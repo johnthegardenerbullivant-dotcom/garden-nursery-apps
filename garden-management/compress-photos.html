@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Compression Tool — Garden Inventory</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f4f6f0;
+            color: #2d3e1f;
+            padding: 24px 16px;
+            min-height: 100vh;
+        }
+
+        .container { max-width: 720px; margin: 0 auto; }
+
+        h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 4px; color: #2d3e1f; }
+
+        .subtitle { font-size: 0.875rem; color: #5a6e42; margin-bottom: 24px; }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+
+        .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 12px; color: #3a5228; }
+
+        .stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+
+        .stat {
+            flex: 1;
+            min-width: 120px;
+            background: #f4f6f0;
+            border-radius: 8px;
+            padding: 12px 14px;
+            text-align: center;
+        }
+
+        .stat-value { font-size: 1.5rem; font-weight: 700; color: #3a5228; line-height: 1; }
+        .stat-label { font-size: 0.75rem; color: #5a6e42; margin-top: 4px; }
+
+        .progress-wrap {
+            background: #e8eddf;
+            border-radius: 8px;
+            height: 10px;
+            overflow: hidden;
+            margin: 12px 0 6px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: #5a8a3c;
+            border-radius: 8px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-label { font-size: 0.8rem; color: #5a6e42; text-align: right; }
+
+        button {
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 10px 20px;
+            transition: opacity 0.15s;
+        }
+
+        button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .btn-primary { background: #5a8a3c; color: #fff; }
+        .btn-primary:hover:not(:disabled) { background: #4a7530; }
+        .btn-secondary { background: #e8eddf; color: #3a5228; }
+        .btn-secondary:hover:not(:disabled) { background: #d6deca; }
+
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+        .log {
+            font-size: 0.8rem;
+            font-family: 'SFMono-Regular', Consolas, monospace;
+            line-height: 1.7;
+            max-height: 360px;
+            overflow-y: auto;
+            background: #f8f9f6;
+            border: 1px solid #dde4d2;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+
+        .log-line    { display: block; }
+        .log-skip    { color: #7a8a6a; }
+        .log-compress { color: #3a6e28; font-weight: 500; }
+        .log-error   { color: #c0392b; }
+        .log-info    { color: #2980b9; }
+
+        #auth-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 32px 0;
+            text-align: center;
+        }
+
+        #auth-section p { color: #5a6e42; font-size: 0.9rem; }
+
+        .spinner {
+            width: 28px; height: 28px;
+            border: 3px solid #d6deca;
+            border-top-color: #5a8a3c;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 20px;
+            background: #e8f5e0;
+            color: #3a6e28;
+            margin-left: 6px;
+        }
+
+        .badge-warn { background: #fdf3cd; color: #856404; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <h1>📸 Photo Compression Tool</h1>
+    <p class="subtitle">Scans all uploaded plant &amp; area photos and compresses any over 500 KB.</p>
+
+    <div class="card" id="auth-card">
+        <div id="auth-section">
+            <div class="spinner"></div>
+            <p>Connecting to Firebase…</p>
+        </div>
+    </div>
+
+    <div id="tool-section" style="display:none">
+
+        <div class="card">
+            <h2>Summary</h2>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" id="stat-total">—</div>
+                    <div class="stat-label">Total photos</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="stat-skipped">—</div>
+                    <div class="stat-label">Already small</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="stat-done">—</div>
+                    <div class="stat-label">Compressed</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="stat-saved">—</div>
+                    <div class="stat-label">Space saved</div>
+                </div>
+            </div>
+
+            <div class="progress-wrap">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <div class="progress-label" id="progress-label">Not started</div>
+
+            <div class="btn-row">
+                <button class="btn-secondary" id="btn-scan" onclick="scan()">🔍 Load photo list</button>
+                <button class="btn-primary"   id="btn-run"  onclick="run()" disabled>▶ Compress all</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Log</h2>
+            <div class="log" id="log">
+                <span class="log-info log-line">Ready. Click "Load photo list" to begin.</span>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp }        from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import {
+    getFirestore,
+    collection, getDocs, doc, updateDoc, getDoc
+}                                from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import {
+    getStorage, ref,
+    uploadBytesResumable, getDownloadURL, getBlob
+}                                from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
+import {
+    getAuth, onAuthStateChanged
+}                                from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import imageCompression          from 'https://cdn.jsdelivr.net/npm/browser-image-compression@2/dist/browser-image-compression.mjs';
+import { firebaseConfig }        from './firebase-config.js';
+
+const app     = initializeApp(firebaseConfig);
+const db      = getFirestore(app);
+const storage = getStorage(app);
+const auth    = getAuth(app);
+
+let allPhotos = [];
+let running   = false;
+
+// ── Auth gate ─────────────────────────────────────────────────────────────────
+onAuthStateChanged(auth, async user => {
+    const authSect = document.getElementById('auth-section');
+
+    if (!user) {
+        authSect.innerHTML = `
+            <p>You need to be signed in as an <strong>admin</strong> in your Garden Inventory app first.</p>
+            <p style="margin-top:8px">Open the app in another tab, sign in, then come back here and refresh.</p>`;
+        return;
+    }
+
+    const roleSnap = await getDoc(doc(db, 'users', user.uid));
+    const role     = roleSnap.exists() ? roleSnap.data().role : null;
+
+    if (role !== 'admin') {
+        authSect.innerHTML = `
+            <p>Signed in as <strong>${user.email || user.uid}</strong>
+               <span class="badge badge-warn">${role || 'no role'}</span></p>
+            <p style="margin-top:8px">Admin role required to use this tool.</p>`;
+        return;
+    }
+
+    document.getElementById('auth-card').innerHTML = `
+        <p style="font-size:.85rem;color:#5a6e42">
+            Signed in as <strong>${user.email || user.uid}</strong>
+            <span class="badge">admin</span>
+        </p>`;
+    document.getElementById('tool-section').style.display = 'block';
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fmt(bytes) {
+    if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + ' MB';
+    if (bytes >= 1024)    return (bytes / 1024).toFixed(0) + ' KB';
+    return bytes + ' B';
+}
+
+function log(msg, cls = '') {
+    const el   = document.getElementById('log');
+    const line = document.createElement('span');
+    line.className   = `log-line ${cls}`;
+    line.textContent = msg;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+}
+
+function setProgress(done, total) {
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    document.getElementById('progress-bar').style.width = pct + '%';
+    document.getElementById('progress-label').textContent =
+        total ? `${done} / ${total} (${pct}%)` : 'Not started';
+}
+
+function setStat(id, val) { document.getElementById(id).textContent = val; }
+
+// ── Step 1: Load photo list from Firestore (no Storage requests) ──────────────
+window.scan = async function () {
+    if (running) return;
+    document.getElementById('btn-scan').disabled = true;
+    document.getElementById('btn-run').disabled  = true;
+    document.getElementById('log').innerHTML = '';
+    allPhotos = [];
+    setStat('stat-total', '…');
+    setStat('stat-skipped', '—');
+    setStat('stat-done', '—');
+    setStat('stat-saved', '—');
+    setProgress(0, 0);
+
+    log('Loading photo list from Firestore…', 'log-info');
+
+    try {
+        const snap = await getDocs(collection(db, 'photos'));
+        allPhotos  = snap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter(p => {
+                if (!p.url || !p.storagePath) {
+                    log(`  ⚠ Skipping doc ${p.id} — missing url or storagePath`, 'log-error');
+                    return false;
+                }
+                return true;
+            });
+
+        setStat('stat-total', allPhotos.length);
+        log(`Found ${allPhotos.length} photo(s) with valid storage paths.`, 'log-info');
+        log(`Click "Compress all" to download, check sizes, and compress where needed.`, 'log-info');
+
+        document.getElementById('btn-run').disabled = allPhotos.length === 0;
+    } catch (e) {
+        log(`Error loading photos: ${e.message}`, 'log-error');
+    }
+
+    document.getElementById('btn-scan').disabled = false;
+};
+
+// ── Step 2: Download → check → compress → re-upload ──────────────────────────
+window.run = async function () {
+    if (running || allPhotos.length === 0) return;
+    running = true;
+    document.getElementById('btn-scan').disabled = true;
+    document.getElementById('btn-run').disabled  = true;
+
+    let skipped   = 0;
+    let compressed = 0;
+    let bytesSaved = 0;
+    const MAX = 500 * 1024;
+
+    setStat('stat-skipped', '0');
+    setStat('stat-done', '0');
+    setStat('stat-saved', '0 KB');
+
+    log(`\nProcessing ${allPhotos.length} photo(s)…`, 'log-info');
+
+    for (let i = 0; i < allPhotos.length; i++) {
+        const photo     = allPhotos[i];
+        const shortName = photo.storagePath.split('/').pop();
+        setProgress(i, allPhotos.length);
+
+        try {
+            // Download via Firebase SDK (avoids CORS restrictions on fetch)
+            const blob = await getBlob(ref(storage, photo.storagePath));
+            const originalSize = blob.size;
+
+            if (originalSize <= MAX) {
+                log(`  ✓ ${shortName} — ${fmt(originalSize)} (already ok)`, 'log-skip');
+                skipped++;
+                setStat('stat-skipped', skipped);
+                continue;
+            }
+
+            // Compress
+            const origName       = photo.filename || shortName;
+            const file           = new File([blob], origName, { type: blob.type });
+            const compressedFile = await imageCompression(file, {
+                maxSizeMB:        0.5,
+                maxWidthOrHeight: 1920,
+                useWebWorker:     true,
+            });
+            const saving = originalSize - compressedFile.size;
+
+            // Re-upload to same path (overwrites existing file)
+            const storageRef = ref(storage, photo.storagePath);
+            await new Promise((resolve, reject) => {
+                const task = uploadBytesResumable(storageRef, compressedFile);
+                task.on('state_changed', null, reject, resolve);
+            });
+
+            // Get the new download URL (token changes on re-upload)
+            const newUrl = await getDownloadURL(ref(storage, photo.storagePath));
+
+            // Update Firestore with the new URL
+            await updateDoc(doc(db, 'photos', photo.id), { url: newUrl });
+
+            bytesSaved += saving;
+            compressed++;
+            setStat('stat-done',  compressed);
+            setStat('stat-saved', fmt(bytesSaved));
+            log(`  ↓ ${shortName} — ${fmt(originalSize)} → ${fmt(compressedFile.size)} (saved ${fmt(saving)})`, 'log-compress');
+
+        } catch (e) {
+            log(`  ✗ ${shortName} — ${e.message}`, 'log-error');
+        }
+    }
+
+    setProgress(allPhotos.length, allPhotos.length);
+    log(`\nFinished. ${compressed} compressed, ${skipped} already small, total saved: ${fmt(bytesSaved)}.`, 'log-info');
+
+    running = false;
+    document.getElementById('btn-scan').disabled = false;
+    // Leave run disabled — rescan to start again
+};
+</script>
+</body>
+</html>

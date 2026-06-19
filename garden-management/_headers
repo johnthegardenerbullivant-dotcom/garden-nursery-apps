@@ -1,0 +1,27 @@
+# Netlify HTTP Headers — Garden Inventory
+# Applied to every response served from this site.
+# https://docs.netlify.com/routing/headers/
+
+/*
+  # ---------- Search engine & bot privacy ----------
+
+  # Tell crawlers (via HTTP header, in addition to robots.txt and meta tag)
+  # not to index, follow links, or cache this site.
+  X-Robots-Tag: noindex, nofollow, noarchive, nosnippet
+
+  # ---------- Security headers ----------
+
+  # Prevent this site from being embedded inside an iframe on another site
+  # (protects against clickjacking attacks).
+  X-Frame-Options: DENY
+
+  # Prevent browsers from guessing content types — they must use what the
+  # server declares (reduces certain injection attack vectors).
+  X-Content-Type-Options: nosniff
+
+  # Don't send the Referer header when following links away from this site,
+  # so external sites don't learn where visitors came from.
+  Referrer-Policy: no-referrer
+
+  # Restrict access to browser features this app doesn't need.
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()

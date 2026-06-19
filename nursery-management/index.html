@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2d6a4f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nursery">
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+    <title>🌱 Nursery Management</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- App Header -->
+    <header class="app-header" id="app-header">
+        <div class="header-inner">
+            <button class="back-btn" id="back-btn" aria-label="Go back">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                Back
+            </button>
+            <h1 class="header-title" id="page-title">Nursery Management</h1>
+            <div class="header-right">
+                <div class="header-action" id="header-action"></div>
+                <button class="user-chip" id="user-chip" title="Account" aria-label="Account menu" style="display:none;">
+                    <span id="user-chip-initials">?</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- User dropdown menu -->
+    <div class="user-dropdown" id="user-dropdown" style="display:none;" role="menu">
+        <div class="user-dropdown-info">
+            <div class="user-dropdown-name" id="user-dropdown-name"></div>
+            <div class="user-dropdown-role" id="user-dropdown-role"></div>
+        </div>
+        <hr class="user-dropdown-divider">
+        <button class="user-dropdown-signout" id="signout-btn">Sign out</button>
+    </div>
+
+    <!-- Main Content -->
+    <main class="app-main" id="app-main">
+        <div class="loading-state" id="loading-state">
+            <div class="leaf-spinner">🌱</div>
+            <p>Loading your nursery…</p>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav" id="bottom-nav">
+        <button class="nav-btn" data-view="dashboard" aria-label="Dashboard">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span>Dashboard</span>
+        </button>
+        <button class="nav-btn" data-view="batches" aria-label="Batches">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1" ry="1"/><path d="M9 12l2 2 4-4"/></svg>
+            <span>Batches</span>
+        </button>
+        <button class="nav-btn" data-view="plants" aria-label="Plants">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22V12M12 12C12 12 7 9 7 4a5 5 0 0 1 10 0c0 5-5 8-5 8z"/></svg>
+            <span>Plants</span>
+        </button>
+        <button class="nav-btn" data-view="stats" aria-label="Stats">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span>Stats</span>
+        </button>
+        <button class="nav-btn" data-view="plans" aria-label="Plans">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M12 2a7 7 0 0 1 7 7c0 4-3.5 7-7 11C8.5 16 5 13 5 9a7 7 0 0 1 7-7z"/>
+                <circle cx="12" cy="9" r="2.2"/>
+            </svg>
+            <span>Plans</span>
+        </button>
+        <button class="nav-btn" data-view="admin" aria-label="Admin" id="admin-nav-btn">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span>Admin</span>
+        </button>
+    </nav>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal" id="modal" role="dialog" aria-modal="true">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title">Form</h2>
+                <button class="modal-close-btn" id="modal-close-btn" aria-label="Close">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Firebase config overlay -->
+    <div id="config-overlay" style="display:none;position:fixed;inset:0;background:var(--green-800);color:#fff;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;z-index:9999;">
+        <h2 style="font-size:1.5rem;margin-bottom:16px;">🌱 Setup required</h2>
+        <p style="max-width:400px;line-height:1.6;">Firebase is not yet configured. Please fill in your Firebase credentials in <code>firebase-config.js</code>, then redeploy.</p>
+    </div>
+
+    <!-- Login overlay -->
+    <div id="login-overlay" style="display:none;position:fixed;inset:0;background:var(--green-800);
+         flex-direction:column;align-items:center;justify-content:center;padding:24px;z-index:9998;
+         overflow-y:auto;">
+        <div class="login-card">
+            <!-- Content built by auth-view.js -->
+        </div>
+    </div>
+
+    <!-- Toast notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script type="module" src="js/main.js"></script>
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .catch(err => console.warn('Service worker registration failed:', err));
+        });
+      }
+    </script>
+</body>
+</html>

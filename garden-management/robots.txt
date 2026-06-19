@@ -1,0 +1,6 @@
+# robots.txt — Garden Inventory
+# Instructs all search engine crawlers not to index or follow links on this site.
+# This is a private family application and should not appear in search results.
+
+User-agent: *
+Disallow: /
