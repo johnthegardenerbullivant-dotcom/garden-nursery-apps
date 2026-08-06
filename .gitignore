@@ -1,16 +1,31 @@
-# Personal data — never share these
+# =============================================================
+#  garden-apps — ignore rules
+#  This repo is PRIVATE and deliberately contains the real
+#  Firebase web config in apps/*/firebase-config.js. Do not add
+#  firebase-config.js here — Netlify needs it in the published
+#  output, and Firestore rules are what protect the data.
+# =============================================================
+
+# Personal data — never commit. Backups and the bulk plant import
+# live outside the repo, in C:\Users\johnb\Documents\Claude\Garden Data\
 Backups/
 *backup*.json
 plant-import.json
 
-# OS / editor noise
+# Netlify / Firebase local state
+.netlify/
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# Editor and OS noise
 .DS_Store
 Thumbs.db
+desktop.ini
 *.bak
+*.orig
 *~
+err.txt
 
-# Anyone who fills in their own real Firebase keys can uncomment the next
-# two lines to avoid committing them. (By default the repo ships blank
-# placeholders, which are safe to share.)
-# garden-management/firebase-config.js
-# nursery-management/firebase-config.js
+# Node — there is no build step, but keep these out if one ever appears
+node_modules/

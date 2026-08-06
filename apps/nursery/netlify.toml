@@ -1,0 +1,10 @@
+# Netlify configuration — Nursery Management
+#
+# This folder is the Netlify site's base directory AND its publish directory,
+# so the paths below are relative to it. There is no build command: the static
+# site is served as-is. The only job of this file is to point Netlify at the
+# label-scan serverless function so it ships with each Git deploy.
+
+[functions]
+  directory = "functions"
+  node_bundler = "esbuild"

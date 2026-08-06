@@ -1,0 +1,202 @@
+rules_version = '2';
+
+// =============================================================
+//  COMBINED Firestore Security Rules
+//  Garden Management + Nursery Management
+//  Firebase project: bbg-garden-inventory
+//  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  Both apps share this single rule set.
+//  Three roles stored in users/{uid}.role:
+//    viewer  — read-only access to all collections
+//    editor  — can add/edit most content
+//    admin   — full access including deletes and admin panel
+//
+//  THIS IS THE ONLY COPY OF THIS FILE.
+//  It used to exist twice, once inside each app's deploy folder.
+//  As of the monorepo restructure it lives here only, at
+//  firebase/firestore.rules, and is not served by Netlify.
+//
+//  ⚠️  Any new collection added to an app's js/db.js needs a
+//  matching match block here, in the SAME commit. Firestore denies
+//  access to anything not explicitly covered, which fails silently
+//  in the app. (May 2026: irrigationZones/irrigationLogs were in
+//  db.js but missing here, and the Admin panel broke.)
+//
+//  HOW TO DEPLOY — from the firebase/ folder:
+//    firebase deploy --only firestore:rules,storage
+// =============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================
+    //  Shared role helpers (used by both apps)
+    // =========================================================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAnonymous() {
+      return isSignedIn() &&
+             request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isViewer() {
+      return isAnonymous() ||
+             (isSignedIn() && userRole() in ['viewer', 'editor', 'admin']);
+    }
+
+    function isEditor() {
+      return isSignedIn() && !isAnonymous() && userRole() in ['editor', 'admin'];
+    }
+
+    function isAdmin() {
+      return isSignedIn() && !isAnonymous() && userRole() == 'admin';
+    }
+
+    // =========================================================
+    //  SHARED COLLECTIONS (read by both apps)
+    // =========================================================
+
+    // ---- users ----
+    // Admins can read all user documents (needed for User Management panel).
+    // Users can read their own document (needed for role lookup on sign-in).
+    // Users can create/update their own document with profile fields only —
+    //   the role and blocked fields may only be written by an admin.
+    match /users/{userId} {
+      allow read:   if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == userId
+                    && !('role'    in request.resource.data)
+                    && !('blocked' in request.resource.data);
+      allow update: if isAdmin()
+                    || (isSignedIn() && request.auth.uid == userId
+                        && !request.resource.data.diff(resource.data)
+                                        .affectedKeys().hasAny(['role', 'blocked']));
+    }
+
+    // ---- plants ----
+    match /plants/{plantId} {
+      allow read:             if isViewer();
+      allow create, update:   if isEditor();
+      allow delete:           if isAdmin();
+    }
+
+    // ---- areas ----
+    match /areas/{areaId} {
+      allow read:                    if isViewer();
+      allow create, update, delete:  if isAdmin();
+    }
+
+    // ---- instances (plant ↔ area relationships) ----
+    // Written by both Garden Management and Nursery (planted-out outcome).
+    match /instances/{instanceId} {
+      allow read:                    if isViewer();
+      allow create, update, delete:  if isEditor();
+    }
+
+    // =========================================================
+    //  GARDEN MANAGEMENT COLLECTIONS
+    // =========================================================
+
+    // ---- photos ----
+    match /photos/{photoId} {
+      allow read:           if isViewer();
+      allow create, update: if isEditor();
+      allow delete:         if isAdmin();
+    }
+
+    // ---- tasks ----
+    match /tasks/{taskId} {
+      allow read:                    if isViewer();
+      allow create, update, delete:  if isAdmin();
+    }
+
+    // ---- taskAssignments ----
+    match /taskAssignments/{assignmentId} {
+      allow read:           if isViewer();
+      allow create, update: if isEditor();
+      allow delete:         if isAdmin();
+    }
+
+    // ---- suggestions (Wishlist & Ideas) ----
+    match /suggestions/{suggestionId} {
+      allow read:                    if isViewer();
+      allow create, update, delete:  if isEditor();
+    }
+
+    // ---- irrigationZones ----
+    match /irrigationZones/{zoneId} {
+      allow read:                    if isViewer();
+      allow create, update, delete:  if isAdmin();
+    }
+
+    // ---- irrigationLogs ----
+    match /irrigationLogs/{logId} {
+      allow read:           if isViewer();
+      allow create, update: if isEditor();
+      allow delete:         if isAdmin();
+    }
+
+    // ---- blogPosts ----
+    match /blogPosts/{postId} {
+      allow read:                    if true;
+      allow create, update, delete:  if isAdmin();
+    }
+
+    // ---- deceasedPlants (Compost Bin) ----
+    match /deceasedPlants/{recordId} {
+      allow read:                    if isViewer();
+      allow create, update, delete:  if isEditor();
+    }
+
+    // =========================================================
+    //  NURSERY MANAGEMENT COLLECTIONS
+    // =========================================================
+
+    // ---- nursery_batches ----
+    match /nursery_batches/{batchId} {
+      allow read:           if isViewer();
+      allow create, update: if isEditor();
+      allow delete:         if isAdmin();
+    }
+
+    // ---- nursery_logs ----
+    match /nursery_logs/{logId} {
+      allow read:           if isViewer();
+      allow create, update: if isEditor();
+      allow delete:         if isAdmin();
+    }
+
+    // ---- nursery_outcomes ----
+    match /nursery_outcomes/{outcomeId} {
+      allow read:           if isViewer();
+      allow create, update: if isEditor();
+      allow delete:         if isAdmin();
+    }
+
+    // ---- nursery_locations ----
+    match /nursery_locations/{locationId} {
+      allow read:                    if isViewer();
+      allow create, update, delete:  if isAdmin();
+    }
+
+    // ---- nursery_wishlist ----
+    match /nursery_wishlist/{itemId} {
+      allow read:                    if isAdmin();
+      allow create, update, delete:  if isAdmin();
+    }
+
+    // ---- nursery_plans ----
+    match /nursery_plans/{planId} {
+      allow read:           if isViewer();
+      allow create, update: if isEditor();
+      allow delete:         if isAdmin();
+    }
+
+  }
+}
