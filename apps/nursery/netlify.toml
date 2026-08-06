@@ -5,6 +5,20 @@
 # site is served as-is. The only job of this file is to point Netlify at the
 # label-scan serverless function so it ships with each Git deploy.
 
+[build]
+  # Monorepo build skipping. Without this, a push that only touches apps/garden
+  # still rebuilds this site — setting a base directory does NOT scope builds by
+  # itself (Netlify docs, "Monorepos").
+  #
+  # The ignore command runs from the base directory, so the "-- ." pathspec limits
+  # the diff to apps/nursery. Netlify's own "mimic default behavior" example omits
+  # the pathspec, which diffs the WHOLE repo and therefore never skips anything.
+  #
+  # Exit 0 = nothing changed here = SKIP the build. Exit 1 = build.
+  # If CACHED_COMMIT_REF is unset (first build after this was added) git errors,
+  # which is non-zero, so it builds. Failing towards building is the safe default.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- ."
+
 [functions]
   directory = "functions"
   node_bundler = "esbuild"

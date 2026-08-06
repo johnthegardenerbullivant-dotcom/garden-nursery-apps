@@ -177,6 +177,22 @@ omits `indexes` and `hosting`, so deploying rules can't clobber composite indexe
 
 ---
 
+## Known issues
+
+**→ [`docs/backlog.md`](docs/backlog.md)** — agreed future changes, deferred deliberately. Currently:
+the Storage rules don't exclude anonymous guests; `nursery_wishlist` needs to match Garden's
+`suggestions` behaviour; and each app's `CLAUDE.md` is served publicly. Read it before assuming
+something is a new bug.
+
+## Build skipping
+
+Each app's `netlify.toml` carries an `ignore` command so a push only rebuilds the site whose folder
+changed. **A base directory does not scope builds on its own** — Netlify rebuilds every connected
+site on any push unless you add this. If you ever change one, verify both directions: touch a Garden
+file and confirm Nursery skips, then the reverse.
+
+---
+
 ## History
 
 Both sites serve from the custom domain `johnandkath.garden`, so Netlify's own
