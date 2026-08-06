@@ -1,46 +1,67 @@
-# Garden Management &amp; Nursery Management 🌿
+# garden-apps 🌿
 
-Two free, self-hostable web apps for keen home gardeners:
+Private monorepo for two Progressive Web Apps that share one Firebase project:
 
-- **Garden Management** — catalogue your plant collection, organise it by area, track tasks and irrigation, keep a garden journal/blog, and log plants that don't make it (the "compost bin").
-- **Nursery Management** — track propagation batches (seeds, cuttings, division and more) from first sowing through to planted-out, given-away, or lost, and learn what works best over time.
+- **Garden Management** (`apps/garden`) — plant collection by area, tasks, irrigation, a garden
+  journal/blog, and a compost-bin log of plants that didn't make it.
+- **Nursery Management** (`apps/nursery`) — propagation batches from first sowing through to
+  planted-out, given away, retired or lost.
 
-They're companion apps: when you "plant out" a batch in Nursery Management, it appears as a new specimen in Garden Management automatically. You can run either one on its own, or both together.
+They're companions: plant out a batch in Nursery and it appears as a specimen in Garden
+automatically. Either runs on its own.
 
-## What they're built with
+**Live sites:** [johnandkath.garden](https://johnandkath.garden/) ·
+[nursery.johnandkath.garden](https://nursery.johnandkath.garden/)
 
-Plain HTML, CSS and JavaScript — **no build step, no install, nothing to compile**. Each app is just a folder of files you upload to a free web host. Data and photos live in your own free Google Firebase project, so everything stays under your control.
-
-## How to set it up
-
-Full step-by-step instructions — written for non-developers — are in **[SETUP-GUIDE.md](SETUP-GUIDE.md)**. It walks you through:
-
-1. Creating a free Firebase project (your database, photo storage, and sign-in)
-2. Pasting in the security rules and turning on sign-in
-3. Adding your Firebase keys to the apps
-4. Publishing each app for free on Netlify
-5. Making yourself the admin and adding your family/friends
-
-It takes about 30–45 minutes the first time, and you only do it once.
-
-## What's in this repository
+## Layout
 
 ```
-garden-apps-shared/
-├── README.md                 ← you are here
-├── SETUP-GUIDE.md            ← the full setup walkthrough — start here
-├── garden-management/        ← the Garden Management app (upload this folder to Netlify)
-│   ├── firebase-config.js    ← blank — you paste YOUR Firebase keys here
-│   └── …
-└── nursery-management/       ← the Nursery Management app (upload this folder to Netlify)
-    ├── firebase-config.js    ← blank — paste the SAME keys here
-    └── …
+apps/garden/     Netlify site #1 — base and publish directory
+apps/nursery/    Netlify site #2 — same
+firebase/        firestore.rules, storage.rules, cors.json — one copy, deployed by CLI
+docs/            design notes, the label-scan spec, the restructure plan
+tools/           check-drift.mjs
 ```
 
-The `firebase-config.js` files ship **blank on purpose** — you fill in your own keys during setup. Use the **same** Firebase project for both apps so they share one database.
+## Deploying
 
-## Need a hand?
+Both Netlify sites build from this repo. There is **no build step** — plain HTML, CSS and native ES
+modules, with Firebase and Quill loaded from CDNs. Netlify just serves the app folder.
 
-If you get stuck, note which step you're on and what you're seeing on screen — that's usually enough to sort it out quickly.
+```bash
+git switch -c feature/thing && git commit -am "feat: thing" && git push -u origin feature/thing
+```
 
-Happy gardening! 🌱
+Netlify builds a deploy preview for the branch. Check the real working site there, then merge to
+`main` for production. A push only rebuilds the site whose folder changed. Tag releases with
+`git tag v2.2 && git push --tags`.
+
+Security rules deploy separately, from `firebase/`:
+
+```bash
+firebase deploy --only firestore:rules,storage
+```
+
+## Before you push
+
+```bash
+node --check apps/garden/js/*.js apps/nursery/js/*.js apps/*/functions/scan-label.js
+node tools/check-drift.mjs
+```
+
+`check-drift.mjs` guards the files that are duplicated between the two apps on purpose — `auth.js`,
+`ui-utils.js` and `scan-label.js` — and fails if the ones meant to be identical have diverged.
+
+## Notes
+
+This repo is **private** and contains real Firebase credentials in `apps/*/firebase-config.js`. That
+config is already public in the sense that anyone can read it from the live site's source — Firestore
+security rules are what protect the data. Keep the repo private anyway.
+
+Backups, `plant-import.json` and archived material live **outside** the repo, in
+`C:\Users\johnb\Documents\Claude\Garden Data\`. Never commit them.
+
+Architecture and working conventions are in **[`CLAUDE.md`](CLAUDE.md)**, the Firestore data model in
+[`docs/data-model.md`](docs/data-model.md), and per-app module maps in
+[`apps/garden/CLAUDE.md`](apps/garden/CLAUDE.md) and
+[`apps/nursery/CLAUDE.md`](apps/nursery/CLAUDE.md).

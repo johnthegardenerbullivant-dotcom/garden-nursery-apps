@@ -1,0 +1,189 @@
+# CLAUDE.md — garden-apps monorepo
+
+Loaded automatically when Claude works anywhere in this repo. Shared conventions, the Firebase
+data model, and the deploy workflow. Each app has its own `CLAUDE.md` with its module map:
+[`apps/garden/CLAUDE.md`](apps/garden/CLAUDE.md) · [`apps/nursery/CLAUDE.md`](apps/nursery/CLAUDE.md).
+
+---
+
+## Snapshot
+
+Two Progressive Web Apps, one Firebase project, one private repo, two Netlify sites.
+
+| | Garden Management | Nursery Management |
+|---|---|---|
+| What it does | Plant collection, areas, tasks, irrigation, blog/journal, compost bin | Propagation batches from sowing to planted-out, given-away or lost |
+| Folder | `apps/garden/` | `apps/nursery/` |
+| JS modules | 14 | 19 |
+| Live URL | https://johnandkath.garden/ | https://nursery.johnandkath.garden/ |
+
+- **Owner:** John Bullivant
+- **Firebase project:** `bbg-garden-inventory` — Firestore + Storage + Auth, shared by both apps
+- **They are companions.** Planting out a Nursery batch writes a `plants` record (if needed) and an
+  `instances` record straight into Garden's collections — see `plantOutToGarden()` in
+  `apps/nursery/js/db.js`. Either app runs standalone; together they share one database.
+
+---
+
+## Repo layout
+
+```
+garden-apps/
+├── CLAUDE.md                 ← this file: shared conventions + data model
+├── README.md
+├── .gitignore  .gitattributes
+│
+├── apps/
+│   ├── garden/               ← Netlify site #1. Base AND publish directory.
+│   │   ├── CLAUDE.md         ← Garden module map
+│   │   ├── netlify.toml      ← points at functions/; no build command
+│   │   ├── firebase-config.js ← REAL credentials (this repo is private)
+│   │   ├── index.html  styles.css  manifest.json  sw.js  robots.txt  _headers
+│   │   ├── compress-photos.html  ← standalone one-off photo-compression utility
+│   │   ├── icons/            ← 3 PNGs
+│   │   ├── functions/scan-label.js  ← Netlify function, Gemini label scan
+│   │   └── js/               ← 14 ES modules
+│   │
+│   └── nursery/              ← Netlify site #2. Same shape, 19 JS modules.
+│
+├── firebase/                 ← deployed by the Firebase CLI, NOT served by Netlify
+│   ├── firebase.json  .firebaserc
+│   ├── firestore.rules       ← the ONLY copy
+│   ├── storage.rules         ← the ONLY copy
+│   └── cors.json
+│
+├── docs/                     ← design notes, specs, the restructure plan
+└── tools/check-drift.mjs     ← guards the deliberately-duplicated files
+```
+
+**Private data lives outside the repo** at `C:\Users\johnb\Documents\Claude\Garden Data\` —
+`Backups/`, `plant-import.json`, and `Archive/`. Never commit any of it; `.gitignore` covers the
+obvious names but the rule is the habit, not the file.
+
+---
+
+## Shared architecture
+
+**No build step.** Native ES modules loaded directly by the browser. No Webpack, no Vite, no npm, no
+`node_modules`, no `package.json`. Netlify's build command is **empty** for both sites — it serves
+`apps/garden` and `apps/nursery` as-is. An edited file is the deployed file.
+
+Everything third-party comes from a CDN:
+
+| Dependency | Version | Used by |
+|---|---|---|
+| Firebase SDK (`app`, `firestore`, `storage`, `auth`) | 10.12.0, from `gstatic.com` | both |
+| `browser-image-compression` | 2.x, from jsdelivr | both |
+| Quill | 1.3.7, from `cdn.quilljs.com` | **Garden only** (blog editor) |
+
+Import paths in JS are either relative (`./db.js`) or full CDN URLs.
+
+**Shared browser JS is duplicated on purpose.** `js/auth.js` and `functions/scan-label.js` are
+byte-identical across the two apps, and `js/ui-utils.js` is close. With no build step, a folder
+outside the publish directory isn't served to the browser, so hoisting them into `shared/` would
+require a build command or symlinks. Instead `tools/check-drift.mjs` diffs them and reports
+divergence. If drift becomes a nuisance, a one-line `cp` build command is the easy upgrade.
+
+### Role system
+
+Three roles, enforced by `isAtLeast()` in each app's `js/auth.js`:
+
+```
+viewer  (rank 1) — read-only; auto-assigned to anonymous (guest) users
+editor  (rank 2) — can add/edit content
+admin   (rank 3) — full access including delete, backup/restore, admin panel
+```
+
+Stored at `users/{uid}` as `{ role, blocked }`. Anonymous users are assigned `viewer` in memory
+with no Firestore document. Both apps read the same `users` collection, so a role granted in one
+applies to both.
+
+There is also an implicit fourth state: a user document with **no `role` and not `blocked`** is
+*pending* — someone who has signed in but hasn't been granted access yet. Both Admin panels surface
+these separately so they can be granted a role or blocked.
+
+---
+
+## Firestore data model
+
+**→ [`docs/data-model.md`](docs/data-model.md)** — all 18 collections with their document shapes, the
+enumerated values (stages, methods, outcomes, loss reasons), the Storage layout, and the two
+cross-app write paths.
+
+Short version: one project, 18 collections. Garden owns twelve, Nursery owns the six `nursery_*`
+ones, and `users` is shared so a role granted in one app applies to both. Nursery also reads and
+writes Garden's `plants`, `instances` and `areas` when planting out.
+
+---
+
+## Deploying
+
+### App code — push to `main`, Netlify builds
+
+Both Netlify sites are linked to this repo with a **base directory** (`apps/garden` /
+`apps/nursery`) and an empty build command. A push only rebuilds the site whose folder changed.
+
+```
+git switch -c feature/thing     # main is always deployable
+# …edit, then node --check every JS file you touched…
+git commit -m "feat: thing"
+git push -u origin feature/thing
+```
+
+Netlify builds a **deploy preview** at its own URL for the branch. Look at the working site there,
+then merge to `main` for production. Tag releases instead of copying folders:
+
+```
+git tag v2.2 && git push --tags
+```
+
+**Rollback:** Netlify → Deploys → pick the last good deploy → *Publish deploy*. Instant.
+
+Netlify's secret scanner trips on the `AIza…` Firebase key format, so both sites set
+`SECRETS_SCAN_OMIT_PATHS = firebase-config.js`. That key is already readable by anyone who views
+source on the live site — Firestore rules are what protect the data, not the key's obscurity.
+
+### Security rules — one file, one CLI command
+
+`firestore.rules` and `storage.rules` exist in **exactly one place**, `firebase/`. They are
+deployed by the Firebase CLI, never served by Netlify, and never pasted into the Console:
+
+```
+cd firebase
+firebase deploy --only firestore:rules,storage
+```
+
+`.firebaserc` already pins the project, so `firebase use` isn't needed. `firebase.json` deliberately
+omits `indexes` and `hosting`, so deploying rules can't clobber composite indexes or fight Netlify.
+
+---
+
+## Standing rules
+
+1. **`node --check` every JS file after generating or moving any of them.** All 35: 14 Garden
+   modules, 19 Nursery modules, 2 `functions/scan-label.js`. If it reports an error, treat it as
+   real — never dismiss it as a false alarm.
+2. **No AI-authored production deploys without John's review.** Push to a branch, look at the
+   Netlify deploy preview, then merge. Never straight to `main`.
+3. **A new Firestore collection in a `db.js` needs its rule block in `firebase/firestore.rules` in
+   the same commit.** Firestore denies anything not explicitly matched, and it fails *silently* in
+   the app. This has bitten before: in May 2026 `irrigationZones` and `irrigationLogs` were in
+   `db.js` but missing from the rules, and the Admin panel broke.
+4. **Run `node tools/check-drift.mjs` before pushing changes to `auth.js`, `ui-utils.js` or
+   `scan-label.js`.** Exit 0 is clean; warnings are known deltas.
+5. **Never commit a backup JSON or `plant-import.json`.** They belong in `Garden Data\`.
+6. **Commit style:** conventional prefixes — `feat:`, `fix:`, `chore:`, `docs:`. Branches:
+   `feature/…`, `fix/…`.
+
+---
+
+## History
+
+Both sites serve from the custom domain `johnandkath.garden`, so Netlify's own
+`*.netlify.app` site names aren't recorded here — identify each site in the Netlify dashboard by its
+domain.
+
+Repo history before 2026-08 is in `Garden Data\Archive\CHANGELOG.md`, outside git — it was archived
+during the restructure on the grounds that git history supersedes it. From 2026-08 onward, per-change
+detail lives in commit messages. The restructure itself is documented in
+[`docs/restructure-plan.md`](docs/restructure-plan.md).

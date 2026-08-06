@@ -1,0 +1,186 @@
+# CLAUDE.md — Nursery Management (`apps/nursery`)
+
+Nursery-specific module map and conventions. Shared architecture, the Firestore data model, the role
+system and the deploy workflow are in the [root `CLAUDE.md`](../../CLAUDE.md) — read that first.
+
+*This is the first `CLAUDE.md` Nursery has had; Garden has had one since April 2026.*
+
+---
+
+## Snapshot
+
+- **What it is:** a PWA for tracking propagation batches — seeds, cuttings, division, grafting and
+  more — from first sowing through to planted-out, given-away, retired or lost, so you learn what
+  actually works
+- **Live URL:** https://nursery.johnandkath.garden/
+- **This folder is both the Netlify base directory and the publish directory.**
+- **No Quill.** Nursery has no rich-text editor, so it doesn't load Quill (Garden does).
+
+### Netlify settings
+
+| Setting | Value |
+|---|---|
+| Base directory | `apps/nursery` |
+| Build command | *(empty)* |
+| Publish directory | `apps/nursery` (or `.` relative to base) |
+| Functions directory | `apps/nursery/functions` (also set in `netlify.toml`) |
+
+Environment variables on the Nursery site:
+
+| Variable | Purpose |
+|---|---|
+| `GEMINI_API_KEY` | Google AI Studio key for the label-scan function. Set and working. |
+| `GEMINI_MODEL` | Optional; defaults to `gemini-flash-latest` |
+| `SECRETS_SCAN_OMIT_PATHS` | `firebase-config.js` — stops the secret scanner failing the build |
+
+> **Label scanning started here.** The Gemini plant-tag scan was trialled in Nursery first and then
+> ported to Garden, which is why `functions/scan-label.js` is byte-identical in both — Nursery's is
+> the original. Netlify env vars are per-site and both sites have their own `GEMINI_API_KEY`.
+
+---
+
+## Files
+
+```
+apps/nursery/
+├── index.html               ← single-page app shell
+├── styles.css               ← all CSS (~114 KB)
+├── firebase-config.js       ← real credentials (same project as Garden)
+├── manifest.json  sw.js     ← PWA manifest + service worker
+├── robots.txt  _headers     ← Netlify config
+├── netlify.toml             ← functions directory + esbuild bundler
+├── icons/                   ← favicon-32, icon-192, icon-512
+├── functions/scan-label.js  ← byte-identical to Garden's
+└── js/                      ← 19 ES modules
+```
+
+---
+
+## JS module map (19 modules)
+
+### Core
+
+| File | Responsibility | Key exports |
+|---|---|---|
+| `main.js` | Entry point: router, auth state listener, nav. Owns navigation and injects it into `ui-utils`. | `navigate`, `navigateReplace`, `goBack` |
+| `db.js` | Every Firestore + Storage read/write, plus the batch-quantity maths and label constants. ~700 lines. | see [below](#dbjs-exports) |
+| `auth.js` | Auth state, role cache, sign-in helpers. **Byte-identical to Garden's.** | `initAuth`, `getAuthInstance`, `getCurrentUser`, `getCurrentRole`, `isAtLeast`, `loadRole`, `setCurrentUser`, `setRole`, `signInWithGoogle`, `signInWithEmail`, `signInAsGuest`, `signOutUser` |
+| `ui-utils.js` | Modal, toast, carousel, drag-sort, date picker. Navigation is injected via `setNavigateFn` etc. rather than imported. | `setNavigateFn`, `setGoBackFn`, `setNavigateReplaceFn`, `navigate`, `goBack`, `navigateReplace`, `setLoading`, `showModal`, `hideModal`, `initPhotoCarousel`, `showToast`, `initPhotoDragSort`, `datePicker`, **`isValidDateStr`**, `initDatePickers` |
+| `auth-view.js` | Login / access-denied overlay | `showLoginOverlay`, `hideLoginOverlay`, `showAccessDenied` |
+
+> `isValidDateStr()` exists here but **not** in Garden's `ui-utils.js` — the one known drift between
+> the two copies. `tools/check-drift.mjs` reports it as a warning. It validates a `YYYY-MM-DD` string
+> from a `datePicker()` text input, where the browser's `required` attribute can't check format.
+
+### Batch views — the heart of the app
+
+`batches-view.js` is a 449-byte re-export shim (`renderBatchesList`, `renderBatchDetail`) that exists
+so `main.js` has one import site while the implementation lives in focused modules.
+
+| File | Responsibility | Key exports |
+|---|---|---|
+| `batches-view.js` | Re-export facade for `main.js` | `renderBatchesList`, `renderBatchDetail` |
+| `batch-list.js` | Batch list with filters | `renderBatchesList` |
+| `batch-detail.js` | One batch: header, logs, outcomes, photos, child batches | `renderBatchDetail` |
+| `batch-form.js` | Add/edit batch — the biggest view (~47 KB). Caches the plant and stock lists. | `invalidatePlantsCache`, `invalidateStockCache` |
+| `batch-log-form.js` | Add a progress log entry | `showLogForm` |
+| `batch-log-edit.js` | Edit an existing log entry | `showEditLogForm` |
+| `batch-outcomes.js` | Record and render outcomes: planted-out / given-away / lost / retired | `loadAndRenderOutcomes`, `showOutcomeForm` |
+| `batch-photos.js` | Batch photo grid and lightbox | `openNurseryPhotoLightbox`, `loadAndRenderBatchPhotos` |
+
+### Other views
+
+| File | Responsibility | Key exports |
+|---|---|---|
+| `dashboard-view.js` | Landing dashboard | `renderDashboard` |
+| `plants-view.js` | Propagated plants list + per-plant propagation history | `renderPropagatedPlants`, `renderPlantPropHistory` |
+| `stats-view.js` | Success rates and method comparisons | `renderStats` |
+| `plans-view.js` | Propagation plans and wishlist | `renderPlansView` |
+| `label-scan.js` | Client half of the Gemini label scan. **Near-identical to Garden's.** | `scanPanelHTML`, `focusScanCard`, `initLabelScan` |
+| `admin-view.js` | Admin panel: export, user roles, locations | `renderAdminView` |
+
+**Navigation (bottom bar, 6 tabs):** Dashboard · Batches · Plants · Stats · Plans · Admin.
+
+### `db.js` exports
+
+- **Locations:** `getNurseryLocations`, `getNurseryLocation`, `addNurseryLocation`,
+  `updateNurseryLocation`, `deleteNurseryLocation`
+- **Batches:** `getNurseryBatches`, `getActiveBatches`, `getNurseryBatch`, `addNurseryBatch`,
+  `updateNurseryBatch`, `deleteNurseryBatch` (cascades to logs and outcomes), `getChildBatches`
+- **Logs:** `getAllNurseryLogs`, `getLogsForBatch`, `addNurseryLog`, `updateNurseryLog`,
+  `deleteNurseryLog`
+- **Outcomes:** `getOutcomesForBatch`, `addNurseryOutcome`, `updateNurseryOutcome`,
+  `deleteNurseryOutcome`
+- **Quantity maths:** `formatBatchQty`, `derivedBatchQty`, `getDerivedBatchQty`,
+  `recomputeBatchState`
+- **Cross-app:** `plantOutToGarden`, `getGardenPlants`, `getGardenAreas`
+- **Photos:** `uploadNurseryPhoto`, `deleteNurseryPhoto`
+- **Wishlist:** `getNurseryWishlist`, `addNurseryWishlistItem`, `updateNurseryWishlistItem`,
+  `deleteNurseryWishlistItem`
+- **Plans:** `getNurseryPlans`, `addNurseryPlan`, `updateNurseryPlan`, `deleteNurseryPlan`
+- **Users:** `getUsers`, `updateUserRole`, `setUserBlocked`, `getPendingUserCount`
+- **Helpers:** `initFirebase`, `escHtml`, `fmtDate`, `todayStr`, `hybridTypeOf`,
+  `formatBotanicalName`, `exportNurseryData`
+- **Constants:** `METHOD_LABELS`, `STAGE_LABELS`, `STAGE_ORDER`, `LOSS_REASON_LABELS`,
+  `PLAN_METHOD_LABELS`, `PLAN_TIMING_OPTIONS`, `PLAN_STATUS_LABELS`
+
+---
+
+## Nursery-specific notes
+
+### Batch quantities — read this before touching the numbers
+
+A batch's remaining count is **derived, never stored directly**:
+
+```
+currentQty = clamp(0 … startQty,  startQty − Σ(log lossCount) − Σ(outcome quantity) + qtyAdjustment)
+```
+
+`qtyAdjustment` is a **signed offset** saved when John corrects the remaining count by hand.
+It's stored as an offset rather than writing `currentQty` directly so the correction survives every
+later log entry and outcome, instead of being wiped by the next recompute. Call
+`recomputeBatchState(batchId, effectiveDate)` after anything that changes a log, an outcome or the
+adjustment — it also handles completion:
+
+- hits **0** → `stage: 'completed'`, `completedAt` set, and `outcome` derived: the single outcome
+  type, `'mixed'` if several, or `'lost'` if it emptied through losses with no recorded outcomes
+- back **above 0** while completed → reopened to `stage: 'ready'`, `completedAt`/`outcome` cleared
+
+Stage is otherwise left alone.
+
+### Stages, methods, outcomes
+
+```
+stage:   propagating → rooted → potted-up → hardening-off → ready → completed   (STAGE_ORDER)
+method:  seed · stem-cutting · hardwood-cutting · root-cutting · leaf-cutting ·
+         division · layering-offset · grafting · acquired-potted
+outcome: planted-out · given-away · lost · retired        (retired = kept as a stock plant)
+loss:    damping-off · rot · dried-out · pest · cold · discarded · unknown · other
+```
+
+A batch with `purpose: 'stock-plant'` can't be "planted out" — the outcome form offers
+*given away* and *retire* instead. Batches raised from a stock plant carry
+`sourceParentBatchId`, which `getChildBatches()` follows.
+
+### Plant out → Garden
+
+`plantOutToGarden()` writes a `nursery_outcomes` row, then reaches into **Garden's** collections: it
+creates a `plants` document if the batch has no `plantId` yet (e.g. the batch came from a gift or
+purchase), and always writes an `instances` row linking plant to area. It returns the resolved
+`plantId` so the caller can store it back on the batch. Editing this function changes Garden's data
+— treat it as cross-app surface area.
+
+### Deliberate query shapes
+
+Several reads avoid composite indexes on purpose and sort client-side instead —
+`getLogsForBatch()`, `getChildBatches()`, `getNurseryWishlist()`, `getNurseryPlans()`. Comments in
+`db.js` say so at each site. If you add an `orderBy` to one of these, you are adding a Firestore
+index requirement; that's a deployment step, not just a code change.
+
+`getActiveBatches()` is the exception — it does use `where('stage','!=','completed')` with
+`orderBy('stage')` and `orderBy('startDate','desc')`.
+
+### Design docs
+
+- [`docs/nursery-design.md`](../../docs/nursery-design.md) (and `nursery-design.pdf`)
+- [`docs/label-scan-spec.md`](../../docs/label-scan-spec.md)
