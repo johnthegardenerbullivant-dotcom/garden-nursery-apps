@@ -1,5 +1,6 @@
 // =============================================================
 //  main.js — App entry point, initialisation & router
+//  comment text for Phase 9 test of just one app deploying
 // =============================================================
 
 import { initFirebase, getPendingUserCount } from './db.js';
