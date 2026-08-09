@@ -109,7 +109,7 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
             <!-- Header card -->
             <div class="detail-header-card">
                 <h2 class="detail-plant-name">${escHtml(displayName)}</h2>
-                ${displaySecondary ? `<p class="detail-common-name" style="margin:2px 0 4px; font-size:0.9rem; color:var(--text-secondary);">${escHtml(displaySecondary)}</p>` : ''}
+                ${displaySecondary ? `<p class="detail-common-name" style="margin:2px 0 4px; font-size:0.9rem; color:var(--grey-500);">${escHtml(displaySecondary)}</p>` : ''}
                 ${showBotanicalLine ? `<p class="detail-botanical">${escHtml(batch.botanicalName)}</p>` : ''}
                 ${batch.hybrid && !computedBotanical ? `<p class="detail-botanical">× Hybrid</p>` : ''}
                 <div class="detail-meta-row">

@@ -47,7 +47,7 @@ async function renderUsersSection(container) {
     try {
         users = await getUsers();
     } catch (e) {
-        umContent.innerHTML = `<p class="section-hint" style="color:var(--danger,#e63946);">
+        umContent.innerHTML = `<p class="section-hint" style="color:var(--red);">
             Could not load users — check Firestore rules are deployed.</p>`;
         return;
     }
