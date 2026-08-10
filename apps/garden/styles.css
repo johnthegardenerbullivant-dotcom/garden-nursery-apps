@@ -401,10 +401,22 @@ button.card-badge:hover {
 .search-clear:hover { background: var(--grey-400); color: var(--white); }
 
 /* --- Buttons --- */
+/* Tap targets, 2026-08-10. Everything except the FAB and the user chip used to
+   sit under 44px, which is the Apple/Material minimum and matters here because
+   the app is mostly used on a phone, outdoors, often with gloves on. Sizes are
+   set with min-height rather than extra padding so the horizontal metrics — and
+   therefore every row that wraps — stay as they were.
+
+   Not all of them reach 44. Primary actions do; dense filter rows are lifted to
+   36 instead, because eight chips at 44px turn a filter strip into a wall. 36 is
+   still a large improvement on the 26px they were, and well clear of the WCAG
+   2.2 AA minimum of 24. */
 .btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
+    min-height: 44px;
     padding: 9px 18px;
     border: none;
     border-radius: var(--radius-sm);
@@ -432,8 +444,13 @@ button.card-badge:hover {
     border: 1.5px solid var(--red);
 }
 .btn-danger:hover { background: var(--red); color: var(--white); }
-.btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+/* Secondary inline action, e.g. "+ Add location" beside a section title.
+   Deliberately 36 rather than 44 — at 44 it is no longer visibly smaller than
+   the primary button it sits next to. */
+.btn-sm { min-height: 36px; padding: 5px 12px; font-size: 0.8rem; }
 .btn-icon {
+    min-width: 44px;
+    min-height: 44px;
     padding: 8px;
     border-radius: var(--radius-sm);
     background: var(--green-100);
@@ -621,6 +638,7 @@ button.card-badge:hover {
     display: inline-flex;
     align-items: center;
     gap: 5px;
+    min-height: 40px;
     padding: 5px 13px;
     border: 1.5px dashed var(--grey-300);
     border-radius: 100px;
@@ -1356,6 +1374,9 @@ code {
     margin-bottom: 14px;
 }
 .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
     padding: 5px 14px;
     border-radius: 100px;
     border: 1.5px solid var(--grey-200);
@@ -1602,6 +1623,10 @@ code {
     width: fit-content;
 }
 .view-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
     padding: 6px 18px;
     border: none;
     border-radius: calc(var(--radius-sm) - 2px);
