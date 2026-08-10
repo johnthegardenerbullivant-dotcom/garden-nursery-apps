@@ -961,6 +961,18 @@ button.card-badge:hover {
     border-color: var(--green-500);
     box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.15);
 }
+/* Placeholder text. Until 2026-08-10 this was left to the browser, which meant
+   it rendered close to the colour of typed text in Chrome and noticeably
+   lighter in Safari — so the same form looked different on phone and laptop.
+   Every input here has a real <label>, so the placeholder is a hint rather
+   than the field's only name. `opacity: 1` is required because Firefox dims
+   placeholders to 0.54 by default, which would double up with the colour.
+   Kept identical to Garden's. */
+input::placeholder,
+textarea::placeholder {
+    color: var(--grey-500);
+    opacity: 1;
+}
 .form-textarea { min-height: 80px; resize: vertical; }
 .form-hint {
     font-size: 0.78rem;
