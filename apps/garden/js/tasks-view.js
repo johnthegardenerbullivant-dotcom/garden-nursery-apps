@@ -108,18 +108,13 @@ export async function renderTasksView(container, headerActionEl, backBtn, restor
     const activeCount = enriched.filter(a =>
         a.status === 'todo' || a.status === 'in-progress').length;
 
+    // Header holds page actions only. The By Area / By Status switch and Expand
+    // all used to live here too — a filter, a bulk action and an icon button
+    // sharing one 60px bar, which read as cluttered and squeezed the page title.
+    // Both have moved into the content area below, next to the filter chips they
+    // belong with. Print stays: it acts on the page, matching Area detail.
     headerActionEl.innerHTML = `
-        <div style="display:flex;align-items:center;gap:8px;">
-            <div class="view-toggle" style="font-size:0.75rem;">
-                <button class="view-toggle-btn${activeView === 'by-area' ? ' active' : ''}"
-                        id="view-area-btn" title="Group tasks by garden area">By Area</button>
-                <button class="view-toggle-btn${activeView === 'by-status' ? ' active' : ''}"
-                        id="view-status-btn" title="Group tasks by status">By Status</button>
-            </div>
-            <button class="btn btn-sm btn-secondary" id="expand-all-btn"
-                style="font-size:0.78rem;padding:4px 10px;">Expand all</button>
-            <button class="btn-icon" id="print-tasks-btn" title="Print tasks list">🖨️</button>
-        </div>
+        <button class="btn-icon" id="print-tasks-btn" title="Print tasks list">🖨️</button>
     `;
 
     // Per-area plant map (plants planted in that area)
@@ -153,6 +148,16 @@ export async function renderTasksView(container, headerActionEl, backBtn, restor
     const byStatusContent = buildStatusView(enriched, areas, areaPlantMap, activeFilters);
 
     container.innerHTML = `
+        <div class="tasks-controls">
+            <div class="view-toggle">
+                <button class="view-toggle-btn${activeView === 'by-area' ? ' active' : ''}"
+                        id="view-area-btn" title="Group tasks by garden area">By Area</button>
+                <button class="view-toggle-btn${activeView === 'by-status' ? ' active' : ''}"
+                        id="view-status-btn" title="Group tasks by status">By Status</button>
+            </div>
+            <button class="btn btn-sm btn-secondary" id="expand-all-btn">Expand all</button>
+        </div>
+
         ${activeCount > 0 ? `
         <div style="margin-bottom:12px;font-size:0.85rem;color:var(--green-700);font-weight:600;
              padding:8px 12px;background:var(--green-50);border-radius:var(--radius-sm);
@@ -222,14 +227,14 @@ export async function renderTasksView(container, headerActionEl, backBtn, restor
     // All task-row interactions (expand, status, note, edit, delete)
     attachTaskHandlers(container, () => renderTasksView(container, headerActionEl, backBtn));
 
-    // View toggle (By Area / By Status)
-    headerActionEl.querySelector('#view-area-btn')?.addEventListener('click', () => {
+    // View toggle (By Area / By Status) — now in the content area, not the header
+    container.querySelector('#view-area-btn')?.addEventListener('click', () => {
         if (activeView !== 'by-area') {
             activeView = 'by-area';
             renderTasksView(container, headerActionEl, backBtn);
         }
     });
-    headerActionEl.querySelector('#view-status-btn')?.addEventListener('click', () => {
+    container.querySelector('#view-status-btn')?.addEventListener('click', () => {
         if (activeView !== 'by-status') {
             activeView = 'by-status';
             renderTasksView(container, headerActionEl, backBtn);
@@ -241,10 +246,10 @@ export async function renderTasksView(container, headerActionEl, backBtn, restor
         const shouldExpand = allExpanded || expandedSectionIds.has(s.dataset.areaId);
         s.classList.toggle('expanded', shouldExpand);
     });
-    const expandBtn = headerActionEl.querySelector('#expand-all-btn');
+    const expandBtn = container.querySelector('#expand-all-btn');
     if (expandBtn) expandBtn.textContent = allExpanded ? 'Collapse all' : 'Expand all';
 
-    headerActionEl.querySelector('#expand-all-btn')?.addEventListener('click', () => {
+    expandBtn?.addEventListener('click', () => {
         allExpanded = !allExpanded;
         container.querySelectorAll('.area-section').forEach(s => {
             s.classList.toggle('expanded', allExpanded);
@@ -254,8 +259,7 @@ export async function renderTasksView(container, headerActionEl, backBtn, restor
                 else expandedSectionIds.delete(areaId);
             }
         });
-        headerActionEl.querySelector('#expand-all-btn').textContent =
-            allExpanded ? 'Collapse all' : 'Expand all';
+        expandBtn.textContent = allExpanded ? 'Collapse all' : 'Expand all';
     });
 
     // Print button — opens a print-friendly window of the current task list

@@ -1622,6 +1622,20 @@ code {
     margin-bottom: 16px;
     width: fit-content;
 }
+/* Tasks page controls row. The view switch and Expand all moved out of the
+   header bar here on 2026-08-10 — a filter, a bulk action and an icon button
+   were sharing one 60px bar with the page title. They now sit with the filter
+   chips they belong with. The view-toggle's own bottom margin is cancelled
+   because the row owns the spacing. */
+.tasks-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+.tasks-controls .view-toggle { margin-bottom: 0; }
 .view-toggle-btn {
     display: inline-flex;
     align-items: center;
