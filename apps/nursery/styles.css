@@ -4439,14 +4439,11 @@ code {
 }
 
 /* Scan-label FAB — stacks above the + FAB */
-.fab-scan {
-    bottom: calc(var(--nav-h) + 84px);
-    background: var(--green-500);
-    font-size: 1.35rem;
-}
-.fab-scan:hover { background: var(--green-700); }
+/* .fab-scan removed 2026-08-10 along with the second FAB it styled. */
 
-/* Pulse to draw attention to the scan card when opened via a shortcut */
+/* Pulse to draw attention to the scan card when opened via a shortcut.
+   Retained: label-scan.js still applies it via focusScanCard(), which Garden
+   uses, and the two copies of that module are deliberately kept in step. */
 .label-scan-pulse { animation: labelScanPulse 1.8s ease; }
 @keyframes labelScanPulse {
     0%   { box-shadow: 0 0 0 0 rgba(82,183,136,0.0); }

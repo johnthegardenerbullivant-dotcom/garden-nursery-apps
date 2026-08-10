@@ -2,10 +2,9 @@
 //  dashboard-view.js — Nursery dashboard (home screen)
 // =============================================================
 
-import { getNurseryBatches, getNurseryLocations, escHtml, fmtDate, STAGE_LABELS, STAGE_ORDER, METHOD_LABELS, formatBatchQty, formatBotanicalName } from './db.js';
+import { getNurseryBatches, escHtml, fmtDate, STAGE_LABELS, STAGE_ORDER, METHOD_LABELS, formatBatchQty, formatBotanicalName } from './db.js';
 import { navigate } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
-import { showBatchForm, invalidatePlantsCache } from './batch-form.js';
 
 export async function renderDashboard(container, headerActionEl, backBtn) {
     backBtn.classList.remove('visible');
@@ -49,24 +48,10 @@ export async function renderDashboard(container, headerActionEl, backBtn) {
         })
         .slice(0, 5);
 
+    // One FAB only. A second 📷 label-scan FAB used to sit above this one, but
+    // it opened the same form the + reaches, and that form already offers the
+    // scan card — so it was a duplicate route to one destination.
     if (isAtLeast('editor')) {
-        // Scan-label shortcut — opens the new-batch form with the scan card highlighted.
-        // Locations are fetched lazily on click so the dashboard load stays fast.
-        const scanFab = document.createElement('button');
-        scanFab.className = 'fab fab-scan';
-        scanFab.title     = 'New batch from a label scan';
-        scanFab.setAttribute('aria-label', 'New batch from a label scan');
-        scanFab.innerHTML = '📷';
-        scanFab.addEventListener('click', async () => {
-            let locations = [];
-            try { locations = await getNurseryLocations(); } catch (e) {}
-            showBatchForm(null, locations, async () => {
-                invalidatePlantsCache();
-                await renderDashboard(container, headerActionEl, backBtn);
-            }, null, { autoScan: true });
-        });
-        document.body.appendChild(scanFab);
-
         const fab = document.createElement('button');
         fab.className = 'fab';
         fab.title     = 'Start new batch';

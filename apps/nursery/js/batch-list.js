@@ -49,22 +49,16 @@ export async function renderBatchesList(container, headerActionEl, backBtn) {
     let currentSort   = _saved?.sort    || 'name-asc';
     let currentOrigin = _saved?.origin  || 'all';   // 'all' | 'created' | 'acquired' (completed tab only)
 
-    // ── FABs ──────────────────────────────────────────────────────────────
+    // ── FAB ───────────────────────────────────────────────────────────────
+    // One only. A second 📷 FAB used to sit above this one as a label-scan
+    // shortcut, but it opened the same form — which already offers the scan
+    // card — so it was a duplicate route to one destination, occupying the
+    // bottom-right corner of the list at every scroll position.
     if (isAtLeast('editor')) {
         const onBatchSaved = async () => {
             invalidatePlantsCache();
             await renderBatchesList(container, headerActionEl, backBtn);
         };
-
-        // Scan-label shortcut (sits above the + button)
-        const scanFab = document.createElement('button');
-        scanFab.className = 'fab fab-scan';
-        scanFab.title     = 'New batch from a label scan';
-        scanFab.setAttribute('aria-label', 'New batch from a label scan');
-        scanFab.innerHTML = '📷';
-        scanFab.addEventListener('click', () =>
-            showBatchForm(null, locations, onBatchSaved, null, { autoScan: true }));
-        document.body.appendChild(scanFab);
 
         const fab = document.createElement('button');
         fab.className = 'fab';
