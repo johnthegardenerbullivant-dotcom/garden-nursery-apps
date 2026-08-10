@@ -9,7 +9,7 @@ import {
     getDerivedBatchQty, recomputeBatchState
 } from './db.js';
 import { showModal, hideModal, showToast, initDatePickers, datePicker, isValidDateStr } from './ui-utils.js';
-import { scanPanelHTML, initLabelScan, focusScanCard } from './label-scan.js';
+import { scanPanelHTML, initLabelScan } from './label-scan.js';
 
 // Cache garden plants for the session (fetched once per form open)
 let _gardenPlantsCache = null;
@@ -37,7 +37,9 @@ export function invalidateStockCache()   { _stockPlantsCache  = null; }
 //  NEW / EDIT BATCH FORM
 // =============================================
 
-async function showBatchForm(existing, locations, onSaved, prefill = null, options = {}) {
+// `options` (5th parameter) was removed on 2026-08-10 along with the scan FAB —
+// its only member was autoScan, and its only callers were the two FABs.
+async function showBatchForm(existing, locations, onSaved, prefill = null) {
     // Apply prefill (from "Take cuttings" button on a stock plant).
     // Synthesises a template object so the form pre-populates botanical fields and source.
     // isEdit stays false — prefill always creates a new batch, never edits one.
@@ -407,8 +409,6 @@ async function showBatchForm(existing, locations, onSaved, prefill = null, optio
     // Label scanner (new batches only)
     if (!isEdit) {
         initLabelScan();
-        // When opened from a "Scan label" shortcut, draw attention to the card.
-        if (options.autoScan) focusScanCard();
     }
 
     // ---- Plant picker ----
