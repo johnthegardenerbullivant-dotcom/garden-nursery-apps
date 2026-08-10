@@ -130,12 +130,32 @@ git commit -m "feat: thing"
 git push -u origin feature/thing
 ```
 
-Netlify builds a **deploy preview** at its own URL for the branch. Look at the working site there,
-then merge to `main` for production. Tag releases instead of copying folders:
+Netlify builds a **deploy preview**, but only for a **pull request** against `main` — pushing a
+branch on its own produces nothing. Open the PR, then take the preview URL from the Netlify bot's
+comment or the `netlify/…/deploy-preview` checks at the foot of the PR. Look at the working site
+there, then merge to `main` for production. Tag releases instead of copying folders:
 
 ```
 git tag v2.2 && git push --tags
 ```
+
+#### Signing in to a deploy preview — use email/password, not Google
+
+**Google sign-in always fails on a preview.** The popup opens and closes instantly. This is not a
+broken build: Firebase Auth only permits OAuth popups from hosts on its **Authorized domains** list
+(Console → Authentication → Settings), preview URLs are `deploy-preview-<PR>--<site>.netlify.app`,
+and that host changes with every PR. Firebase does not accept wildcards, so no single entry covers
+them. The error behind the flash is `auth/unauthorized-domain`.
+
+Email/password sign-in is **not** domain-restricted, so it works on any preview. As of August 2026
+there is a dedicated email/password admin account for exactly this. On a preview, scroll past the
+Google button and use the **Email** form.
+
+Anonymous *Continue as Guest* also works, but guests are `viewer` — read-only, so no add or edit
+forms. It is only good enough for checking list and detail layouts.
+
+Adding each preview host to Authorized domains by hand is the alternative, but it is two entries
+per PR (one per site) and they accumulate. Prefer the email account.
 
 **Rollback:** Netlify → Deploys → pick the last good deploy → *Publish deploy*. Instant.
 
