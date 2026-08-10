@@ -4,7 +4,7 @@
 
 import {
     getBlogPosts, getBlogPost, saveBlogPost, deleteBlogPost, uploadBlogPhoto,
-    getPlants, getAreas, formatBotanicalName, escHtml
+    getPlants, getAreas, formatBotanicalName, escHtml, todayStr, fmtDateLong
 } from './db.js';
 import { showModal, hideModal, showToast, navigate, goBack, navigateReplace, setLoading, datePicker, initDatePickers } from './ui-utils.js';
 import { isAtLeast, getCurrentUser } from './auth.js';
@@ -13,18 +13,8 @@ import { isAtLeast, getCurrentUser } from './auth.js';
 //  HELPERS
 // =============================================
 
-function todayStr() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-
-function formatDisplayDate(dateStr) {
-    if (!dateStr) return '';
-    const [y, m, d] = dateStr.split('-');
-    return new Date(+y, +m - 1, +d).toLocaleDateString('en-GB', {
-        day: 'numeric', month: 'long', year: 'numeric'
-    });
-}
+// todayStr comes from db.js, and formatDisplayDate is now db.js's fmtDateLong —
+// same output ("14 September 2026"), one definition instead of a per-module copy.
 
 function stripHtml(html) {
     if (!html) return '';
@@ -265,7 +255,7 @@ function blogPostCard(post) {
             </div>` : ''}
             <div class="blog-post-card-body">
                 <div class="blog-post-card-meta">
-                    <span class="blog-post-date">${formatDisplayDate(post.postDate)}</span>
+                    <span class="blog-post-date">${fmtDateLong(post.postDate)}</span>
                     ${isDraft ? `<span class="blog-draft-badge">Draft</span>` : ''}
                 </div>
                 <div class="blog-post-card-title">${escHtml(post.title || 'Untitled')}</div>
@@ -319,7 +309,7 @@ export async function renderBlogPost(container, headerActionEl, backBtn, postId)
             <div class="blog-post-header">
                 <h1 class="blog-post-title">${escHtml(post.title || 'Untitled')}</h1>
                 <div class="blog-post-meta-row">
-                    <span class="blog-post-date-large">${formatDisplayDate(post.postDate)}</span>
+                    <span class="blog-post-date-large">${fmtDateLong(post.postDate)}</span>
                     ${!post.published ? `<span class="blog-draft-badge" style="margin-left:8px;">Draft</span>` : ''}
                 </div>
                 ${(post.tags || []).length ? `

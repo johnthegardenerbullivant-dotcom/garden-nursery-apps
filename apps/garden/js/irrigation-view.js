@@ -6,7 +6,7 @@ import {
     getIrrigationZones, addIrrigationZone, updateIrrigationZone, deleteIrrigationZone,
     getIrrigationLogsForZone, getIrrigationLogsForDateRange,
     addIrrigationLog, updateIrrigationLog, deleteIrrigationLog,
-    getAreas, escHtml
+    getAreas, escHtml, fmtDate, todayStr
 } from './db.js';
 import { showModal, hideModal, showToast, navigate } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
@@ -57,7 +57,9 @@ function getZoneAreaIds(zone) {
 //  DATE HELPERS
 // =============================================
 
-function todayStr() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+// todayStr and fmtDate now come from db.js — see the import above. This module's
+// own fmtDate rendered a four-digit year ("14 May 2026") where Tasks and Overview
+// showed two ("14 May 26"); the shared one is the short form.
 
 function addDays(dateStr, n) {
     const d = new Date(dateStr + 'T12:00:00');
@@ -72,11 +74,6 @@ function weekStart(dateStr) {
     const diff = dow === 0 ? -6 : 1 - dow;
     d.setDate(d.getDate() + diff);
     return d.toISOString().slice(0, 10);
-}
-
-function fmtDate(dateStr) {
-    const [y, m, d] = dateStr.split('-').map(Number);
-    return `${d} ${MONTH_SHORT[m - 1]} ${y}`;
 }
 
 function fmtDayDate(dateStr) {

@@ -1036,3 +1036,48 @@ export function escHtml(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
 }
+
+// =============================================
+//  DATE HELPERS
+//  Added 2026-08-10. These lived as six separate local copies across
+//  tasks-view, garden-view, compost-view, irrigation-view and blog-view, and
+//  they disagreed: Tasks and Overview rendered "14 May 26" while the Compost
+//  Bin, Irrigation and the Blog rendered "14 May 2026". fmtDate is byte-identical
+//  to Nursery's in apps/nursery/js/db.js, so both apps now read the same.
+// =============================================
+
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_FULL  = ['January','February','March','April','May','June',
+                      'July','August','September','October','November','December'];
+
+/** Format a YYYY-MM-DD string as "14 Sep 26". The default for lists and rows. */
+export function fmtDate(dateStr) {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return `${d} ${MONTHS_SHORT[m - 1]} ${String(y).slice(2)}`;
+}
+
+/**
+ * Format a YYYY-MM-DD string as "14 September 2026".
+ * Only for prominent standalone dates — a blog post header — where the full
+ * month and year read better and there is no density pressure. This is what
+ * blog-view's formatDisplayDate produced via toLocaleDateString('en-GB'), kept
+ * so journal entries look unchanged. Prefer fmtDate everywhere else.
+ */
+export function fmtDateLong(dateStr) {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return `${d} ${MONTHS_FULL[m - 1]} ${y}`;
+}
+
+/** Today as YYYY-MM-DD */
+export function todayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+/** True if a due date has passed and the task is not already completed. */
+export function isOverdue(dateStr, status) {
+    if (!dateStr || status === 'completed') return false;
+    return dateStr < todayStr();
+}
