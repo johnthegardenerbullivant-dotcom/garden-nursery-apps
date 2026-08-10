@@ -33,10 +33,16 @@ garden-apps/
 ├── README.md
 ├── .gitignore  .gitattributes
 │
+├── shared/                   ← ONE copy of the design layer, used by both apps
+│   ├── tokens.css            ← :root — colour ramps, spacing, radii, shadows, type
+│   └── base.css              ← reset, header, account menu, main, loading, bottom nav
+│                                Copied into each app at build time; never served from here.
+│
 ├── apps/
 │   ├── garden/               ← Netlify site #1. Base AND publish directory.
 │   │   ├── CLAUDE.md         ← Garden module map
-│   │   ├── netlify.toml      ← points at functions/; no build command
+│   │   ├── netlify.toml      ← functions/ + the `cp ../../shared` build command
+│   │   ├── shared/           ← GENERATED at build time. Gitignored. Never edit.
 │   │   ├── firebase-config.js ← REAL credentials (this repo is private)
 │   │   ├── index.html  styles.css  manifest.json  sw.js  robots.txt  _headers
 │   │   ├── compress-photos.html  ← standalone one-off photo-compression utility
@@ -64,9 +70,26 @@ obvious names but the rule is the habit, not the file.
 
 ## Shared architecture
 
-**No build step.** Native ES modules loaded directly by the browser. No Webpack, no Vite, no npm, no
-`node_modules`, no `package.json`. Netlify's build command is **empty** for both sites — it serves
-`apps/garden` and `apps/nursery` as-is. An edited file is the deployed file.
+**Almost no build step.** Native ES modules loaded directly by the browser. No Webpack, no Vite, no
+npm, no `node_modules`, no `package.json`. For everything in `apps/garden` and `apps/nursery`, an
+edited file is the deployed file.
+
+The one exception, added 2026-08-10: each site's build command is
+
+```
+rm -rf shared && cp -r ../../shared shared
+```
+
+A folder outside the publish directory is not served to the browser, so the shared design layer at
+`/shared` has to be copied inside each app before deploy. Consequences worth knowing:
+
+- **`apps/*/shared/` is generated build output and is gitignored.** Edit `/shared`, never a copy.
+  A copy you edit will be silently overwritten by the next build.
+- **A fresh checkout has no `apps/*/shared/`**, so opening `apps/garden/index.html` straight off
+  disk gives an unstyled page. Run the `cp` line above from the app folder first.
+- **Both `netlify.toml` ignore commands watch `../../shared`** as well as `.`, so a change to the
+  shared layer rebuilds both sites. Without that a site would skip its build and keep serving the
+  previous copy.
 
 Everything third-party comes from a CDN:
 
@@ -78,11 +101,12 @@ Everything third-party comes from a CDN:
 
 Import paths in JS are either relative (`./db.js`) or full CDN URLs.
 
-**Shared browser JS is duplicated on purpose.** `js/auth.js` and `functions/scan-label.js` are
-byte-identical across the two apps, and `js/ui-utils.js` is close. With no build step, a folder
-outside the publish directory isn't served to the browser, so hoisting them into `shared/` would
-require a build command or symlinks. Instead `tools/check-drift.mjs` diffs them and reports
-divergence. If drift becomes a nuisance, a one-line `cp` build command is the easy upgrade.
+**Shared CSS is hoisted; shared JS is still duplicated.** `/shared/tokens.css` and
+`/shared/base.css` are the single source for the design tokens and the app shell — that move is
+done. `js/auth.js` and `functions/scan-label.js` are still byte-identical copies in both apps, and
+`js/ui-utils.js` is close, with `tools/check-drift.mjs` diffing them and reporting divergence. The
+`cp` build command now exists, so hoisting those into `/shared` too is a small follow-on whenever
+it is worth doing.
 
 ### Role system
 
