@@ -87,9 +87,13 @@ service cloud.firestore {
     }
 
     // ---- areas ----
+    // Editors may create and rename areas (2026-08-10): an editor who can add a
+    // plant needs to be able to add the bed it goes in. Deleting stays admin —
+    // it cascades to the instance records for every plant in that area.
     match /areas/{areaId} {
-      allow read:                    if isViewer();
-      allow create, update, delete:  if isAdmin();
+      allow read:           if isViewer();
+      allow create, update: if isEditor();
+      allow delete:         if isAdmin();
     }
 
     // ---- instances (plant ↔ area relationships) ----

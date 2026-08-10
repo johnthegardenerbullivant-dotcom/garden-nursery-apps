@@ -44,8 +44,10 @@ export async function renderAreasList(container, headerActionEl, backBtn) {
         }
     }
 
-    // FAB — admin only (areas are structural, only admin can add/edit them)
-    if (isAtLeast('admin')) {
+    // FAB — editor+. Areas used to be admin-only on the grounds that they are
+    // structural, but an editor who can add a plant could not add the bed to put
+    // it in. Deleting an area still requires admin, in both the UI and the rules.
+    if (isAtLeast('editor')) {
         const fab = document.createElement('button');
         fab.className = 'fab';
         fab.title = 'Add garden area';
@@ -112,7 +114,7 @@ function areaCard(area, activeTasks = 0, overdueTasks = 0) {
                 ${area.description ? `<div class="card-subtitle">${escHtml(area.description)}</div>` : ''}
                 ${taskBadge ? `<div class="card-meta" style="margin-top:6px;">${taskBadge}</div>` : ''}
             </div>
-            ${isAtLeast('admin') ? `
+            ${isAtLeast('editor') ? `
             <button class="area-card-edit-btn btn-icon" data-id="${area.id}" title="Edit area"
                 style="position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.85);border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;font-size:0.9rem;">✏️</button>
             ` : ''}
@@ -162,8 +164,8 @@ export async function renderAreaDetail(container, headerActionEl, backBtn, areaI
     } catch (_) {}
     const plantMap = Object.fromEntries(allPlants.map(p => [p.id, p]));
 
-    // Header buttons — print (all roles) + edit (admin only)
-    headerActionEl.innerHTML = isAtLeast('admin')
+    // Header buttons — print (all roles) + edit (editor+)
+    headerActionEl.innerHTML = isAtLeast('editor')
         ? `<button class="btn-icon" id="print-area-btn" title="Print plant list">🖨️</button>
            <button class="btn-icon" id="edit-area-btn" title="Edit area">✏️</button>`
         : `<button class="btn-icon" id="print-area-btn" title="Print plant list">🖨️</button>`;
