@@ -8,7 +8,7 @@ import {
     addTaskAssignment, updateTaskAssignment, deleteTaskAssignment,
     getAreas, getInstances, getPlants,
     createNextRecurringOccurrence, firstOccurrenceFromToday,
-    formatBotanicalName, escHtml
+    formatBotanicalName, escHtml, fmtDate, todayStr, isOverdue
 } from './db.js';
 import { showModal, hideModal, showToast, setLoading, navigate } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
@@ -43,20 +43,7 @@ let allExpanded = false;
 // This survives re-renders (filter changes, Back navigation) so sections stay open.
 let expandedSectionIds = new Set();
 
-// ---- Date helpers ----
-function fmtDate(dateStr) {
-    if (!dateStr) return '';
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return `${d} ${months[m - 1]} ${String(y).slice(2)}`;
-}
-function todayStr() {
-    const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-function isOverdue(dateStr, status) {
-    if (!dateStr || status === 'completed') return false;
-    return dateStr < todayStr();
-}
+// Date helpers now come from db.js — see the import above.
 
 // =============================================
 //  MAIN TASKS PAGE

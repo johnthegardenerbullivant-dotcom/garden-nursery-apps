@@ -5,7 +5,7 @@
 //  appear here for one area while still alive in another. Records carry name
 //  snapshots, so they stay readable even if the plant/area is later changed.
 
-import { getDeceasedPlants, deleteDeceasedRecord, escHtml } from './db.js';
+import { getDeceasedPlants, deleteDeceasedRecord, escHtml, fmtDate } from './db.js';
 import { setLoading, navigate, showToast } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
 
@@ -40,12 +40,9 @@ export function causeMeta(key) {
 const MONTH_FULL = ['January','February','March','April','May','June',
                     'July','August','September','October','November','December'];
 
-function fmtDate(dateStr) {
-    if (!dateStr) return 'Undated';
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return `${d} ${months[m - 1]} ${y}`;
-}
+// fmtDate now comes from db.js. It returns '' for a missing date where this
+// module's own copy returned 'Undated', so the one call site supplies that
+// fallback itself — see the `|| 'Undated'` below.
 
 function monthKey(dateStr) {
     return (dateStr && dateStr.length >= 7) ? dateStr.slice(0, 7) : '0000-00';
@@ -168,7 +165,7 @@ function rowHtml(r) {
                 <div class="compost-cause" title="${escHtml(c.label)}">${c.icon}</div>
                 <div class="compost-info">
                     <div class="compost-name">${name} ${qty} ${common}</div>
-                    <div class="compost-meta">${area}<span class="compost-date">${escHtml(fmtDate(r.diedDate))}</span><span class="compost-cause-lbl">${escHtml(c.label)}</span></div>
+                    <div class="compost-meta">${area}<span class="compost-date">${escHtml(fmtDate(r.diedDate) || 'Undated')}</span><span class="compost-cause-lbl">${escHtml(c.label)}</span></div>
                     ${notes}
                 </div>
             </div>

@@ -191,7 +191,10 @@ async function renderUsersSection(container) {
         return '<span class="um-provider guest">Unknown</span>';
     }
 
-    function fmtDate(ts) {
+    // Relative "last seen" for the user list — a Firestore Timestamp in, a phrase
+    // out. Deliberately NOT db.js's fmtDate, which formats a YYYY-MM-DD string.
+    // Renamed from fmtDate on 2026-08-10 so the two are not confused again.
+    function fmtLastSeen(ts) {
         if (!ts) return '—';
         const d = ts.toDate ? ts.toDate() : new Date(ts);
         const diff = Date.now() - d.getTime();
@@ -236,7 +239,7 @@ async function renderUsersSection(container) {
             </div>
             <div class="um-meta">
                 ${providerLabel(u.provider || '')}
-                <span class="um-lastseen">${fmtDate(u.lastLoginAt)}</span>
+                <span class="um-lastseen">${fmtLastSeen(u.lastLoginAt)}</span>
             </div>
             <div class="um-actions">
                 ${isPending ? `

@@ -7,27 +7,15 @@ import {
     getTasks, getTaskAssignments,
     getSuggestions, addSuggestion, updateSuggestion, deleteSuggestion,
     getDeceasedPlants,
-    formatBotanicalName, escHtml
+    formatBotanicalName, escHtml, todayStr, isOverdue
 } from './db.js';
 import { setLoading, navigate, showToast } from './ui-utils.js';
 import { buildTaskRow, attachTaskHandlers } from './tasks-view.js';
 import { getIrrigationBannerInfo }          from './irrigation-view.js';
 import { causeMeta }                        from './compost-view.js';
 
-// ---- Date helpers ----
-function todayStr() {
-    const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-function fmtDate(dateStr) {
-    if (!dateStr) return '';
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return `${d} ${months[m - 1]} ${String(y).slice(2)}`;
-}
-function isOverdue(dateStr, status) {
-    if (!dateStr || status === 'completed') return false;
-    return dateStr < todayStr();
-}
+// Date helpers come from db.js. This module also carried its own fmtDate, which
+// nothing ever called — removed 2026-08-10 rather than re-pointed.
 
 // =============================================
 //  OVERVIEW PAGE
