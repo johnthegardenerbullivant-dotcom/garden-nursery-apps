@@ -283,7 +283,7 @@ export async function renderAreaDetail(container, headerActionEl, backBtn, areaI
                 ` : ''}
             </div>
             ` : ''}
-            ${isAtLeast('admin') ? `
+            ${isAtLeast('editor') ? `
             <div class="photo-upload-strip">
                 <label class="photo-upload-mini" title="Choose from gallery">
                     🖼 Gallery
