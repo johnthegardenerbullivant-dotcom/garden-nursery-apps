@@ -416,7 +416,7 @@ function buildPlanFormHtml(existing, gardenPlants, selectedTimings, sourceType) 
                 <input class="form-input" type="text" id="plan-plant-name"
                        value="${escHtml(existing?.plantName || '')}"
                        placeholder="e.g. Salvia nemorosa 'Caradonna'"
-                       required maxlength="120" autocomplete="off">
+                       required maxlength="120" autocomplete="off" autocapitalize="words">
             </div>
 
             <!-- Method + Status row -->

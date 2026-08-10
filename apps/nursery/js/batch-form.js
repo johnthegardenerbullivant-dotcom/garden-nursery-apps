@@ -167,14 +167,16 @@ async function showBatchForm(existing, locations, onSaved, prefill = null, optio
                 <div class="form-group" style="margin:0;">
                     <label class="form-label" for="src-person">Person's name (optional)</label>
                     <input class="form-input" type="text" id="src-person" name="srcPerson"
-                           value="${escHtml(src.personName || '')}" placeholder="e.g. Sarah">
+                           value="${escHtml(src.personName || '')}" placeholder="e.g. Sarah"
+                           autocapitalize="words">
                 </div>
             </div>
             <div class="source-fields" id="source-purchased" style="display:${src.type === 'purchased' ? 'flex' : 'none'};">
                 <div class="form-group" style="margin:0;">
                     <label class="form-label" for="src-supplier">Supplier (optional)</label>
                     <input class="form-input" type="text" id="src-supplier" name="srcSupplier"
-                           value="${escHtml(src.supplier || '')}" placeholder="e.g. Chiltern Seeds">
+                           value="${escHtml(src.supplier || '')}" placeholder="e.g. Chiltern Seeds"
+                           autocapitalize="words">
                 </div>
             </div>
             <div class="source-fields" id="source-other" style="display:${(src.type === 'wild-collected' || src.type === 'other') ? 'flex' : 'none'};">
@@ -205,7 +207,7 @@ async function showBatchForm(existing, locations, onSaved, prefill = null, optio
                     <input class="form-input" type="text" id="plant-input" name="plantName"
                            value="${escHtml(selectedPlantName)}"
                            placeholder="Type to search library or enter a new name…"
-                           autocomplete="off" required>
+                           autocomplete="off" autocapitalize="words" required>
                     <div class="plant-picker-dropdown" id="plant-dropdown" style="display:none;"></div>
                 </div>
                 <div class="plant-linked-chip" id="plant-linked-chip" style="display:${selectedPlantId ? 'flex' : 'none'}; margin-top:6px;">
@@ -222,7 +224,7 @@ async function showBatchForm(existing, locations, onSaved, prefill = null, optio
                         <label class="form-label" for="genus-input">Genus (optional)</label>
                         <input class="form-input" type="text" id="genus-input" name="genus"
                                value="${escHtml(existing?.genus || '')}"
-                               placeholder="e.g. Rosa" autocomplete="off">
+                               placeholder="e.g. Rosa" autocomplete="off" autocapitalize="words">
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="species-input">Species (optional)</label>
@@ -253,20 +255,20 @@ async function showBatchForm(existing, locations, onSaved, prefill = null, optio
                         <label class="form-label" for="cultivar-input">Cultivar (optional)</label>
                         <input class="form-input" type="text" id="cultivar-input" name="cultivar"
                                value="${escHtml(existing?.cultivar || '')}"
-                               placeholder="e.g. New Dawn" autocomplete="off">
+                               placeholder="e.g. New Dawn" autocomplete="off" autocapitalize="words">
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="authority-input">Authority (optional)</label>
                         <input class="form-input" type="text" id="authority-input" name="authority"
                                value="${escHtml(existing?.authority || '')}"
-                               placeholder="e.g. L. or Thunb." autocomplete="off">
+                               placeholder="e.g. L. or Thunb." autocomplete="off" autocapitalize="words">
                     </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="common-name-input">Common name (optional)</label>
                     <input class="form-input" type="text" id="common-name-input" name="commonName"
                            value="${escHtml(existing?.commonName || '')}"
-                           placeholder="e.g. Dog rose" autocomplete="off">
+                           placeholder="e.g. Dog Rose" autocomplete="off" autocapitalize="words">
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="hybrid-type-select">Hybrid (optional)</label>
@@ -360,7 +362,8 @@ async function showBatchForm(existing, locations, onSaved, prefill = null, optio
                 <label class="form-label" for="tags-input">Tags (optional, comma-separated)</label>
                 <input class="form-input" type="text" id="tags-input" name="tags"
                        value="${escHtml((existing?.tags || []).join(', '))}"
-                       placeholder="e.g. 2026, greenhouse, hardy">
+                       placeholder="e.g. 2026, greenhouse, hardy"
+                       autocapitalize="none" spellcheck="false">
             </div>
 
             <div class="form-actions">

@@ -457,7 +457,7 @@ function showLocationForm(existing, onSaved) {
                 <input class="form-input" type="text" id="loc-name" name="name"
                        value="${escHtml(existing?.name || '')}"
                        placeholder="e.g. Heated Propagator, Cold Frame, South Windowsill"
-                       required maxlength="80" autocomplete="off">
+                       required maxlength="80" autocomplete="off" autocapitalize="words">
             </div>
             <div class="form-group">
                 <label class="form-label" for="loc-type">Type <span class="required">*</span></label>
