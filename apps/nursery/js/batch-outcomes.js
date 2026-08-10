@@ -214,7 +214,7 @@ function buildOutcomeFormHTML(batch, existing) {
                     <label class="form-label" for="outcome-recipient">Recipient (optional)</label>
                     <input class="form-input" type="text" id="outcome-recipient"
                         value="${escHtml(src.recipientName || '')}"
-                        placeholder="e.g. Sarah, Plant swap">
+                        placeholder="e.g. Sarah, Plant swap" autocapitalize="words">
                 </div>
             </div>
 

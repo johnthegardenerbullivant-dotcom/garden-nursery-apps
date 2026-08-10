@@ -334,6 +334,35 @@ export async function renderPlantDetail(container, headerActionEl, backBtn, plan
     });
 
 
+    // Photo upload straight from the detail view — editor+. Mirrors the Area
+    // detail handler; both inputs share one function so Gallery and Camera behave
+    // identically. uploadPhoto() writes to the `photos` collection, which allows
+    // create for editors.
+    async function handleDetailPhotoUpload(e) {
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
+        const progressEl  = container.querySelector('#plant-upload-progress');
+        const progressBar = container.querySelector('#plant-upload-progress-bar');
+        if (progressEl) progressEl.style.display = 'block';
+        try {
+            for (let i = 0; i < files.length; i++) {
+                await uploadPhoto(plantId, files[i], pct => {
+                    const overall = ((i / files.length) + (pct / 100 / files.length)) * 100;
+                    if (progressBar) progressBar.style.width = overall + '%';
+                });
+            }
+            showToast(files.length === 1 ? 'Photo added!' : `${files.length} photos added!`, 'success');
+            await renderPlantDetail(container, headerActionEl, backBtn, plantId);
+        } catch (err) {
+            showToast('Photo upload failed', 'error');
+            console.error(err);
+        } finally {
+            if (progressEl) progressEl.style.display = 'none';
+        }
+    }
+    container.querySelector('#plant-detail-photo-input')?.addEventListener('change', handleDetailPhotoUpload);
+    container.querySelector('#plant-detail-camera-input')?.addEventListener('change', handleDetailPhotoUpload);
+
     // Lightbox — tap photo in carousel to enlarge
     container.querySelectorAll('.photo-carousel-slide--clickable img').forEach(img => {
         img.addEventListener('click', () => openPlantLightbox(img.src));
@@ -444,13 +473,18 @@ function buildPlantDetailHTML(plant, instances, photos) {
         </div>
         ` : ''}
 
-        <!-- Photos (read-only; tap to enlarge — manage via Edit) -->
-        ${photos.length > 0 ? `
+        <!-- Photos. The section renders even with no photos so the Gallery/Camera
+             strip is always reachable — previously it was hidden at zero photos,
+             which meant the plants most in need of one offered no way to add it.
+             Reordering and deleting still live in the edit form; deleting a photo
+             is admin-only in firestore.rules, adding is editor+. -->
         <div class="detail-section">
             <div class="detail-section-title">Photos
+                ${photos.length > 0 ? `
                 <span style="font-size:0.75rem;color:var(--grey-400);font-weight:400;
-                             margin-left:6px;">tap to enlarge · manage via Edit</span>
+                             margin-left:6px;">tap to enlarge · reorder via Edit</span>` : ''}
             </div>
+            ${photos.length > 0 ? `
             <div class="photo-carousel">
                 <div class="photo-carousel-track">
                     ${photos.map(photo => `
@@ -465,8 +499,23 @@ function buildPlantDetailHTML(plant, instances, photos) {
                     <div class="photo-carousel-counter">1 / ${photos.length}</div>
                 ` : ''}
             </div>
+            ` : `<p class="text-muted" style="font-size:0.9rem;padding:4px 0">No photos yet.</p>`}
+            ${isAtLeast('editor') ? `
+            <div class="photo-upload-strip">
+                <label class="photo-upload-mini" title="Choose from gallery">
+                    🖼 Gallery
+                    <input type="file" id="plant-detail-photo-input" accept="image/*" multiple style="display:none">
+                </label>
+                <label class="photo-upload-mini" title="Take a photo">
+                    📸 Camera
+                    <input type="file" id="plant-detail-camera-input" accept="image/*" capture="environment" style="display:none">
+                </label>
+            </div>
+            <div class="upload-progress" id="plant-upload-progress" style="display:none;margin-top:8px;">
+                <div class="upload-progress-bar" id="plant-upload-progress-bar" style="width:0%"></div>
+            </div>
+            ` : ''}
         </div>
-        ` : ''}
 
         <!-- Locations (Instances) -->
         <div class="detail-section">
