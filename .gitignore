@@ -27,5 +27,11 @@ desktop.ini
 *~
 err.txt
 
-# Node — there is no build step, but keep these out if one ever appears
+# Build output. The shared design layer lives at /shared and is copied into each
+# app's folder at build time by the command in its netlify.toml, because a folder
+# outside the publish directory is not served. Those copies are generated, never
+# committed — edit /shared, not apps/*/shared/.
+apps/*/shared/
+
+# Node — the only build step is a `cp`, but keep these out if npm ever appears
 node_modules/

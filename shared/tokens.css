@@ -1,0 +1,60 @@
+/* =============================================================
+   shared/tokens.css — design tokens for BOTH apps
+   -------------------------------------------------------------
+   Single source of truth for colour, spacing, radii, shadows and
+   type. Copied into each app's publish directory at build time by
+   the `cp` command in each app's netlify.toml — it is NOT served
+   from this folder, and the copies are gitignored build output.
+
+   Edit here, never in a copy.
+   ============================================================= */
+
+:root {
+    /* Green ramp. 600/400/200 added 2026-08-09 — they were referenced ~30 times per app in
+       each stylesheet but never defined, so every one of those declarations was invalid
+       and silently dropped. 400 and 200 are the canonical steps of this palette;
+       600 is the midpoint of 700 and 500. */
+    --green-900: #1b4332;
+    --green-800: #2d6a4f;
+    --green-700: #40916c;
+    --green-600: #49a47a;
+    --green-500: #52b788;
+    --green-400: #74c69d;
+    --green-300: #95d5b2;
+    --green-200: #b7e4c7;
+    --green-100: #d8f3dc;
+    --green-50:  #f0faf4;
+    --amber:     #f4a261;
+    --red:       #e63946;
+    /* Grey ramp. 700/500/300 added 2026-08-09, same reason — ~60 references between
+       them. --grey-500 is the muted-text colour and by far the worst affected: with
+       it undefined, `color: var(--grey-500)` fell back to inherit, so secondary text
+       has been rendering at the parent's colour rather than muted. */
+    --grey-50:   #f8f9fa;
+    --grey-100:  #f1f3f5;
+    --grey-200:  #e9ecef;
+    --grey-300:  #ced4da;
+    --grey-400:  #adb5bd;
+    --grey-500:  #868e96;
+    --grey-600:  #6c757d;
+    --grey-700:  #495057;
+    --grey-800:  #343a40;
+    --white:     #ffffff;
+
+    --header-h:  60px;
+    --nav-h:     68px;
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    /* Legacy alias, added 2026-08-09. Used by .user-dropdown, .overview-stat,
+       .overview-section and the login buttons, which have all been rendering with
+       square corners. Fold those into --radius-md and delete this in Phase 5. */
+    --radius:    var(--radius-md);
+    /* Brand alias — Nursery's .view-in-garden-link is the only consumer. */
+    --primary:   var(--green-700);
+    --shadow-sm: 0 1px 4px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.12);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.16);
+    --transition: 0.18s ease;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
