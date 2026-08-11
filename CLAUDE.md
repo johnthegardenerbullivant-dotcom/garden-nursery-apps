@@ -35,8 +35,12 @@ garden-apps/
 │
 ├── shared/                   ← ONE copy of the design layer, used by both apps
 │   ├── tokens.css            ← :root — colour ramps, spacing, radii, shadows, type
-│   └── base.css              ← reset, header, account menu, main, loading, bottom nav
+│   ├── base.css              ← reset, header, account menu, main, loading, bottom nav
+│   └── components.css        ← buttons, cards, forms, modal, toast, photos, search,
+│                                filter chips, empty states, user-management rows
 │                                Copied into each app at build time; never served from here.
+│                                Load order is tokens → base → components → the app's own
+│                                styles.css, so an app can still override any of it.
 │
 ├── apps/
 │   ├── garden/               ← Netlify site #1. Base AND publish directory.
