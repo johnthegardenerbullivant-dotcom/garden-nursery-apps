@@ -163,11 +163,27 @@ body {
 .user-dropdown-signout:hover { background: var(--grey-50); }
 
 /* --- Main Content --- */
+/* The page frame for both apps. The bottom padding clears the FAB, which is
+   fixed at nav-h + 16px and 56px tall, so it needs 72px plus a gap to stop it
+   covering the last row of a list. Nursery used to get this from its own
+   .view-content wrapper and Garden got nothing at all — Garden's FAB sat on top
+   of the final card. Both are handled here now (2026-08-10). */
 .app-main {
     margin-top: var(--header-h);
     margin-bottom: var(--nav-h);
     min-height: calc(100dvh - var(--header-h) - var(--nav-h));
-    padding: 16px;
+    padding: 16px 16px 88px;
+}
+/* Desktop frame. Was declared identically in both stylesheets; moved here
+   2026-08-10 so the two cannot drift. The 88px bottom is repeated because the
+   shorthand would otherwise reset it and put the FAB back over the last row. */
+@media (min-width: 900px) {
+    .app-main {
+        padding: 24px 32px 88px;
+        max-width: 1100px;
+        margin-left: auto;
+        margin-right: auto;
+    }
 }
 
 /* --- Loading State --- */
