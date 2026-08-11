@@ -89,6 +89,31 @@
     color: var(--grey-800);
 }
 .btn-secondary:hover { background: var(--grey-200); }
+/* Icon-only button. Unified 2026-08-10: Garden called this .btn-icon and gave it
+   a green tint, Nursery called it .icon-btn and gave it a grey outline. Garden's
+   name and Garden's look won — a tint reads as a button, an outline reads as a
+   field. Nursery's .danger variant was worth keeping and is restated here in the
+   tinted idiom rather than as a red outline. */
+.btn-icon {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    background: var(--green-100);
+    color: var(--green-800);
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    -webkit-tap-highlight-color: transparent;
+}
+.btn-icon:hover { background: var(--green-300); }
+/* Literal reds: there is no red ramp in tokens.css, only the single --red. */
+.btn-icon.danger { background: #ffebee; color: var(--red); }
+.btn-icon.danger:hover { background: #ffcdd2; }
 .fab {
     position: fixed;
     bottom: calc(var(--nav-h) + 16px);

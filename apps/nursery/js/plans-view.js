@@ -251,10 +251,10 @@ function planCard(plan) {
                 </div>
                 <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
                     ${isAtLeast('editor') ? `
-                        <button class="icon-btn plan-start-batch-btn" title="Start a batch from this plan" style="color:var(--green-700);">
+                        <button class="btn-icon plan-start-batch-btn" title="Start a batch from this plan" style="color:var(--green-700);">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22V12M12 12C12 12 7 9 7 4a5 5 0 0 1 10 0c0 5-5 8-5 8z"/><line x1="12" y1="12" x2="12" y2="22"/></svg>
                         </button>
-                        <button class="icon-btn danger plan-delete-btn" title="Delete">
+                        <button class="btn-icon danger plan-delete-btn" title="Delete">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                         </button>
                     ` : ''}

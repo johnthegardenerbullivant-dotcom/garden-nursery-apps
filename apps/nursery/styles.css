@@ -1404,24 +1404,11 @@ textarea::placeholder {
 
 .card-list { display: flex; flex-direction: column; }
 
-/* ---- Icon buttons ---- */
-.icon-btn {
-    background: none;
-    border: 1.5px solid var(--grey-200);
-    border-radius: var(--radius-sm);
-    min-width: 44px;
-    min-height: 44px;
-    padding: 6px;
-    cursor: pointer;
-    color: var(--grey-600);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all var(--transition);
-}
-.icon-btn:hover  { background: var(--grey-100); }
-.icon-btn.danger { color: var(--red); border-color: #ffcdd2; }
-.icon-btn.danger:hover { background: #ffebee; }
+/* ---- Icon buttons ----
+   Was .icon-btn, a grey outline. Renamed to .btn-icon and restyled to Garden's
+   green tint on 2026-08-10 so the two apps stop having two names and two looks
+   for one control. The rule now lives in shared/components.css, including the
+   .danger variant this file used to own. */
 
 /* ---- Outcome chips ---- */
 .outcome-chip {

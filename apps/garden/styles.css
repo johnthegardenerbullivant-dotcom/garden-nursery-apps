@@ -114,23 +114,7 @@ button.card-badge:hover {
    Deliberately 36 rather than 44 — at 44 it is no longer visibly smaller than
    the primary button it sits next to. */
 .btn-sm { min-height: 36px; padding: 5px 12px; font-size: 0.8rem; }
-.btn-icon {
-    min-width: 44px;
-    min-height: 44px;
-    padding: 8px;
-    border-radius: var(--radius-sm);
-    background: var(--green-100);
-    color: var(--green-800);
-    border: none;
-    cursor: pointer;
-    transition: all var(--transition);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-    -webkit-tap-highlight-color: transparent;
-}
-.btn-icon:hover { background: var(--green-300); }
+/* .btn-icon moved to shared/components.css on 2026-08-10 — both apps use it. */
 
 /* --- Plant Detail Page --- */
 .detail-section {
