@@ -520,7 +520,7 @@ function buildAdminHTML(counts) {
 
         <!-- Danger zone -->
         <div class="detail-section" style="border:1.5px solid var(--grey-200);">
-            <div class="detail-section-title" style="color:var(--red)">Danger Zone</div>
+            <div class="detail-section-title danger">Danger Zone</div>
             <p style="font-size:0.92rem;color:var(--grey-600);margin-bottom:14px;line-height:1.5;">
                 Permanently delete <strong>all</strong> plants, areas, locations, and photo records from
                 Firestore. This cannot be undone. Download a backup first.

@@ -9,14 +9,7 @@
 
 
 /* --- Cards --- */
-.card {
-    background: var(--white);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-    overflow: hidden;
-    transition: box-shadow var(--transition), transform var(--transition);
-    cursor: pointer;
-}
+/* .card moved to shared/components.css on 2026-08-10. */
 
 
 
@@ -1135,17 +1128,9 @@ textarea::placeholder {
     margin-top: 2px;
 }
 
-/* ---- Card items (generic clickable card) ---- */
-.card-item {
-    background: var(--white);
-    border-radius: var(--radius-md);
-    padding: 12px 14px;
-    cursor: pointer;
-    box-shadow: var(--shadow-sm);
-    border: 1.5px solid var(--grey-200);
-    transition: border-color var(--transition), box-shadow var(--transition);
-}
-.card-item:active { border-color: var(--green-300); box-shadow: var(--shadow-md); }
+/* .card-item moved to shared/components.css on 2026-08-10 and restyled to
+   Garden's card look — the grey border is gone and it lifts on hover instead of
+   tinting a border on tap. */
 
 /* ---- Dashboard ---- */
 .dashboard-section { margin-bottom: 24px; }
@@ -1387,6 +1372,9 @@ textarea::placeholder {
 .admin-section { margin-bottom: 28px; }
 .section-hint { font-size: 0.82rem; color: var(--grey-600); margin: 2px 0 12px; line-height: 1.5; }
 .section-header-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+/* The heading's own bottom margin is wrong inside a flex row — it was being
+   cancelled by an inline style="margin:0" on all seven call sites. */
+.section-header-row .section-heading { margin: 0; }
 
 .admin-card {
     background: var(--white);

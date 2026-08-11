@@ -41,6 +41,18 @@
     --grey-800:  #343a40;
     --white:     #ffffff;
 
+    /* Spacing scale, added 2026-08-10. The values already dominate the two
+       stylesheets — 4/6/8/12/16/24 account for most of the spacing in both — so
+       this names what is already there rather than imposing a new rhythm. Use
+       these for new work; existing literals are not worth churning. */
+    --sp-1: 4px;
+    --sp-2: 6px;
+    --sp-3: 8px;
+    --sp-4: 12px;
+    --sp-5: 16px;
+    --sp-6: 24px;
+    --sp-7: 32px;
+
     --header-h:  60px;
     --nav-h:     68px;
     --radius-sm: 8px;

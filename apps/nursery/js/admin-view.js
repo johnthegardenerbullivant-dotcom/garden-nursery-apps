@@ -254,7 +254,7 @@ async function renderAdmin(container) {
             <!-- User Management -->
             <section class="admin-section">
                 <div class="section-header-row">
-                    <h2 class="section-heading" style="margin:0;">👥 User Management</h2>
+                    <h2 class="section-heading">👥 User Management</h2>
                 </div>
                 <p class="section-hint" style="margin-bottom:10px;">
                     Roles apply to both <strong>Garden Management</strong> and
@@ -266,7 +266,7 @@ async function renderAdmin(container) {
             <!-- Propagation Locations -->
             <section class="admin-section">
                 <div class="section-header-row">
-                    <h2 class="section-heading" style="margin:0;">📍 Propagation Locations</h2>
+                    <h2 class="section-heading">📍 Propagation Locations</h2>
                     <button class="btn btn-sm btn-primary" id="add-location-btn">+ Add</button>
                 </div>
                 <p class="section-hint">Where do you propagate? E.g. Heated Propagator, Cold Frame, South Windowsill.</p>
@@ -286,7 +286,7 @@ async function renderAdmin(container) {
             <!-- Wishlist / Ideas -->
             <section class="admin-section">
                 <div class="section-header-row">
-                    <h2 class="section-heading" style="margin:0;">💡 App Wishlist & Ideas</h2>
+                    <h2 class="section-heading">💡 App Wishlist & Ideas</h2>
                     <button class="btn btn-sm btn-primary" id="add-wish-btn">+ Add</button>
                 </div>
                 <p class="section-hint">Record feature ideas, improvements, or things you'd like to change about this app.</p>

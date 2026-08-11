@@ -13,8 +13,35 @@
    never in a copy.
    ============================================================= */
 
+/* --- Cards ---
+   .card is the tile: no padding of its own, wraps a .card-body.
+   .card-item is the same card in row form, carrying its own padding because a
+   list row has no inner body element.
+
+   Unified 2026-08-10. Nursery's .card-item used to have a 1.5px grey border and
+   tinted that border green on tap, while Garden's .card had no border and lifted
+   on hover. Two looks for one idea. Garden's won — the shadow already separates
+   a card from the page, so the border was doing the same job twice. */
+.card {
+    background: var(--white);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: box-shadow var(--transition), transform var(--transition);
+    cursor: pointer;
+}
 .card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .card:active { transform: translateY(0); }
+.card-item {
+    background: var(--white);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: box-shadow var(--transition), transform var(--transition);
+}
+.card-item:hover  { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.card-item:active { transform: translateY(0); }
 .card-title {
     font-size: 1rem;
     font-weight: 600;
