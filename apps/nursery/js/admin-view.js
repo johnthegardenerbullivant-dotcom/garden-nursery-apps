@@ -435,10 +435,10 @@ function locationCard(loc) {
                     ${loc.description ? `<div class="admin-card-desc">${escHtml(loc.description)}</div>` : ''}
                 </div>
                 <div class="admin-card-actions">
-                    <button class="icon-btn location-edit-btn" title="Edit">
+                    <button class="btn-icon location-edit-btn" title="Edit">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
-                    <button class="icon-btn danger location-delete-btn" title="Delete">
+                    <button class="btn-icon danger location-delete-btn" title="Delete">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                     </button>
                 </div>
@@ -558,10 +558,10 @@ function wishCard(item) {
                     ${item.description ? `<div class="admin-card-desc" style="color:var(--grey-600);font-size:0.85rem;">${escHtml(item.description)}</div>` : ''}
                 </div>
                 <div class="admin-card-actions">
-                    <button class="icon-btn wish-edit-btn" title="Edit">
+                    <button class="btn-icon wish-edit-btn" title="Edit">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
-                    <button class="icon-btn danger wish-delete-btn" title="Delete">
+                    <button class="btn-icon danger wish-delete-btn" title="Delete">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                     </button>
                 </div>

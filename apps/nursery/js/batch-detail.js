@@ -49,10 +49,10 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
     const reload   = () => renderBatchDetail(container, headerActionEl, backBtn, id);
 
     // Header action buttons
-    const editBtn   = isAtLeast('editor') ? `<button class="icon-btn" id="edit-batch-btn" title="Edit batch">
+    const editBtn   = isAtLeast('editor') ? `<button class="btn-icon" id="edit-batch-btn" title="Edit batch">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
     </button>` : '';
-    const deleteBtn = isAtLeast('admin') ? `<button class="icon-btn danger" id="delete-batch-btn" title="Delete batch">
+    const deleteBtn = isAtLeast('admin') ? `<button class="btn-icon danger" id="delete-batch-btn" title="Delete batch">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
     </button>` : '';
     headerActionEl.innerHTML = `<div style="display:flex;gap:6px;">${editBtn}${deleteBtn}</div>`;
@@ -458,12 +458,12 @@ function logEntryCard(log, batch) {
         </div>` : '';
 
     const editBtn = isAtLeast('editor') ? `
-        <button class="icon-btn log-edit-btn" title="Edit entry">
+        <button class="btn-icon log-edit-btn" title="Edit entry">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>` : '';
 
     const deleteBtn = isAtLeast('admin') ? `
-        <button class="icon-btn danger log-delete-btn" title="Delete entry">
+        <button class="btn-icon danger log-delete-btn" title="Delete entry">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         </button>` : '';
 
