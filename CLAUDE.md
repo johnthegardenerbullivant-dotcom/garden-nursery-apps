@@ -59,7 +59,10 @@ garden-apps/
 │   └── cors.json
 │
 ├── docs/                     ← design notes, specs, the restructure plan
-└── tools/check-drift.mjs     ← guards the deliberately-duplicated files
+└── tools/
+    ├── check-drift.mjs       ← guards the deliberately-duplicated files
+    └── find-dead-css.mjs     ← reports unused class selectors; understands
+                                 runtime-built names like `stage-${…}`
 ```
 
 **Private data lives outside the repo** at `C:\Users\johnb\Documents\Claude\Garden Data\` —
