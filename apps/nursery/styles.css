@@ -20,7 +20,7 @@
 .card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .card:active { transform: translateY(0); }
 
-.card-body { padding: 14px 16px; }
+
 .card-title {
     font-size: 1rem;
     font-weight: 600;
@@ -37,60 +37,23 @@
     margin-top: 8px;
     flex-wrap: wrap;
 }
-.card-badge {
-    font-size: 0.75rem;
-    background: var(--green-100);
-    color: var(--green-800);
-    padding: 2px 8px;
-    border-radius: 100px;
-    font-weight: 500;
-}
-button.card-badge {
-    border: none;
-    font-family: inherit;
-    cursor: pointer;
-    transition: background var(--transition), color var(--transition);
-}
-button.card-badge:hover {
-    background: var(--green-400);
-    color: var(--green-900);
-}
+
+
+
 
 /* --- Plant cards --- */
-.plant-card-banner {
-    height: 6px;
-    background: linear-gradient(90deg, var(--green-700), var(--green-500));
-}
+
 
 /* --- List layouts --- */
-.list-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-    gap: 12px;
-}
-.list-title {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--grey-800);
-}
-.list-count {
-    font-size: 0.85rem;
-    color: var(--grey-600);
-}
 
-.card-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 10px;
-}
 
-@media (min-width: 600px) {
-    .card-grid { grid-template-columns: repeat(2, 1fr); }
-}
+
+
+
+
+
 @media (min-width: 900px) {
-    .card-grid { grid-template-columns: repeat(3, 1fr); }
+    
     .app-main { padding: 24px 32px; max-width: 1100px; margin-left: auto; margin-right: auto; }
 }
 
@@ -181,31 +144,14 @@ button.card-badge:hover {
     color: var(--grey-800);
 }
 .btn-secondary:hover { background: var(--grey-200); }
-.btn-danger {
-    background: transparent;
-    color: var(--red);
-    border: 1.5px solid var(--red);
-}
-.btn-danger:hover { background: var(--red); color: var(--white); }
+
+
 /* Secondary inline action, e.g. "+ Add entry" beside a section heading.
    Deliberately 36 rather than 44 — at 44 it is no longer visibly smaller than
    the primary button it sits next to. */
 .btn-sm { min-height: 36px; padding: 5px 12px; font-size: 0.8rem; }
-.btn-icon {
-    padding: 8px;
-    border-radius: var(--radius-sm);
-    background: var(--green-100);
-    color: var(--green-800);
-    border: none;
-    cursor: pointer;
-    transition: all var(--transition);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-    -webkit-tap-highlight-color: transparent;
-}
-.btn-icon:hover { background: var(--green-300); }
+
+
 .fab {
     position: fixed;
     bottom: calc(var(--nav-h) + 16px);
@@ -230,71 +176,23 @@ button.card-badge:hover {
 .fab:active { transform: scale(0.97); }
 
 /* --- Plant Detail Page --- */
-.detail-section {
-    background: var(--white);
-    border-radius: var(--radius-md);
-    padding: 16px;
-    margin-bottom: 12px;
-    box-shadow: var(--shadow-sm);
-}
-.detail-section-title {
-    font-size: 0.78rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--green-700);
-    margin-bottom: 10px;
-}
-.botanical-name {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--grey-800);
-    line-height: 1.4;
-}
-.botanical-name em { font-style: italic; }
+
+
+
+
 .common-name {
     font-size: 0.9rem;
     color: var(--grey-600);
     margin-top: 2px;
 }
-.plant-detail-header {
-    padding: 8px 0 10px;
-}
-.plant-detail-title {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--green-800);
-    line-height: 1.4;
-}
-.plant-detail-title em { font-style: italic; }
-.plant-detail-subtitle {
-    font-size: 0.82rem;
-    color: var(--grey-600);
-    margin-top: 3px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0;
-}
-.field-row {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--grey-100);
-}
-.field-row:last-child { border-bottom: none; }
-.field-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--grey-600);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-.field-value {
-    font-size: 0.95rem;
-    color: var(--grey-800);
-    white-space: pre-wrap;
-}
+
+
+
+
+
+
+
+
 
 /* --- Photo Gallery --- */
 .photo-grid {
@@ -364,28 +262,9 @@ button.card-badge:hover {
 }
 
 /* Keep .photo-upload-btn for modal thumbnail grids */
-.photo-upload-btn {
-    aspect-ratio: 1;
-    border-radius: var(--radius-sm);
-    border: 2px dashed var(--grey-300);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    cursor: pointer;
-    color: var(--grey-400);
-    font-size: 0.75rem;
-    transition: all var(--transition);
-    background: none;
-    font-family: var(--font);
-}
-.photo-upload-btn:hover {
-    border-color: var(--green-500);
-    color: var(--green-700);
-    background: var(--green-50);
-}
-.photo-upload-btn .plus { font-size: 1.5rem; line-height: 1; }
+
+
+
 
 /* --- Compact upload strip (below carousel / thumbnail grid) --- */
 .photo-upload-strip {
@@ -545,12 +424,7 @@ button.card-badge:hover {
     height: 6px;
     overflow: hidden;
 }
-.upload-progress-bar {
-    height: 100%;
-    background: var(--green-500);
-    border-radius: 100px;
-    transition: width 0.3s ease;
-}
+
 /* Photo upload progress (log/batch inline upload) */
 .photo-upload-bar {
     height: 6px;
@@ -573,38 +447,13 @@ button.card-badge:hover {
 }
 
 /* --- Instance rows --- */
-.instance-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--grey-100);
-    gap: 12px;
-}
-.instance-row:last-child { border-bottom: none; }
-.instance-info { flex: 1; }
-.instance-area-name {
-    font-weight: 600;
-    font-size: 0.95rem;
-}
-.instance-detail {
-    font-size: 0.8rem;
-    color: var(--grey-600);
-    margin-top: 2px;
-}
-.instance-delete-btn {
-    background: none;
-    border: none;
-    color: var(--grey-400);
-    cursor: pointer;
-    font-size: 1rem;
-    padding: 4px;
-    border-radius: var(--radius-sm);
-    transition: color var(--transition);
-    display: flex;
-    align-items: center;
-}
-.instance-delete-btn:hover { color: var(--red); }
+
+
+
+
+
+
+
 
 /* --- Empty state --- */
 .empty-state {
@@ -617,7 +466,7 @@ button.card-badge:hover {
     gap: 12px;
     color: var(--grey-600);
 }
-.empty-state-icon { font-size: 3rem; }
+
 .empty-state h3 { font-size: 1.1rem; color: var(--grey-800); }
 .empty-state p { font-size: 0.9rem; max-width: 280px; }
 
@@ -702,7 +551,8 @@ button.card-badge:hover {
     text-transform: none;
     letter-spacing: 0;
 }
-.form-input, .form-textarea, .form-select {
+
+.form-input {
     width: 100%;
     padding: 10px 12px;
     border: 1.5px solid var(--grey-200);
@@ -714,7 +564,8 @@ button.card-badge:hover {
     outline: none;
     transition: border-color var(--transition), box-shadow var(--transition);
 }
-.form-input:focus, .form-textarea:focus, .form-select:focus {
+
+.form-input:focus {
     border-color: var(--green-500);
     box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.15);
 }
@@ -730,7 +581,7 @@ textarea::placeholder {
     color: var(--grey-500);
     opacity: 1;
 }
-.form-textarea { min-height: 80px; resize: vertical; }
+
 .form-hint {
     font-size: 0.78rem;
     color: var(--grey-400);
@@ -761,17 +612,7 @@ textarea::placeholder {
 .form-label .required { color: var(--red); margin-left: 2px; font-weight: 700; }
 
 /* ---- Phone only: stack task-row chips onto a second line ---- */
-@media (max-width: 599px) {
-    .task-row-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 4px;
-    }
-    .task-row-left  { width: 100%; min-width: 0; }
-    .task-row-right { width: 100%; flex-wrap: wrap; flex-shrink: 1; }
-    /* Allow the title to wrap rather than be cut off */
-    .task-title-text { white-space: normal; }
-}
+
 
 /* --- Date picker widget --- */
 .date-picker-wrap {
@@ -833,165 +674,34 @@ textarea::placeholder {
 }
 
 /* --- Area detail plant photo gallery --- */
-.plant-photo-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-top: 8px;
-}
-.plant-photo-card {
-    aspect-ratio: 1;
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-    position: relative;
-    cursor: pointer;
-}
-.plant-photo-card img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-    transition: transform var(--transition);
-}
-.plant-photo-card:hover img { transform: scale(1.05); }
-.plant-photo-caption {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 18px 7px 6px;
-    background: linear-gradient(transparent, rgba(0,0,0,0.62));
-    color: #fff;
-    font-size: 0.68rem;
-    font-style: italic;
-    line-height: 1.3;
-}
+
+
+
+
+
 
 /* --- Garden view --- */
-.area-section {
-    background: var(--white);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    margin-bottom: 12px;
-    box-shadow: var(--shadow-sm);
-}
-.area-section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 16px;
-    background: var(--green-50);
-    border-bottom: 1px solid transparent;
-    cursor: pointer;
-    user-select: none;
-}
-.area-section.expanded .area-section-header {
-    border-bottom-color: var(--green-100);
-}
-.area-section-header:hover {
-    background: var(--green-100);
-}
-.area-header-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-    flex: 1;
-}
-.area-header-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-shrink: 0;
-    margin-left: 8px;
-}
-.area-chevron {
-    font-size: 0.65rem;
-    color: var(--green-600);
-    transition: transform 0.2s ease;
-    flex-shrink: 0;
-}
-.area-section.expanded .area-chevron {
-    transform: rotate(90deg);
-}
-.area-name-block {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-.area-section-header h3 {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--green-800);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin: 0;
-}
-.area-plant-count {
-    font-size: 0.75rem;
-    color: var(--green-600);
-    font-weight: 500;
-    white-space: nowrap;
-    margin-top: 2px;
-}
-.area-open-btn {
-    background: none;
-    border: 1px solid var(--green-300);
-    border-radius: var(--radius-sm);
-    color: var(--green-700);
-    font-size: 0.9rem;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: background var(--transition), color var(--transition);
-}
-.area-open-btn:hover {
-    background: var(--green-600);
-    color: var(--white);
-    border-color: var(--green-600);
-}
-.area-plants-list {
-    display: none;
-    padding: 8px 0;
-}
-.area-section.expanded .area-plants-list {
-    display: block;
-}
-.area-plant-row {
-    display: flex;
-    align-items: center;
-    padding: 9px 16px;
-    gap: 10px;
-    cursor: pointer;
-    transition: background var(--transition);
-    border-bottom: 1px solid var(--grey-50);
-}
-.area-plant-row:last-child { border-bottom: none; }
-.area-plant-row:hover { background: var(--green-50); }
-.area-plant-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--green-500);
-    flex-shrink: 0;
-}
-.area-plant-name {
-    flex: 1;
-    font-size: 0.9rem;
-    color: var(--grey-800);
-}
-.area-plant-qty {
-    font-size: 0.78rem;
-    color: var(--grey-500);
-    background: var(--grey-100);
-    padding: 2px 6px;
-    border-radius: 100px;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* --- Toast --- */
 .toast {
@@ -1032,28 +742,13 @@ textarea::placeholder {
     justify-content: center;
     padding: 24px;
 }
-.config-box {
-    background: var(--white);
-    border-radius: var(--radius-lg);
-    padding: 32px 28px;
-    max-width: 440px;
-    width: 100%;
-    text-align: center;
-    box-shadow: var(--shadow-lg);
-}
-.config-logo { font-size: 3rem; margin-bottom: 12px; }
-.config-box h2 { font-size: 1.4rem; margin-bottom: 10px; color: var(--grey-800); }
-.config-box p { font-size: 0.95rem; color: var(--grey-600); line-height: 1.6; margin-bottom: 12px; }
-.config-steps {
-    background: var(--green-50);
-    border-radius: var(--radius-sm);
-    padding: 14px 16px;
-    margin: 16px 0;
-    text-align: left;
-    border-left: 4px solid var(--green-500);
-}
-.config-steps p { font-size: 0.9rem; margin-bottom: 8px; }
-.config-steps p:last-child { margin-bottom: 0; }
+
+
+
+
+
+
+
 code {
     background: var(--grey-100);
     padding: 2px 6px;
@@ -1062,113 +757,49 @@ code {
     font-size: 0.85em;
     color: var(--green-800);
 }
-.config-help { font-size: 0.85rem !important; color: var(--grey-400) !important; }
+
 
 /* --- Detail header area --- */
-.plant-hero {
-    background: linear-gradient(135deg, var(--green-800), var(--green-600));
-    color: var(--white);
-    padding: 20px 16px;
-    margin: -16px -16px 16px;
-    text-align: center;
-}
-.plant-hero .botanical-name { color: var(--white); font-size: 1.3rem; }
-.plant-hero .common-name { color: var(--green-200, #b7e4c7); }
-.plant-hero .specimen-count {
-    margin-top: 10px;
-    display: inline-block;
-    background: rgba(255,255,255,0.2);
-    padding: 3px 12px;
-    border-radius: 100px;
-    font-size: 0.8rem;
-}
+
+
+
+
 
 /* --- Scrollable select in form --- */
-.area-checkbox-list {
-    border: 1.5px solid var(--grey-200);
-    border-radius: var(--radius-sm);
-    max-height: 160px;
-    overflow-y: auto;
-}
-.area-checkbox-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--grey-100);
-    cursor: pointer;
-    transition: background var(--transition);
-}
-.area-checkbox-item:last-child { border-bottom: none; }
-.area-checkbox-item:hover { background: var(--green-50); }
-.area-checkbox-item input { width: 16px; height: 16px; accent-color: var(--green-700); }
+
+
+
+
+
 
 /* Utility */
-.text-muted { color: var(--grey-600); }
-.mt-1 { margin-top: 4px; }
-.mt-2 { margin-top: 8px; }
-.mt-3 { margin-top: 12px; }
-.flex-between { display: flex; align-items: center; justify-content: space-between; }
-.gap-2 { gap: 8px; }
+
+
+
+
+
+
 
 /* =============================================
    ADMIN VIEW
    ============================================= */
-.admin-stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-    margin-bottom: 4px;
-}
-.admin-stat-tile {
-    background: var(--grey-50);
-    border: 1px solid var(--grey-200);
-    border-radius: 12px;
-    padding: 12px 8px;
-    text-align: center;
-}
-.admin-stat-icon  { font-size: 1.4rem; margin-bottom: 4px; }
-.admin-stat-count { font-size: 1.4rem; font-weight: 700; color: var(--green-800); line-height: 1.1; }
-.admin-stat-label { font-size: 0.72rem; color: var(--grey-500); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
 
-.admin-restore-options {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-.admin-radio-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 12px;
-    border: 1.5px solid var(--grey-200);
-    border-radius: 10px;
-    cursor: pointer;
-    transition: border-color var(--transition), background var(--transition);
-}
-.admin-radio-row:has(input:checked) {
-    border-color: var(--green-600);
-    background: var(--green-50);
-}
-.admin-radio-row input[type="radio"] {
-    margin-top: 3px;
-    width: 16px;
-    height: 16px;
-    accent-color: var(--green-700);
-    flex-shrink: 0;
-}
+
+
+
+
+
+
+
+
+
 
 /* =============================================
    TASKS — Release 2
    ============================================= */
 
 /* --- Filter chips --- */
-.filter-chips {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 14px;
-}
+
 .filter-chip {
     display: inline-flex;
     align-items: center;
@@ -1202,241 +833,74 @@ code {
     white-space: nowrap;
     letter-spacing: 0.01em;
 }
-.status-badge.status-todo        { background: var(--grey-100); color: var(--grey-600); }
-.status-badge.status-in-progress { background: #fff3e0; color: #c47a1e; }
-.status-badge.status-completed   { background: var(--green-100); color: var(--green-800); }
-.status-badge.status-skipped     { background: var(--grey-100); color: var(--grey-500); font-style: italic; }
+
+
+
+
 
 /* --- Recurring task badge --- */
-.recurring-badge {
-    font-size: 0.75rem;
-    margin-right: 2px;
-    opacity: 0.75;
-}
-.task-skip-btn { border-left: 1.5px solid var(--grey-200); margin-left: 2px; }
+
+
 
 /* --- Suggestion (wishlist) list --- */
-.suggestion-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 9px 4px;
-    border-bottom: 1px solid var(--grey-100);
-}
-.suggestion-item:last-child { border-bottom: none; }
-.suggestion-label {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    flex: 1;
-    cursor: pointer;
-    font-size: 0.92rem;
-    line-height: 1.45;
-}
-.suggestion-label input[type="checkbox"] {
-    margin-top: 2px;
-    flex-shrink: 0;
-    accent-color: var(--green-600);
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-}
-.suggestion-item.done .suggestion-text {
-    text-decoration: line-through;
-    color: var(--grey-400);
-}
-.suggestion-delete {
-    background: none;
-    border: none;
-    color: var(--grey-300);
-    cursor: pointer;
-    font-size: 0.8rem;
-    padding: 2px 4px;
-    flex-shrink: 0;
-    line-height: 1;
-    transition: color var(--transition);
-}
-.suggestion-delete:hover { color: var(--red); }
+
+
+
+
+
+
+
 
 /* --- Priority dots --- */
-.priority-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    display: inline-block;
-}
-.priority-dot.priority-high   { background: var(--red); }
-.priority-dot.priority-normal { background: var(--grey-400); }
-.priority-dot.priority-low    { background: var(--grey-200); border: 1.5px solid var(--grey-300); }
+
+
+
+
 
 /* --- Task rows (within accordion sections) --- */
-.task-row {
-    border-bottom: 1px solid var(--grey-50);
-    transition: background var(--transition);
-}
-.task-row:last-child { border-bottom: none; }
 
-.task-row-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 16px;
-    cursor: pointer;
-    gap: 10px;
-    transition: background var(--transition);
-    user-select: none;
-}
-.task-row-header:hover { background: var(--green-50); }
 
-.task-row-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-    min-width: 0;
-}
-.task-title-text {
-    font-size: 0.92rem;
-    color: var(--grey-800);
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.task-row.expanded .task-title-text { white-space: normal; }
 
-.task-row-right {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-}
-.task-due {
-    font-size: 0.75rem;
-    color: var(--grey-500);
-    white-space: nowrap;
-}
-.task-due.overdue { color: var(--red); font-weight: 600; }
+
+
+
+
+
+
+
+
+
+
 
 /* Task row body (expanded content) */
-.task-row-body {
-    display: none;
-    padding: 0 16px 14px;
-    border-top: 1px solid var(--grey-100);
-    margin-top: 0;
-}
-.task-row.expanded .task-row-body { display: block; }
 
-.task-description {
-    font-size: 0.88rem;
-    color: var(--grey-600);
-    line-height: 1.55;
-    margin: 10px 0 10px;
-}
 
-.task-plants {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 12px;
-    font-size: 0.82rem;
-}
-.task-plants-label { color: var(--grey-500); font-weight: 600; }
-.task-plant-tag {
-    background: var(--green-50);
-    color: var(--green-800);
-    border: 1px solid var(--green-200);
-    border-radius: 100px;
-    padding: 2px 9px;
-    font-size: 0.78rem;
-    font-style: italic;
-}
 
-.task-completed-info {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    font-size: 0.8rem;
-    color: var(--green-700);
-    margin-bottom: 10px;
-    background: var(--green-50);
-    padding: 8px 10px;
-    border-radius: var(--radius-sm);
-}
-.task-completion-note-text {
-    color: var(--grey-600);
-    font-style: italic;
-}
+
+
+
+
+
+
+
+
 
 /* Quick status-change buttons */
-.task-status-btns {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin: 12px 0 10px;
-}
-.task-status-btn {
-    padding: 4px 12px;
-    border-radius: 100px;
-    border: 1.5px solid var(--grey-200);
-    background: var(--white);
-    color: var(--grey-600);
-    font-size: 0.78rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all var(--transition);
-    font-family: var(--font);
-    -webkit-tap-highlight-color: transparent;
-}
-.task-status-btn:hover { border-color: var(--green-400); }
-.task-status-btn.active {
-    background: var(--green-700);
-    border-color: var(--green-700);
-    color: var(--white);
-}
-.task-status-btn.active[data-status="in-progress"] { background: #c47a1e; border-color: #c47a1e; }
-.task-status-btn.active[data-status="todo"] { background: var(--grey-500); border-color: var(--grey-500); }
 
-.task-completion-note-wrap { margin-top: 8px; }
 
-.task-row-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-    flex-wrap: wrap;
-}
+
+
+
+
+
+
+
+
 
 /* --- View toggle (Plants / Tasks) in area detail --- */
-.view-toggle {
-    display: flex;
-    background: var(--grey-100);
-    border-radius: var(--radius-sm);
-    padding: 3px;
-    gap: 3px;
-    margin-bottom: 16px;
-    width: fit-content;
-}
-.view-toggle-btn {
-    padding: 6px 18px;
-    border: none;
-    border-radius: calc(var(--radius-sm) - 2px);
-    background: transparent;
-    color: var(--grey-600);
-    font-size: 0.88rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all var(--transition);
-    font-family: var(--font);
-    -webkit-tap-highlight-color: transparent;
-}
-.view-toggle-btn.active {
-    background: var(--white);
-    color: var(--green-800);
-    font-weight: 600;
-    box-shadow: var(--shadow-sm);
-}
+
+
+
 
 /* --- Nav badge (active task count) --- */
 .nav-badge {
@@ -1647,33 +1111,14 @@ code {
 }
 
 /* --- Task assignment block in form --- */
-.task-assignment-block {
-    background: var(--green-50);
-    border: 1.5px solid var(--green-100);
-    border-radius: var(--radius-sm);
-    padding: 12px 14px;
-    margin-bottom: 10px;
-}
-.assignment-plant-list { max-height: 130px; }
+
+
 
 /* --- Area tag shown on task rows in By Status view --- */
-.task-area-tag {
-    font-size: 0.72rem;
-    background: var(--grey-100);
-    color: var(--grey-600);
-    border-radius: 4px;
-    padding: 2px 7px;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
+
 
 /* --- Admin stats 3-column layout for 6 tiles --- */
-.admin-stats-6 {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin-bottom: 4px;
-}
+
 
 /* ============================================================
    LOGIN SCREEN
@@ -1802,7 +1247,7 @@ code {
     }
 
     /* Cards: a touch more padding */
-    .card-body { padding: 16px 18px; }
+    
 
     /* Search bar: taller input */
     .search-input {
@@ -1811,9 +1256,8 @@ code {
     }
 
     /* Forms: larger inputs and labels */
-    .form-input,
-    .form-textarea,
-    .form-select {
+    
+.form-input {
         padding: 12px 14px;
         font-size: 1rem;
     }
@@ -1822,19 +1266,19 @@ code {
     /* Bigger tap targets for action buttons */
     .btn        { padding: 11px 20px; font-size: 0.95rem; }
     .btn-sm     { padding:  7px 14px; font-size: 0.84rem; }
-    .btn-icon   { padding: 10px; font-size: 1.2rem; }
+    
 
     /* FAB */
     .fab { width: 62px; height: 62px; font-size: 1.8rem; }
 
     /* Slightly taller task / area rows for easier tapping */
-    .task-row-header   { padding: 13px 18px; }
-    .area-plant-row    { padding: 12px 18px; }
-    .area-section-header { padding: 16px 18px; }
+    
+    
+    
 
 
     /* Detail section padding */
-    .detail-section { padding: 18px; }
+    
 
     /* Bottom nav badge position adjust */
     .nav-badge { top: 5px; }
@@ -1845,62 +1289,28 @@ code {
    ============================================= */
 
 /* --- Overdue filter chip --- */
-.filter-chip--overdue {
-    border-color: var(--red);
-    color: var(--red);
-}
-.filter-chip--overdue:hover { border-color: var(--red); background: #fff0f0; }
-.filter-chip--overdue.active {
-    background: var(--red);
-    border-color: var(--red);
-    color: #fff;
-}
+
+
+
 
 /* --- Overdue section header in By Status view --- */
-.overdue-section .area-section-header {
-    background: #fff5f5;
-    border-left: 3px solid var(--red);
-}
-.overdue-section .area-section-header h3 { color: var(--red); }
+
+
 
 /* --- Area card task badge --- */
-.area-task-badge {
-    display: inline-block;
-    font-size: 0.75rem;
-    padding: 2px 8px;
-    border-radius: 100px;
-    background: var(--green-100);
-    color: var(--green-800);
-    font-weight: 500;
-}
-.area-task-badge.overdue {
-    background: #fff0f0;
-    color: var(--red);
-    font-weight: 600;
-}
+
+
 
 /* --- Plant card location line --- */
-.plant-card-location {
-    display: block;
-    font-size: 0.78rem;
-    color: var(--grey-500);
-    margin-top: 6px;
-}
-.plant-card-location--unplaced {
-    color: var(--grey-300);
-    font-style: italic;
-}
+
+
 
 /* =============================================
    OVERVIEW DASHBOARD
    ============================================= */
 
 /* Stats row */
-.overview-stats {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-}
+
 .overview-stat {
     flex: 1;
     text-align: center;
@@ -1912,19 +1322,8 @@ code {
 }
 .overview-stat[data-nav] { cursor: pointer; }
 .overview-stat[data-nav]:hover { background: var(--green-100); }
-.overview-stat-value {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--green-700);
-    line-height: 1;
-    margin-bottom: 4px;
-}
-.overview-stat-label {
-    font-size: 0.7rem;
-    color: var(--grey-600);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
+
+
 
 /* Section containers */
 .overview-section {
@@ -1934,148 +1333,38 @@ code {
     padding: 14px 16px;
     margin-bottom: 14px;
 }
-.overview-section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-}
-.overview-section-title {
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: var(--grey-800);
-}
-.overview-section-link {
-    font-size: 0.78rem;
-    color: var(--green-700);
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 2px 0;
-    font-family: inherit;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-}
-.overview-section-link:hover { color: var(--green-900); }
+
+
+
+
 
 /* Task rows */
-.overview-task-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--grey-100);
-    cursor: pointer;
-    transition: background var(--transition);
-    margin: 0 -4px;
-    padding-left: 4px;
-    padding-right: 4px;
-    border-radius: 4px;
-}
-.overview-task-row:last-child { border-bottom: none; }
-.overview-task-row:hover { background: var(--grey-50); }
-.overview-task-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-}
-.overview-task-right {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-}
-.overview-task-title {
-    font-size: 0.88rem;
-    color: var(--grey-800);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.overview-task-due {
-    font-size: 0.75rem;
-    color: var(--grey-500);
-    white-space: nowrap;
-}
-.overview-task-due.overdue { color: var(--red); font-weight: 600; }
-.overview-overdue-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--red);
-    flex-shrink: 0;
-}
-.overview-pending-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--green-400);
-    flex-shrink: 0;
-}
+
+
+
+
+
+
+
+
+
+
 
 /* Area chips */
-.overview-area-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-.overview-area-chip {
-    padding: 6px 14px;
-    font-size: 0.83rem;
-    border-radius: 100px;
-    border: 1.5px solid var(--green-300);
-    background: var(--green-50);
-    color: var(--green-800);
-    cursor: pointer;
-    font-family: inherit;
-    transition: background var(--transition), border-color var(--transition);
-}
-.overview-area-chip:hover {
-    background: var(--green-100);
-    border-color: var(--green-500);
-}
+
+
+
 
 /* Recent plant rows */
-.overview-plant-row {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    padding: 7px 0;
-    border-bottom: 1px solid var(--grey-100);
-    cursor: pointer;
-    transition: background var(--transition);
-    margin: 0 -4px;
-    padding-left: 4px;
-    padding-right: 4px;
-    border-radius: 4px;
-}
-.overview-plant-row:last-child { border-bottom: none; }
-.overview-plant-row:hover { background: var(--grey-50); }
-.overview-plant-name {
-    font-size: 0.88rem;
-    color: var(--grey-800);
-    font-style: italic;
-}
-.overview-plant-common {
-    font-size: 0.78rem;
-    color: var(--grey-500);
-    font-style: normal;
-}
+
+
+
+
+
 
 /* Empty / more text */
-.overview-empty {
-    font-size: 0.85rem;
-    color: var(--grey-400);
-    text-align: center;
-    padding: 8px 0;
-}
-.overview-more {
-    font-size: 0.78rem;
-    color: var(--grey-400);
-    text-align: right;
-    margin-top: 6px;
-    margin-bottom: 0;
-}
+
+
 
 /* =============================================
    IRRIGATION — Nav adjustment for 6 tabs
@@ -2092,810 +1381,244 @@ code {
 /* =============================================
    IRRIGATION — Overview banner
    ============================================= */
-.irr-overview-banner {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 10px 16px 4px;
-    padding: 13px 14px;
-    background: #eff6ff;
-    border: 1.5px solid #bfdbfe;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    text-decoration: none;
-    transition: background var(--transition);
-}
-.irr-overview-banner:hover  { background: #dbeafe; }
-.irr-overview-banner:active { background: #bfdbfe; }
-.irr-overview-banner.all-done {
-    background: var(--green-50);
-    border-color: var(--green-300);
-}
-.irr-banner-icon { font-size: 1.4rem; line-height: 1; }
-.irr-banner-body { flex: 1; }
-.irr-banner-body strong {
-    display: block;
-    font-size: 0.9rem;
-    color: var(--grey-800);
-    font-weight: 600;
-}
-.irr-banner-sub {
-    display: block;
-    font-size: 0.78rem;
-    color: #3b82f6;
-    margin-top: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.irr-overview-banner.all-done .irr-banner-sub { color: var(--green-700); }
+
+
+
+
+
+
+
+
+
 
 /* =============================================
    IRRIGATION — Tab bar
    ============================================= */
-.irr-tab-bar {
-    display: flex;
-    background: white;
-    border-bottom: 1.5px solid var(--grey-200);
-    position: sticky;
-    top: var(--header-h);
-    z-index: 10;
-}
-.irr-tab-btn {
-    flex: 1;
-    padding: 12px 4px 10px;
-    border: none;
-    background: none;
-    border-bottom: 3px solid transparent;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: var(--grey-500);
-    cursor: pointer;
-    transition: color var(--transition), border-color var(--transition);
-    -webkit-tap-highlight-color: transparent;
-}
-.irr-tab-btn.active {
-    color: var(--green-700);
-    border-bottom-color: var(--green-600);
-}
+
+
+
 
 /* =============================================
    IRRIGATION — Date navigator (Today & Week tabs)
    ============================================= */
-.irr-date-nav {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    background: var(--grey-50);
-    border-bottom: 1px solid var(--grey-200);
-}
-.irr-nav-arrow {
-    width: 36px;
-    height: 36px;
-    border: 1.5px solid var(--grey-300);
-    background: white;
-    border-radius: 50%;
-    font-size: 1.6rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: var(--grey-600);
-    line-height: 1;
-    transition: background var(--transition);
-}
-.irr-nav-arrow:hover { background: var(--grey-100); }
-.irr-date-label  { text-align: center; }
-.irr-date-chip {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--grey-400);
-}
-.irr-date-full {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--grey-800);
-    margin-top: 1px;
-}
+
+
+
+
+
+
 
 /* =============================================
    IRRIGATION — Shared section & dot
    ============================================= */
-.irr-section {
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--grey-100);
-}
-.irr-section-title {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--grey-500);
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.irr-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-.irr-area-chip {
-    font-size: 0.75rem;
-    color: var(--green-700);
-    font-weight: 500;
-}
+
+
+
+
 
 /* =============================================
    IRRIGATION — Auto zone rows (Today tab)
    ============================================= */
-.irr-auto-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--grey-100);
-}
-.irr-auto-row:last-child { border-bottom: none; }
-.irr-auto-info   { flex: 1; min-width: 0; }
-.irr-auto-name   { font-weight: 600; font-size: 0.9rem; color: var(--grey-800); }
-.irr-auto-meta   { font-size: 0.8rem; color: var(--grey-500); margin-top: 2px; }
-.irr-auto-logged { font-size: 0.78rem; margin-top: 4px; }
-.irr-auto-logged.completed { color: var(--green-700); }
-.irr-auto-logged.skipped   { color: var(--grey-400); }
+
+
+
+
+
+
+
+
 
 /* =============================================
    IRRIGATION — Badges
    ============================================= */
-.irr-badge {
-    font-size: 0.7rem;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 999px;
-    text-transform: none;
-    letter-spacing: 0;
-}
-.irr-badge--pending { background: #dbeafe; color: #1d4ed8; }
-.irr-badge--done    { background: var(--green-100); color: var(--green-700); }
 
-.irr-conflict-note {
-    font-size: 0.8rem;
-    color: #92400e;
-    background: #fef3c7;
-    border: 1px solid #fde68a;
-    border-radius: var(--radius-sm);
-    padding: 8px 10px;
-    margin-bottom: 10px;
-}
+
+
+
+
 
 /* =============================================
    IRRIGATION — Manual zone cards (Today tab)
    ============================================= */
-.irr-manual-card {
-    background: white;
-    border: 1.5px solid var(--grey-200);
-    border-radius: var(--radius-sm);
-    padding: 12px;
-    margin-bottom: 10px;
-    transition: border-color var(--transition);
-}
-.irr-manual-card.completed {
-    border-color: var(--green-300);
-    background: var(--green-50);
-}
-.irr-manual-card.skipped {
-    border-color: var(--grey-200);
-    background: var(--grey-50);
-    opacity: 0.75;
-}
-.irr-manual-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-.irr-manual-info { flex: 1; min-width: 0; }
-.irr-manual-name { font-weight: 600; color: var(--grey-800); font-size: 0.92rem; }
-.irr-manual-dur  { font-size: 0.82rem; color: var(--grey-500); flex-shrink: 0; }
 
-.irr-action-row {
-    display: flex;
-    gap: 8px;
-}
 
-.irr-log-summary {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.85rem;
-    flex-wrap: wrap;
-}
-.irr-log-summary.completed { color: var(--green-700); font-weight: 600; }
-.irr-log-summary.skipped   { color: var(--grey-500); }
-.irr-log-note {
-    font-size: 0.8rem;
-    color: var(--grey-500);
-    font-style: italic;
-    flex: 1;
-}
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* Outline button variant used for secondary actions within cards */
-.irr-btn-outline {
-    background: transparent;
-    border: 1.5px solid var(--grey-300);
-    color: var(--grey-600);
-    border-radius: var(--radius-sm);
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 4px 10px;
-    cursor: pointer;
-    transition: border-color var(--transition), color var(--transition);
-}
-.irr-btn-outline:hover { border-color: var(--green-500); color: var(--green-700); }
+
+
 
 /* =============================================
    IRRIGATION — Week grid
    ============================================= */
-.irr-week-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 3px;
-    padding: 12px 10px;
-}
-.irr-week-col {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 8px 2px;
-    border-radius: 8px;
-    cursor: pointer;
-    border: 1.5px solid transparent;
-    transition: background var(--transition), border-color var(--transition);
-    min-height: 86px;
-}
-.irr-week-col:hover  { background: var(--grey-100); }
-.irr-week-col.today  { background: var(--green-50); border-color: var(--green-300); }
-.irr-week-col.past   { opacity: 0.55; }
-.irr-week-dow {
-    font-size: 0.62rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--grey-500);
-}
-.irr-week-num {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--grey-800);
-    margin: 2px 0 4px;
-}
-.irr-week-col.today .irr-week-num  { color: var(--green-700); }
-.irr-week-dots {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 2px;
-    min-height: 18px;
-}
-.irr-week-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-}
-.irr-week-manual { margin-top: 4px; }
-.irr-week-badge {
-    font-size: 0.58rem;
-    font-weight: 800;
-    padding: 2px 4px;
-    border-radius: 4px;
-    line-height: 1.4;
-}
-.irr-week-badge.pending { background: #dbeafe; color: #1d4ed8; }
-.irr-week-badge.done    { background: var(--green-100); color: var(--green-700); }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* =============================================
    IRRIGATION — Week colour legend
    ============================================= */
-.irr-legend {
-    padding: 12px 16px;
-    border-top: 1px solid var(--grey-200);
-}
-.irr-legend-title {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--grey-400);
-    margin-bottom: 8px;
-}
-.irr-legend-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 16px;
-}
-.irr-legend-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.78rem;
-    color: var(--grey-700);
-}
-.irr-legend-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
+
+
+
+
+
 
 /* =============================================
    IRRIGATION — Zones tab
    ============================================= */
-.irr-area-group { padding: 0 16px; margin-top: 10px; }
-.irr-area-group-hdr {
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    color: var(--grey-500);
-    padding: 8px 0 4px;
-    border-bottom: 1px solid var(--grey-200);
-    margin-bottom: 8px;
-}
-.irr-zone-card {
-    background: white;
-    border: 1.5px solid var(--grey-200);
-    border-radius: var(--radius-sm);
-    margin-bottom: 8px;
-    padding: 12px;
-    transition: border-color var(--transition);
-}
-.irr-zone-card:hover { border-color: var(--green-300); }
-.irr-zone-card.inactive { opacity: 0.6; }
-.irr-zone-card-body {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px;
-}
-.irr-zone-card-name {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-    color: var(--grey-800);
-    font-size: 0.92rem;
-    margin-bottom: 5px;
-}
-.irr-zone-card-meta {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-.irr-type-badge {
-    font-size: 0.65rem;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    flex-shrink: 0;
-}
-.irr-type-badge.auto   { background: #dbeafe; color: #1d4ed8; }
-.irr-type-badge.manual { background: var(--green-100); color: var(--green-700); }
-.irr-zone-sched {
-    font-size: 0.78rem;
-    color: var(--grey-500);
-}
-.irr-zone-card-btns {
-    display: flex;
-    gap: 2px;
-    flex-shrink: 0;
-}
-.irr-inactive-tag {
-    font-size: 0.65rem;
-    background: var(--grey-200);
-    color: var(--grey-500);
-    padding: 1px 5px;
-    border-radius: 4px;
-    font-weight: 600;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* =============================================
    IRRIGATION — Zone form (modal)
    ============================================= */
-.irr-type-toggle {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-.irr-type-opt {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    font-weight: 500;
-    font-size: 0.9rem;
-}
-.irr-day-checks {
-    display: flex;
-    gap: 5px;
-    flex-wrap: wrap;
-}
+
+
+
 /* Toggle-style day checkboxes — hidden input, styled label */
-.irr-day-check {
-    display: inline-flex;
-    align-items: center;
-    padding: 5px 9px;
-    border: 1.5px solid var(--grey-300);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    font-size: 0.78rem;
-    font-weight: 600;
-    user-select: none;
-    transition: background var(--transition), border-color var(--transition), color var(--transition);
-}
-.irr-day-check input[type="checkbox"] { display: none; }
+
+
 /* Modern CSS — highlight checked state without JS */
-.irr-day-check:has(input:checked) {
-    background: var(--green-600);
-    color: white;
-    border-color: var(--green-600);
-}
+
 
 /* =============================================
    IRRIGATION — Log modal
    ============================================= */
-.irr-log-header {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 10px 12px;
-    background: var(--grey-50);
-    border-radius: var(--radius-sm);
-    margin-bottom: 16px;
-    border: 1px solid var(--grey-200);
-}
-.irr-log-header strong { color: var(--grey-800); font-size: 0.95rem; }
-.irr-log-header span   { font-size: 0.82rem; color: var(--grey-500); }
+
+
+
 
 /* =============================================
    IRRIGATION — History modal
    ============================================= */
-.irr-hist-stats {
-    display: flex;
-    border: 1.5px solid var(--grey-200);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-    margin-bottom: 14px;
-}
-.irr-hist-stat {
-    flex: 1;
-    text-align: center;
-    padding: 12px 6px;
-    border-right: 1px solid var(--grey-200);
-}
-.irr-hist-stat:last-child { border-right: none; }
-.irr-hist-val {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--green-700);
-    line-height: 1;
-}
-.irr-hist-lbl {
-    font-size: 0.7rem;
-    color: var(--grey-500);
-    margin-top: 3px;
-}
-.irr-hist-sched {
-    font-size: 0.8rem;
-    color: var(--grey-500);
-    margin-bottom: 12px;
-    font-style: italic;
-}
-.irr-hist-list {
-    max-height: 280px;
-    overflow-y: auto;
-    border: 1px solid var(--grey-200);
-    border-radius: var(--radius-sm);
-}
-.irr-hist-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 9px 12px;
-    border-bottom: 1px solid var(--grey-100);
-}
-.irr-hist-row:last-child { border-bottom: none; }
+
+
+
+
+
+
+
+
+
 
 /* ---- history row internals ---- */
-.irr-hist-icon {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.75rem;
-    flex-shrink: 0;
-    background: var(--grey-100);
-    color: var(--grey-500);
-}
-.irr-hist-row.completed .irr-hist-icon {
-    background: var(--green-100);
-    color: var(--green-700);
-}
-.irr-hist-row.skipped .irr-hist-icon {
-    background: #fef3c7;
-    color: #92400e;
-}
-.irr-hist-info { flex: 1; min-width: 0; }
-.irr-hist-date {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--grey-700);
-}
-.irr-hist-dur {
-    font-size: 0.78rem;
-    color: var(--green-700);
-}
-.irr-hist-note {
-    font-size: 0.78rem;
-    color: var(--grey-500);
-    font-style: italic;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+
+
+
+
+
+
+
 
 /* ---- action buttons (Done / Skip on manual cards) ---- */
-.irr-done-btn {
-    background: var(--green-600);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius-sm);
-    padding: 6px 14px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-}
-.irr-done-btn:hover { background: var(--green-700); }
-.irr-skip-btn {
-    background: transparent;
-    color: var(--grey-500);
-    border: 1px solid var(--grey-300);
-    border-radius: var(--radius-sm);
-    padding: 6px 14px;
-    font-size: 0.85rem;
-    cursor: pointer;
-}
-.irr-skip-btn:hover { background: var(--grey-50); }
+
+
+
+
 
 /* ---- icon buttons (history, edit-zone, edit-log) ---- */
-.irr-history-btn,
-.irr-edit-zone-btn,
-.irr-edit-log-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 4px 6px;
-    border-radius: var(--radius-sm);
-    font-size: 1rem;
-    color: var(--grey-500);
-    transition: background 0.15s;
-}
-.irr-history-btn:hover,
-.irr-edit-zone-btn:hover,
-.irr-edit-log-btn:hover {
-    background: var(--grey-100);
-    color: var(--grey-700);
-}
+
+
 
 /* ---- log-auto-btn (log / logged state on auto zone rows) ---- */
-.irr-log-auto-btn {
-    font-size: 0.78rem;
-    padding: 3px 10px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    border: 1px solid var(--grey-300);
-    background: transparent;
-    color: var(--grey-600);
-}
-.irr-log-auto-btn:hover { background: var(--grey-100); }
-.irr-log-auto-btn.logged {
-    border-color: var(--green-400);
-    color: var(--green-700);
-    background: var(--green-50);
-}
+
+
+
 
 /* =============================================
    IRRIGATION — Status chips (completed / skipped / missed)
    Shown in the manual-card header when a zone has been logged,
    replacing the plain duration label.
    ============================================= */
-.irr-status-chip {
-    font-size: 0.68rem;
-    font-weight: 600;
-    padding: 3px 9px;
-    border-radius: 20px;
-    white-space: nowrap;
-    flex-shrink: 0;
-    letter-spacing: 0.01em;
-}
-.irr-status-chip.completed {
-    background: var(--green-100);
-    color: var(--green-700);
-}
-.irr-status-chip.skipped {
-    background: var(--grey-100);
-    color: var(--grey-500);
-}
-.irr-status-chip.missed {
-    background: #fef3c7;
-    color: #92400e;
-}
+
+
+
+
 
 /* =============================================
    IRRIGATION — Log details row
    Replaces the old irr-log-summary inside completed/skipped cards.
    ============================================= */
-.irr-log-details {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 5px 14px 10px;
-    flex-wrap: wrap;
-}
-.irr-log-dur {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--green-700);
-}
+
+
 /* .irr-log-note already defined above; these ensure it sits inline here too */
-.irr-log-details .irr-log-note {
-    flex: 1;
-    min-width: 0;
-}
-.irr-log-details .irr-btn-outline {
-    margin-left: auto;
-    font-size: 0.72rem;
-    padding: 2px 9px;
-}
+
+
 
 /* =============================================
    IRRIGATION — Overdue cards & section header
    ============================================= */
-.irr-manual-card.overdue {
-    border-color: #f59e0b;
-    background: #fffbeb;
-}
-.irr-overdue-tag {
-    font-size: 0.7rem;
-    color: #b45309;
-    font-weight: 500;
-    margin-top: 1px;
-}
-.irr-overdue-section-hdr {
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #b45309;
-    padding: 8px 2px 5px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-.irr-today-divider {
-    font-size: 0.7rem;
-    color: var(--grey-400);
-    padding: 8px 2px 4px;
-    border-top: 1px solid var(--grey-100);
-    margin-top: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
+
+
+
+
 
 /* ---- Action chips (Done / Skip) on pending manual cards ---- */
-.irr-action-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    border-radius: 20px;
-    padding: 5px 16px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    border: 1.5px solid;
-    background: transparent;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s;
-    white-space: nowrap;
-}
-.irr-action-chip--done {
-    border-color: var(--green-500);
-    color: var(--green-700);
-}
-.irr-action-chip--done:hover  { background: var(--green-50); }
-.irr-action-chip--skip {
-    border-color: var(--grey-300);
-    color: var(--grey-600);
-}
-.irr-action-chip--skip:hover  { background: var(--grey-50); }
+
+
+
+
+
 
 /* =============================================
    IRRIGATION — History tab
    ============================================= */
 
 /* Stats bar (reuses .irr-hist-val / .irr-hist-lbl from the modal) */
-.irr-hist-tab-stats {
-    display: flex;
-    border-bottom: 1px solid var(--grey-100);
-}
-.irr-hist-tab-stats .irr-hist-stat {
-    flex: 1;
-    text-align: center;
-    padding: 10px 4px;
-    border-right: 1px solid var(--grey-100);
-}
-.irr-hist-tab-stats .irr-hist-stat:last-child { border-right: none; }
+
+
+
 
 /* Weekly group block */
-.irr-hist-week-group {
-    border-bottom: 1.5px solid var(--grey-100);
-    padding-bottom: 2px;
-    margin-bottom: 2px;
-}
-.irr-hist-week-hdr {
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: var(--grey-400);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 10px 16px 4px;
-}
+
+
 
 /* Individual event row */
-.irr-hist-event-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 7px 16px;
-    border-bottom: 1px solid var(--grey-50);
-}
-.irr-hist-event-row:last-child { border-bottom: none; }
-.irr-hist-event-row.completed { background: transparent; }
-.irr-hist-event-row.skipped   { opacity: 0.75; }
-.irr-hist-event-row.missed    { opacity: 0.6; }
 
-.irr-hist-event-date {
-    font-size: 0.72rem;
-    color: var(--grey-500);
-    width: 68px;
-    flex-shrink: 0;
-    line-height: 1.3;
-}
-.irr-hist-event-info {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px;
-}
-.irr-hist-event-name {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--grey-800);
-}
-.irr-hist-event-note {
-    width: 100%;
-    font-size: 0.73rem;
-    color: var(--grey-500);
-    margin-top: 1px;
-}
+
+
+
+
+
+
+
+
+
 
 /* =============================================
    SEARCHABLE PLANT PICKER
@@ -2906,503 +1629,142 @@ code {
     position: relative;
 }
 
-.plant-picker-results {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0; right: 0;
-    z-index: 200;
-    background: var(--white);
-    border: 1.5px solid var(--green-300);
-    border-top: none;
-    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-    max-height: 260px;
-    overflow-y: auto;
-    box-shadow: var(--shadow-md);
-}
 
-.plant-picker-option {
-    padding: 10px 14px;
-    font-size: 0.88rem;
-    color: var(--grey-800);
-    cursor: pointer;
-    border-bottom: 1px solid var(--grey-100);
-    transition: background var(--transition);
-    font-style: italic;
-}
-.plant-picker-option:last-child { border-bottom: none; }
-.plant-picker-option:hover { background: var(--green-50); }
 
-.plant-picker-empty {
-    padding: 12px 14px;
-    font-size: 0.86rem;
-    color: var(--grey-400);
-    font-style: normal;
-}
 
-.plant-picker-selected {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 6px;
-    padding: 8px 12px;
-    background: var(--green-50);
-    border: 1.5px solid var(--green-200);
-    border-radius: var(--radius-sm);
-    font-size: 0.88rem;
-    color: var(--green-800);
-    font-style: italic;
-}
 
-.plant-picker-selected-name { flex: 1; }
 
-.plant-picker-clear {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 0.85rem;
-    color: var(--grey-400);
-    padding: 0 2px;
-    line-height: 1;
-    flex-shrink: 0;
-}
-.plant-picker-clear:hover { color: var(--grey-700); }
+
+
+
+
+
+
+
+
+
 
 /* =============================================
    BLOG — List view
    ============================================= */
 
-.blog-list-controls {
-    padding: 12px 16px 0;
-}
 
-.blog-tag-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 10px 0 4px;
-}
 
-.blog-tag-filter-btn {
-    padding: 4px 12px;
-    border-radius: 100px;
-    border: 1.5px solid var(--grey-300);
-    background: var(--white);
-    color: var(--grey-600);
-    font-size: 0.78rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all var(--transition);
-    font-family: var(--font);
-}
-.blog-tag-filter-btn:hover { border-color: var(--green-400); color: var(--green-700); }
-.blog-tag-filter-btn.active {
-    background: var(--green-700);
-    border-color: var(--green-700);
-    color: var(--white);
-}
 
-.blog-post-cards {
-    padding: 12px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
 
-.blog-post-card {
-    background: var(--white);
-    border: 1.5px solid var(--grey-200);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    cursor: pointer;
-    transition: border-color var(--transition), box-shadow var(--transition);
-    box-shadow: var(--shadow-sm);
-}
-.blog-post-card:hover {
-    border-color: var(--green-300);
-    box-shadow: var(--shadow-md);
-}
 
-.blog-post-card-thumb {
-    width: 100%;
-    height: 160px;
-    overflow: hidden;
-    background: var(--grey-100);
-}
-.blog-post-card-thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
 
-.blog-post-card-body {
-    padding: 14px 16px;
-}
 
-.blog-post-card-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
-}
 
-.blog-post-date {
-    font-size: 0.75rem;
-    color: var(--grey-500);
-    font-weight: 500;
-}
 
-.blog-draft-badge {
-    display: inline-block;
-    font-size: 0.65rem;
-    font-weight: 700;
-    padding: 2px 7px;
-    border-radius: 4px;
-    background: #fef3c7;
-    color: #92400e;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
 
-.blog-post-card-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--grey-800);
-    margin-bottom: 6px;
-    line-height: 1.35;
-}
 
-.blog-post-card-excerpt {
-    font-size: 0.85rem;
-    color: var(--grey-500);
-    line-height: 1.5;
-    margin-bottom: 10px;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
 
-.blog-post-card-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* =============================================
    BLOG — Tag chip (shared: list, post, editor)
    ============================================= */
 
-.blog-tag {
-    display: inline-block;
-    padding: 2px 9px;
-    border-radius: 100px;
-    background: var(--green-50);
-    border: 1px solid var(--green-200);
-    color: var(--green-700);
-    font-size: 0.72rem;
-    font-weight: 500;
-}
+
 
 /* =============================================
    BLOG — Post (reader) view
    ============================================= */
 
-.blog-post-view {
-    padding: 16px 16px 32px;
-    max-width: 720px;
-    margin: 0 auto;
-}
 
-.blog-post-header {
-    margin-bottom: 12px;
-    padding-bottom: 10px;
-    border-bottom: 1.5px solid var(--grey-100);
-}
 
-.blog-post-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--grey-800);
-    line-height: 1.3;
-    margin-bottom: 8px;
-}
 
-.blog-post-meta-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 10px;
-}
 
-.blog-post-date-large {
-    font-size: 0.88rem;
-    color: var(--grey-500);
-    font-weight: 500;
-}
 
-.blog-post-tags-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 10px;
-}
 
-.blog-post-plants-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    margin-top: 4px;
-}
 
-.blog-plant-ref-btn {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 100px;
-    background: var(--green-50);
-    border: 1px solid var(--green-200);
-    color: var(--green-700);
-    font-size: 0.78rem;
-    font-family: var(--font);
-    cursor: pointer;
-    transition: background var(--transition);
-    font-style: italic;
-}
-.blog-plant-ref-btn:hover { background: var(--green-100); }
+
+
+
+
+
+
+
+
+
 
 /* Rich text content area (mimics Quill output styling without editor chrome) */
-.blog-post-content {
-    font-size: 1rem;
-    line-height: 1.75;
-    color: var(--grey-800);
-    /* Reset Quill's editor-specific styles when used read-only */
-    padding: 0 !important;
-    border: none !important;
-    min-height: unset !important;
-    /* Quill sets white-space:pre-wrap on .ql-editor, which causes template-literal
-       newlines before the content to render as visible blank space */
-    white-space: normal !important;
-}
+
 /* Remove browser/Quill default top margin on the opening paragraph */
-.blog-post-content > p:first-child,
-.blog-post-content > h2:first-child,
-.blog-post-content > h3:first-child {
-    margin-top: 0;
-}
-.blog-post-content h2 { font-size: 1.25rem; font-weight: 700; margin: 20px 0 8px; color: var(--grey-800); }
-.blog-post-content h3 { font-size: 1.05rem; font-weight: 700; margin: 16px 0 6px; color: var(--grey-800); }
-.blog-post-content p  { margin-bottom: 0.8em; }
-.blog-post-content ul, .blog-post-content ol { padding-left: 1.4em; margin-bottom: 0.8em; }
-.blog-post-content li { margin-bottom: 4px; }
-.blog-post-content blockquote {
-    border-left: 3px solid var(--green-400);
-    margin: 12px 0;
-    padding: 8px 14px;
-    color: var(--grey-600);
-    font-style: italic;
-    background: var(--green-50);
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-}
-.blog-post-content img {
-    max-width: 100%;
-    height: auto;
-    border-radius: var(--radius-sm);
-    margin: 8px 0;
-    display: block;
-}
-.blog-post-content a { color: var(--green-700); text-decoration: underline; }
+
+
+
+
+
+
+
+
+
 
 /* Plant chip (inline in post body — also styled in editor) */
-.blog-plant-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 10px;
-    border-radius: 100px;
-    background: var(--green-50);
-    border: 1px solid var(--green-200);
-    color: var(--green-700);
-    font-size: 0.82rem;
-    font-style: normal;
-    font-weight: 500;
-    cursor: pointer;
-    user-select: none;
-    white-space: nowrap;
-    transition: background var(--transition);
-    vertical-align: middle;
-    margin: 0 2px;
-}
-.blog-plant-chip:hover { background: var(--green-100); }
+
+
 
 /* Area chip (inline in post body — also styled in editor) */
-.blog-area-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 10px;
-    background: #dbeafe;
-    border: 1px solid #93c5fd;
-    border-radius: 100px;
-    font-size: 0.82rem;
-    color: #1e40af;
-    font-weight: 500;
-    white-space: nowrap;
-    cursor: pointer;
-    user-select: none;
-    transition: background var(--transition);
-    vertical-align: middle;
-    margin: 0 2px;
-}
-.blog-area-chip:hover { background: #bfdbfe; }
+
+
 
 /* Area ref buttons (header row in post reader) */
-.blog-post-areas-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    margin-top: 4px;
-}
-.blog-area-ref-btn {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 100px;
-    background: #dbeafe;
-    border: 1px solid #93c5fd;
-    font-size: 0.82rem;
-    color: #1e40af;
-    cursor: pointer;
-    margin: 2px 4px 2px 0;
-    transition: background var(--transition);
-    font-style: italic;
-}
-.blog-area-ref-btn:hover { background: #bfdbfe; }
+
+
+
 
 /* =============================================
    BLOG — Editor view
    ============================================= */
 
-.blog-editor-wrap {
-    padding: 12px 16px 32px;
-    max-width: 720px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-}
 
-.blog-editor-fields {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    margin-bottom: 12px;
-}
+
+
 
 /* Tag chip input row */
-.blog-tag-input-wrap {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 5px;
-    padding: 7px 10px;
-    border: 1.5px solid var(--grey-200);
-    border-radius: var(--radius-sm);
-    background: var(--white);
-    min-height: 42px;
-    cursor: text;
-    transition: border-color var(--transition);
-}
-.blog-tag-input-wrap:focus-within { border-color: var(--green-500); }
 
-.blog-tag-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 8px;
-    background: var(--green-100);
-    border: 1px solid var(--green-300);
-    border-radius: 100px;
-    color: var(--green-800);
-    font-size: 0.78rem;
-    font-weight: 500;
-    white-space: nowrap;
-}
 
-.blog-tag-chip-remove {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 0.7rem;
-    color: var(--green-600);
-    padding: 0;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-}
-.blog-tag-chip-remove:hover { color: var(--green-900); }
 
-.blog-tag-input {
-    border: none;
-    outline: none;
-    font-size: 0.88rem;
-    font-family: var(--font);
-    color: var(--grey-800);
-    background: transparent;
-    min-width: 80px;
-    flex: 1;
-    padding: 0;
-}
+
+
+
+
+
+
 
 /* Extra toolbar row (plant ref button, above Quill) */
-.blog-editor-toolbar-extra {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 0 4px;
-    border-top: 1px solid var(--grey-200);
-    margin-bottom: 0;
-}
+
 
 /* Quill editor container */
-.blog-quill-container {
-    min-height: 320px;
-    border: 1.5px solid var(--grey-200);
-    border-top: none;
-    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-    background: var(--white);
-}
+
 
 /* Quill editor inner area — give it comfortable height */
-.blog-quill-container .ql-editor {
-    min-height: 300px;
-    font-size: 1rem;
-    line-height: 1.75;
-    font-family: var(--font);
-    color: var(--grey-800);
-}
+
 
 /* Quill toolbar — match app style */
-.blog-quill-container .ql-toolbar.ql-snow {
-    border: 1.5px solid var(--grey-200);
-    border-bottom: 1px solid var(--grey-200);
-    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-    background: var(--grey-50);
-    padding: 6px 10px;
-}
-.ql-container.ql-snow {
-    border-color: transparent !important;
-}
+
+
 
 /* Editor action buttons */
-.blog-editor-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid var(--grey-100);
-}
+
 
 
 /* =============================================
