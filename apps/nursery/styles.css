@@ -32,10 +32,8 @@
 
 
 
-@media (min-width: 900px) {
-    
-    .app-main { padding: 24px 32px; max-width: 1100px; margin-left: auto; margin-right: auto; }
-}
+/* The desktop .app-main frame moved to shared/base.css — both apps used the
+   same rule, so it now lives in one place. */
 
 /* --- Buttons --- */
 /* Tap targets, 2026-08-10. Everything except the FAB and the user chip used to
@@ -1557,12 +1555,14 @@ textarea::placeholder {
 }
 
 /* ---- Layout utilities ---- */
-.view-content {
-    padding: 16px 16px 100px;
-    max-width: 680px;
-    margin: 0 auto;
-}
-.view-content--list { max-width: none; }
+/* .view-content used to add a second 16px gutter inside .app-main's and cap the
+   column at 680px, so Nursery sat in a narrower, more inset column than Garden
+   on the same screen. Neither was deliberate — it came in during Nursery's
+   development and was never reconciled. Removed 2026-08-10; the page frame is
+   now entirely .app-main in shared/base.css, identical for both apps.
+
+   The class itself stays on the wrapper divs: .view-content--list is a hook for
+   the responsive batch-row rules in the media query above. */
 
 .section-heading {
     font-size: 0.8rem;
