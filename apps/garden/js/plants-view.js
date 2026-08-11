@@ -532,7 +532,7 @@ function buildPlantDetailHTML(plant, instances, photos) {
         <!-- Danger zone — admin only -->
         ${isAtLeast('admin') ? `
         <div class="detail-section" style="border: 1.5px solid var(--grey-200);">
-            <div class="detail-section-title" style="color:var(--red)">Danger Zone</div>
+            <div class="detail-section-title danger">Danger Zone</div>
             <button class="btn btn-danger btn-sm" id="delete-plant-btn">Delete this plant</button>
         </div>
         ` : ''}

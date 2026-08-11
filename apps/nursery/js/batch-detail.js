@@ -201,7 +201,7 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
 
             <!-- Batch photos -->
             <div class="section-header-row" style="margin-top:24px;">
-                <h3 class="section-heading" style="margin:0;">Photos</h3>
+                <h3 class="section-heading">Photos</h3>
             </div>
             <div id="batch-photos-section">
                 <div class="loading-state" style="padding:8px 0;"><div class="leaf-spinner" style="font-size:0.9rem;">🌱</div></div>
@@ -209,7 +209,7 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
 
             <!-- Outcomes -->
             <div class="section-header-row" style="margin-top:24px;">
-                <h3 class="section-heading" style="margin:0;">Outcomes</h3>
+                <h3 class="section-heading">Outcomes</h3>
                 ${isAtLeast('editor') && batch.stage !== 'completed' ? `<button class="btn btn-sm btn-secondary" id="record-outcome-btn2">+ Record outcome</button>` : ''}
             </div>
             <div id="outcomes-section">
@@ -220,7 +220,7 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
 
                         <!-- Log entries -->
             <div class="section-header-row" style="margin-top:24px;">
-                <h3 class="section-heading" style="margin:0;">Log entries</h3>
+                <h3 class="section-heading">Log entries</h3>
                 ${isAtLeast('editor') ? `<button class="btn btn-sm btn-primary" id="add-log-btn">+ Add entry</button>` : ''}
             </div>
             <div id="log-entries-section">
@@ -232,7 +232,7 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
             ${isStockPlant ? `
             <!-- Batches originated from this stock plant -->
             <div class="section-header-row" style="margin-top:24px;">
-                <h3 class="section-heading" style="margin:0;">Batches from this stock plant</h3>
+                <h3 class="section-heading">Batches from this stock plant</h3>
             </div>
             <div id="child-batches-section">
                 <div class="loading-state" style="padding:12px 0;"><div class="leaf-spinner">🌱</div></div>

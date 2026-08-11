@@ -9,14 +9,7 @@
 
 
 /* --- Cards --- */
-.card {
-    background: var(--white);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-    overflow: hidden;
-    transition: box-shadow var(--transition), transform var(--transition);
-    cursor: pointer;
-}
+/* .card moved to shared/components.css on 2026-08-10. */
 
 .card-body { padding: 14px 16px; }
 .card-badge {
@@ -124,6 +117,9 @@ button.card-badge:hover {
     margin-bottom: 12px;
     box-shadow: var(--shadow-sm);
 }
+/* .danger is the Danger Zone heading — four call sites carried an inline
+   style="color:var(--red)" for this. */
+.detail-section-title.danger { color: var(--red); }
 .detail-section-title {
     font-size: 0.78rem;
     font-weight: 700;

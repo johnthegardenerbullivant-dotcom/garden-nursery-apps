@@ -343,7 +343,7 @@ export async function renderAreaDetail(container, headerActionEl, backBtn, areaI
         <!-- Danger zone — admin only -->
         ${isAtLeast('admin') ? `
         <div class="detail-section" style="border:1.5px solid var(--grey-200);">
-            <div class="detail-section-title" style="color:var(--red)">Danger Zone</div>
+            <div class="detail-section-title danger">Danger Zone</div>
             <button class="btn btn-danger btn-sm" id="delete-area-btn">Delete this area</button>
             <p class="form-hint" style="margin-top:6px">
                 Deleting an area removes all plant location records and task assignments for it,
