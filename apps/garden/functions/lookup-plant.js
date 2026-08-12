@@ -529,11 +529,17 @@ const RAMBLE = /\b(wait|let's|let me|however|but the rule|rule says|i should|ins
 // the difference between "the model found nothing" and "we threw it away".
 // Silently emptying a field is how you end up staring at a blank height
 // wondering which of the two happened — as we just did.
+// Per-field limits. 40 characters suits a size like "5-8 m", but a list of
+// common names is legitimately longer — "Sycamore Maple, False Plane Tree,
+// Great Maple" is a correct answer and was being thrown away every run.
+const FIELD_LIMIT = { height: 40, width: 40, family: 40, commonNames: 140 };
+
 function shortField(v, label, discarded) {
     const s = str(v);
     if (!s) return '';
+    const limit = FIELD_LIMIT[label] || 40;
     let why = '';
-    if (s.length > 40)            why = `too long (${s.length} chars)`;
+    if (s.length > limit)         why = `too long (${s.length} chars, limit ${limit})`;
     else if (RAMBLE.test(s))      why = 'contains deliberation';
     else if (/[.;]\s/.test(s))    why = 'more than one sentence';
     if (why) {
@@ -795,11 +801,25 @@ exports.handler = async (event) => {
         // Drop anything outside this track's categories. The prompt says not to
         // stray, but a fact in the wrong category would otherwise reach a writer
         // that has been told to ignore that section, and vanish silently.
+        //
+        // Match loosely. An exact comparison threw away an entire result when the
+        // model answered "Description" rather than "description" — six facts
+        // dropped, none kept, and an empty note. Never let capitalisation decide
+        // whether the feature works.
+        const canonCategory = (v) => {
+            const s = str(v).toLowerCase();
+            return CATEGORIES.find((c) => s.includes(c)) || '';
+        };
+        const canonLevel = (v) => {
+            const s = str(v).toLowerCase();
+            return ['cultivar', 'species', 'genus'].find((l) => s.includes(l)) || '';
+        };
+
         const facts = (Array.isArray(raw.facts) ? raw.facts : [])
             .map((f) => ({
                 text:        str(f?.text),
-                category:    str(f?.category),
-                level:       str(f?.level).toLowerCase(),
+                category:    canonCategory(f?.category),
+                level:       canonLevel(f?.level),
                 sourceIndex: Number.isInteger(f?.sourceIndex) ? f.sourceIndex : -1,
             }))
             .filter((f) => f.text && allowed.includes(f.category));

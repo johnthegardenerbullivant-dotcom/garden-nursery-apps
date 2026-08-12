@@ -90,3 +90,27 @@ outside the publish directory.
 **Done looks like:** a redirect in each app's `netlify.toml` returning 404 for `/CLAUDE.md`, or
 accept it and close this. Not worth a deploy on its own; fold it into the next change that touches
 those files.
+
+---
+
+## 4. Linkify URLs in notes at render time
+
+**Status:** open, enhancement · noted 2026-08-12
+
+The AI plant lookup writes a `SOURCES` block into a plant's `notes`, and some entries carry a real
+URL. `notes` renders through `escHtml()` into `.field-value`, which is plain text with
+`white-space: pre-wrap`, so those URLs are readable but not clickable.
+
+Considered and **rejected**: making `notes` a rich-text field. That would mean migrating every
+existing record, rewriting the detail view, and adding an editor to the plant form in both apps —
+Nursery has no rich-text editor at all, and Garden's Quill is confined to the blog. It would also
+cost the things plain text is good at: searchable, exportable, unchanged in a JSON backup.
+
+**Done looks like:** after `escHtml()`, replace bare `https?://…` runs in the rendered string with
+an anchor (`target="_blank" rel="noopener noreferrer"`). Order matters — escape first, then linkify
+the escaped text, or the anchor itself gets escaped. No data change, no migration, and it applies
+retroactively to every note already written.
+
+Deliberately deferred: the lookup already strips Google's `vertexaisearch` grounding redirects and
+keeps the source title alone, so most notes have few bare URLs to click. Worth doing only if the
+missing links turn out to be a nuisance in real use.
