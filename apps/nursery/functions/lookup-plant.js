@@ -513,51 +513,68 @@ async function callGemini(apiKey, model, body, remainingMs) {
     }
 }
 
-// Run one Gemini call, coping with a model that rejects thinkingConfig and,
-// for the grounded phase, with one that rejects search-plus-schema. Grounding
-// matters more than the schema, so the schema is what gets dropped.
+const JSON_ONLY = '\n\nReturn ONLY a JSON object, no other text.';
+
+// Models differ in which optional generationConfig fields they accept, and a
+// rejection says only "Request contains an invalid argument" without naming the
+// field. Matching on the error text therefore does not work — Flash-Lite
+// rejected a request whose message mentioned nothing at all.
+//
+// So instead of guessing, try progressively plainer request shapes and take the
+// first that is accepted. Ordered best-to-plainest, and every variant keeps the
+// search tool: grounding is the guarantee this whole feature rests on, so it is
+// never what gets dropped. If nothing is accepted we fail loudly rather than
+// quietly returning an answer written from memory.
+function requestVariants({ text, schema, useSearch }) {
+    const shapes = [
+        { label: 'schema+thinking', thinking: true,  structured: true  },
+        { label: 'schema',          thinking: false, structured: true  },
+        { label: 'freeform',        thinking: false, structured: false },
+    ];
+
+    return shapes.map(({ label, thinking, structured }) => {
+        const generationConfig = { temperature: 0 };
+        if (thinking) generationConfig.thinkingConfig = { thinkingBudget: THINKING_BUDGET };
+        if (structured) {
+            generationConfig.responseMimeType = 'application/json';
+            generationConfig.responseSchema   = schema;
+        }
+        const body = {
+            contents: [{ parts: [{ text: structured ? text : text + JSON_ONLY }] }],
+            generationConfig,
+        };
+        if (useSearch) body.tools = [{ google_search: {} }];
+        return { label: (useSearch ? 'grounded+' : '') + label, body };
+    });
+}
+
 async function runPhase({ apiKey, model, prompt, input, schema, useSearch, remaining }) {
     const text = `${prompt}\n\n=== THE REQUEST ===\n${input}`;
-    const base = {
-        contents: [{ parts: [{ text }] }],
-        generationConfig: {
-            temperature:      0,
-            responseMimeType: 'application/json',
-            responseSchema:   schema,
-            thinkingConfig:   { thinkingBudget: THINKING_BUDGET },
-        },
-    };
-    if (useSearch) base.tools = [{ google_search: {} }];
+    const variants = requestVariants({ text, schema, useSearch });
+    const tried = [];
 
-    const stripThinking = (b) => {
-        const { thinkingConfig, ...rest } = b.generationConfig;
-        return { ...b, generationConfig: rest };
-    };
-    const stripSchema = (b) => {
-        const { responseMimeType, responseSchema, ...rest } = b.generationConfig;
-        return { ...b, generationConfig: rest };
-    };
+    let attempt = null;
+    let mode = variants[0].label;
 
-    let mode = useSearch ? 'grounded+schema' : 'schema';
-    let attempt = await callGemini(apiKey, model, base, remaining());
+    for (const variant of variants) {
+        attempt = await callGemini(apiKey, model, variant.body, remaining());
+        mode = variant.label;
+        tried.push(variant.label);
 
-    if (!attempt.ok && attempt.status === 400 && /thinking/i.test(attempt.text)) {
-        console.warn('lookup-plant: model rejected thinkingConfig — retrying without it.');
-        attempt = await callGemini(apiKey, model, stripThinking(base), remaining());
-    }
+        if (attempt.ok || attempt.aborted) break;
 
-    if (useSearch && !attempt.ok && attempt.status === 400 && !attempt.aborted) {
+        // Only a 400 means "this request shape is wrong for this model". Any
+        // other failure (429, 500, network) will not be fixed by simplifying,
+        // so stop and report it rather than burning the budget on retries.
+        if (attempt.status !== 400) break;
+
         console.warn(
-            'lookup-plant: grounded+schema rejected on', model,
-            '— retrying grounded free-form. Detail:', attempt.text.slice(0, 300),
+            'lookup-plant:', model, 'rejected', variant.label, '(HTTP 400) —',
+            attempt.text.slice(0, 200).replace(/\s+/g, ' '),
         );
-        const freeform = stripSchema(base);
-        freeform.contents = [{ parts: [{ text: `${text}\n\nReturn ONLY a JSON object, no other text.` }] }];
-        attempt = await callGemini(apiKey, model, freeform, remaining());
-        mode = 'grounded+freeform';
     }
 
-    return { attempt, mode };
+    return { attempt, mode, tried };
 }
 
 exports.handler = async (event) => {
@@ -624,7 +641,7 @@ exports.handler = async (event) => {
         }
 
         try {
-            const { attempt, mode } = await runPhase({
+            const { attempt, mode, tried } = await runPhase({
                 apiKey, model: MODEL_WRITE, prompt: writePrompt(track), input: buildWriterInput(research),
                 schema: SCHEMA_WRITE, useSearch: false, remaining,
             });
@@ -636,7 +653,7 @@ exports.handler = async (event) => {
             if (!attempt.ok) {
                 const detail = attempt.text.slice(0, 600);
                 console.error('lookup-plant write: HTTP', attempt.status, 'detail:', detail);
-                return fail(502, { error: 'Lookup service error', status: attempt.status, detail });
+                return fail(502, { error: 'Lookup service error', status: attempt.status, tried, detail });
             }
 
             const candidate = attempt.json?.candidates?.[0];
@@ -680,7 +697,7 @@ exports.handler = async (event) => {
     }
 
     try {
-        const { attempt, mode } = await runPhase({
+        const { attempt, mode, tried } = await runPhase({
             apiKey, model: MODEL_RESEARCH, prompt: researchPrompt(track), input: buildQuery(payload, name),
             schema: SCHEMA_RESEARCH, useSearch: true, remaining,
         });
@@ -692,7 +709,7 @@ exports.handler = async (event) => {
         if (!attempt.ok) {
             const detail = attempt.text.slice(0, 600);
             console.error('lookup-plant research: HTTP', attempt.status, 'detail:', detail);
-            return fail(502, { error: 'Lookup service error', status: attempt.status, detail });
+            return fail(502, { error: 'Lookup service error', status: attempt.status, tried, detail });
         }
 
         const candidate = attempt.json?.candidates?.[0];
