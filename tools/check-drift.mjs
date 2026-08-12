@@ -51,6 +51,12 @@ const PAIRS = [
     note: 'One Gemini plant-lookup function, deployed as a Netlify function by both sites.',
   },
   {
+    path: 'js/plant-lookup.js',
+    severity: 'error',
+    note: 'Client half of the plant lookup. Field IDs differ per app, so they are passed '
+        + 'in by the caller rather than hard-coded — the module itself must stay identical.',
+  },
+  {
     path: 'js/ui-utils.js',
     severity: 'warn',
     note: 'Known delta: Nursery has isValidDateStr(), Garden does not. Port it to Garden to clear this.',

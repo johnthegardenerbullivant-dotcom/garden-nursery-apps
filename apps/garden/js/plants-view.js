@@ -15,6 +15,7 @@ import { showModal, hideModal, showToast, setLoading, navigate, goBack, initPhot
 import { isAtLeast } from './auth.js';
 import { DEATH_CAUSES } from './compost-view.js';
 import { scanPanelHTML, initLabelScan, focusScanCard } from './label-scan.js';
+import { lookupPanelHTML, initPlantLookup } from './plant-lookup.js';
 
 // Plain-text botanical name (strips the HTML that formatBotanicalName returns)
 function plainName(plant) {
@@ -844,6 +845,25 @@ export async function showPlantForm(plant, onSave, preselectedAreaId = null, opt
         if (opts && opts.focusScan) focusScanCard();
     }
 
+    // Plant lookup — offered when editing too. Enriching a plant added years
+    // ago is the main thing it is for, and it only ever appends to Notes.
+    initPlantLookup({
+        fields: {
+            genus:      'genus',
+            species:    'species',
+            subspecies: 'subspecies',
+            variety:    'variety',
+            cultivar:   'cultivar',
+            commonName: 'commonName',
+        },
+        targets: {
+            notes:     'notes',
+            careNotes: 'careReminders',
+            height:    'height',
+            width:     'width',
+        },
+    });
+
     // Location visibility toggle (add mode only)
     if (!isEdit) {
         const areaSelect = document.getElementById('new-plant-area');
@@ -1047,6 +1067,7 @@ function buildPlantFormHTML(plant, areas = [], photos = [], preselectedAreaId = 
     return `
         <form id="plant-form" autocomplete="off">
             ${!isEdit ? scanPanelHTML() : ''}
+            ${lookupPanelHTML()}
             <div class="form-section-label">Botanical Identity</div>
 
             <div class="form-row">

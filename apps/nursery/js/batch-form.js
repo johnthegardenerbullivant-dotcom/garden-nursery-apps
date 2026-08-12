@@ -10,6 +10,7 @@ import {
 } from './db.js';
 import { showModal, hideModal, showToast, initDatePickers, datePicker, isValidDateStr } from './ui-utils.js';
 import { scanPanelHTML, initLabelScan } from './label-scan.js';
+import { lookupPanelHTML, initPlantLookup } from './plant-lookup.js';
 
 // Cache garden plants for the session (fetched once per form open)
 let _gardenPlantsCache = null;
@@ -89,6 +90,7 @@ async function showBatchForm(existing, locations, onSaved, prefill = null) {
         <form id="batch-form" novalidate>
 
             ${!isEdit ? scanPanelHTML() : ''}
+            ${lookupPanelHTML()}
 
             <!-- METHOD -->
             <div class="form-section-label">Method</div>
@@ -410,6 +412,25 @@ async function showBatchForm(existing, locations, onSaved, prefill = null) {
     if (!isEdit) {
         initLabelScan();
     }
+
+    // Plant lookup — offered when editing too, unlike the scanner. Nursery's
+    // botanical fields carry an -input suffix, hence the mapping.
+    initPlantLookup({
+        fields: {
+            genus:      'genus-input',
+            species:    'species-input',
+            subspecies: 'subspecies-input',
+            variety:    'variety-input',
+            cultivar:   'cultivar-input',
+            commonName: 'common-name-input',
+        },
+        targets: {
+            notes:     'description-input',
+            careNotes: 'care-input',
+            height:    'height-input',
+            width:     'width-input',
+        },
+    });
 
     // ---- Plant picker ----
     const plantInput  = document.getElementById('plant-input');

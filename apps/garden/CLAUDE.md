@@ -29,6 +29,8 @@ Environment variables on the Garden site:
 |---|---|
 | `GEMINI_API_KEY` | Google AI Studio key for the label-scan function. Set and verified working. |
 | `GEMINI_MODEL` | Optional; defaults to `gemini-flash-latest` |
+| `GEMINI_MODEL_RESEARCH` | Optional; model for the lookup's research phase. Set to `gemini-3.5-flash-lite` — the full Flash could not finish a grounded search inside the function timeout. |
+| `LOOKUP_BUDGET_MS` | Optional; the lookup's self-imposed deadline, default 8500. Raise once Netlify grants a longer function timeout. |
 | `SECRETS_SCAN_OMIT_PATHS` | `firebase-config.js` — stops the secret scanner failing the build |
 
 ---
@@ -45,8 +47,10 @@ apps/garden/
 ├── netlify.toml             ← functions directory + esbuild bundler
 ├── compress-photos.html     ← standalone utility, not part of the SPA (see below)
 ├── icons/                   ← favicon-32, icon-192, icon-512
-├── functions/scan-label.js  ← Netlify serverless function; calls Gemini
-└── js/                      ← 14 ES modules
+├── functions/               ← 2 Netlify serverless functions, both calling Gemini
+│   ├── scan-label.js        ← reads a printed plant label from photos
+│   └── lookup-plant.js      ← researches a plant from its name, with web search
+└── js/                      ← 15 ES modules
 ```
 
 `compress-photos.html` is a self-contained one-off page that re-compresses existing photos in
@@ -55,7 +59,7 @@ navigation. It ships with the site but nothing in `js/` depends on it.
 
 ---
 
-## JS module map (14 modules)
+## JS module map (15 modules)
 
 | File | Responsibility | Key exports |
 |---|---|---|
@@ -72,6 +76,7 @@ navigation. It ships with the site but nothing in `js/` depends on it.
 | `blog-view.js` | Blog/Journal list, post reader, admin editor (Quill) | `renderBlogList`, `renderBlogPost`, `renderBlogEditor` |
 | `compost-view.js` | Compost Bin: deceased-plant log, grouped by month | `renderCompostView`, `DEATH_CAUSES`, `causeMeta` |
 | `label-scan.js` | Client half of the Gemini label scan; compresses images and POSTs to the function. **Near-identical to Nursery's.** | `scanPanelHTML`, `focusScanCard`, `initLabelScan` |
+| `plant-lookup.js` | Client half of the AI plant lookup. Offers the two tracks, previews the result, appends to Notes on request. **Byte-identical to Nursery's** — field IDs are passed in. | `lookupPanelHTML`, `initPlantLookup` |
 | `admin-view.js` | Admin panel: backup/restore, import, stats, user roles, irrigation shortcut | `renderAdminView` |
 
 **Navigation (bottom bar, 6 tabs):** Tasks · Areas · Plants · Overview · Blog · Admin.
