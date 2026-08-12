@@ -365,6 +365,11 @@ function render() {
     flags.appendChild(flag(sources.length + ' sources', sources.length ? 'good' : 'bad'));
     const dropped = tracks.reduce((n, t) => n + (t.meta.droppedFacts || 0), 0);
     if (dropped) flags.appendChild(flag(dropped + ' out-of-scope facts dropped', 'warn'));
+
+    // A field the guard threw away looks exactly like a field the model never
+    // filled. Say which, or you spend an evening guessing.
+    const binned = tracks.flatMap((t) => t.meta.discarded || []);
+    binned.forEach((d) => flags.appendChild(flag(`${d.field} discarded: ${d.why}`, 'warn')));
     flags.appendChild(flag('mode: ' + (tracks[0].meta.mode || '?')));
     flags.appendChild(flag(tracks[0].meta.model || ''));
 

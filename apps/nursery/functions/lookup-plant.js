@@ -239,10 +239,12 @@ function researchPrompt(trackKey) {
             '',
             '  - height / width: ultimate size in the source\'s own units, keeping ranges ("3-4 ft",',
             '    "24-30 in", "5-6 m"). Do not convert — a conversion you perform is one more chance',
-            '    to put an error into a number. If sources conflict, leave the field EMPTY and put',
-            '    the disagreement in "caveats" (rule 7). If the only sizes you found are for the',
-            '    species and you were asked about a cultivar, leave these EMPTY and record the',
-            '    species size as a fact instead (rule 5).',
+            '    to put an error into a number. If sources conflict, give the range that spans',
+            '    them ("5-8 m") and note the disagreement in "caveats" — a span is more use than',
+            '    a blank, and rule 7 says record the range. Only leave the field empty if you',
+            '    cannot express what you found in a few characters. If the only sizes you found',
+            '    are for the species and you were asked about a cultivar, leave these EMPTY and',
+            '    record the species size as a fact instead (rule 5).',
             '  - family, commonNames: if found. commonNames comma separated.',
           ].join('\n')
         : [
@@ -509,13 +511,25 @@ function str(v) { return typeof v === 'string' ? v.trim() : ''; }
 // containing several sentences of the model arguing with itself about which
 // rule applied. Never let that reach a form. Anything that is not a short bare
 // value is discarded: an empty field is honest, a rambling one is not.
-const RAMBLE = /\b(wait|let's|let me|however|but the rule|rule says|i should|instead of|depending on|approx)\b/i;
+// "approx" was in this list and was a mistake — "3-4 ft approx" is a perfectly
+// good bare value, and discarding it silently lost real sizes. Keep the markers
+// to things that only appear when the model is talking to itself.
+const RAMBLE = /\b(wait|let's|let me|however|but the rule|rule says|i should|instead of|depending on)\b/i;
 
-function shortField(v, label) {
+// Returns the value, or '' plus a note in `discarded` so the caller can tell
+// the difference between "the model found nothing" and "we threw it away".
+// Silently emptying a field is how you end up staring at a blank height
+// wondering which of the two happened — as we just did.
+function shortField(v, label, discarded) {
     const s = str(v);
     if (!s) return '';
-    if (s.length > 40 || RAMBLE.test(s) || /[.;]\s/.test(s)) {
-        console.warn(`lookup-plant: discarded ${label} — not a bare value:`, s.slice(0, 120));
+    let why = '';
+    if (s.length > 40)            why = `too long (${s.length} chars)`;
+    else if (RAMBLE.test(s))      why = 'contains deliberation';
+    else if (/[.;]\s/.test(s))    why = 'more than one sentence';
+    if (why) {
+        console.warn(`lookup-plant: discarded ${label} — ${why}:`, s.slice(0, 160));
+        discarded.push({ field: label, why, value: s.slice(0, 160) });
         return '';
     }
     return s;
@@ -751,7 +765,13 @@ exports.handler = async (event) => {
             return fail(502, { error: 'The research step came back in a form we could not read. Try again.', mode });
         }
 
-        const scope   = str(raw.scope).toLowerCase();
+        const discarded = [];
+
+        // The model has come back with "Cultivar", "cultivar-level" and similar.
+        // Match on what it contains rather than demanding an exact word — an
+        // unset scope loses rule 5's whole point.
+        const rawScope = str(raw.scope).toLowerCase();
+        const scope = ['cultivar', 'species', 'genus', 'mixed'].find((s) => rawScope.includes(s)) || '';
         const sources = mergeSources(raw.sources, sourcesFromGrounding(candidate));
         const allowed = TRACKS[track].categories;
 
@@ -788,11 +808,11 @@ exports.handler = async (event) => {
                     resolvedName: str(raw.resolvedName) || name,
                     identified:   raw.identified !== false,
                     identityNote: str(raw.identityNote),
-                    scope:        ['cultivar', 'species', 'genus', 'mixed'].includes(scope) ? scope : '',
-                    family:       shortField(raw.family, 'family'),
-                    commonNames:  shortField(raw.commonNames, 'commonNames'),
-                    height:       shortField(raw.height, 'height'),
-                    width:        shortField(raw.width, 'width'),
+                    scope,
+                    family:       shortField(raw.family, 'family', discarded),
+                    commonNames:  shortField(raw.commonNames, 'commonNames', discarded),
+                    height:       shortField(raw.height, 'height', discarded),
+                    width:        shortField(raw.width, 'width', discarded),
                     caveats:      str(raw.caveats),
                     notFound:     str(raw.notFound),
                     facts,
@@ -801,6 +821,7 @@ exports.handler = async (event) => {
                 grounded:      didSearch || sources.length > 0,
                 searchQueries: Array.isArray(queries) ? queries : [],
                 droppedFacts:  dropped > 0 ? dropped : 0,
+                discarded,
                 phase, track, mode, model: MODEL_RESEARCH,
                 elapsedMs: elapsed(), budgetMs: BUDGET_MS,
             }),
