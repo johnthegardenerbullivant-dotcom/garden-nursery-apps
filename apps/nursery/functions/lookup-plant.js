@@ -50,8 +50,22 @@
 // set GEMINI_MODEL=gemini-flash-latest in Netlify to always track the newest
 // Flash. Search grounding needs a model that supports the google_search tool.
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
-const ENDPOINT =
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+// The two phases have opposite needs, so each can use its own model.
+//
+// Research is latency-critical and is really extraction — read search results,
+// pull out facts, cite them. A Flash-Lite tier is built for exactly that and is
+// markedly quicker, which is the difference between fitting in a function
+// timeout and not. Set GEMINI_MODEL_RESEARCH=gemini-3.5-flash-lite to try it.
+//
+// Write is the quality-critical half — it turns facts into prose someone will
+// read — and it is already fast because it does no searching, so there is
+// nothing to gain by economising there.
+const MODEL_RESEARCH = process.env.GEMINI_MODEL_RESEARCH || GEMINI_MODEL;
+const MODEL_WRITE    = process.env.GEMINI_MODEL_WRITE    || GEMINI_MODEL;
+
+const endpointFor = (model) =>
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
 // Our own deadline, set just inside the platform's, so a timeout returns a
 // diagnostic instead of the empty 504 Netlify sends when it kills a function.
@@ -477,11 +491,11 @@ function parseJsonLoosely(text) {
 
 function str(v) { return typeof v === 'string' ? v.trim() : ''; }
 
-async function callGemini(apiKey, body, remainingMs) {
+async function callGemini(apiKey, model, body, remainingMs) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), Math.max(1000, remainingMs));
     try {
-        const resp = await fetch(`${ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
+        const resp = await fetch(`${endpointFor(model)}?key=${encodeURIComponent(apiKey)}`, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify(body),
@@ -502,7 +516,7 @@ async function callGemini(apiKey, body, remainingMs) {
 // Run one Gemini call, coping with a model that rejects thinkingConfig and,
 // for the grounded phase, with one that rejects search-plus-schema. Grounding
 // matters more than the schema, so the schema is what gets dropped.
-async function runPhase({ apiKey, prompt, input, schema, useSearch, remaining }) {
+async function runPhase({ apiKey, model, prompt, input, schema, useSearch, remaining }) {
     const text = `${prompt}\n\n=== THE REQUEST ===\n${input}`;
     const base = {
         contents: [{ parts: [{ text }] }],
@@ -525,21 +539,21 @@ async function runPhase({ apiKey, prompt, input, schema, useSearch, remaining })
     };
 
     let mode = useSearch ? 'grounded+schema' : 'schema';
-    let attempt = await callGemini(apiKey, base, remaining());
+    let attempt = await callGemini(apiKey, model, base, remaining());
 
     if (!attempt.ok && attempt.status === 400 && /thinking/i.test(attempt.text)) {
         console.warn('lookup-plant: model rejected thinkingConfig — retrying without it.');
-        attempt = await callGemini(apiKey, stripThinking(base), remaining());
+        attempt = await callGemini(apiKey, model, stripThinking(base), remaining());
     }
 
     if (useSearch && !attempt.ok && attempt.status === 400 && !attempt.aborted) {
         console.warn(
-            'lookup-plant: grounded+schema rejected on', GEMINI_MODEL,
+            'lookup-plant: grounded+schema rejected on', model,
             '— retrying grounded free-form. Detail:', attempt.text.slice(0, 300),
         );
         const freeform = stripSchema(base);
         freeform.contents = [{ parts: [{ text: `${text}\n\nReturn ONLY a JSON object, no other text.` }] }];
-        attempt = await callGemini(apiKey, freeform, remaining());
+        attempt = await callGemini(apiKey, model, freeform, remaining());
         mode = 'grounded+freeform';
     }
 
@@ -581,7 +595,8 @@ exports.handler = async (event) => {
         headers: CORS,
         body: JSON.stringify({
             ...body, phase, track,
-            elapsedMs: elapsed(), budgetMs: BUDGET_MS, model: GEMINI_MODEL,
+            elapsedMs: elapsed(), budgetMs: BUDGET_MS,
+            model: phase === 'write' ? MODEL_WRITE : MODEL_RESEARCH,
         }),
     });
 
@@ -610,7 +625,7 @@ exports.handler = async (event) => {
 
         try {
             const { attempt, mode } = await runPhase({
-                apiKey, prompt: writePrompt(track), input: buildWriterInput(research),
+                apiKey, model: MODEL_WRITE, prompt: writePrompt(track), input: buildWriterInput(research),
                 schema: SCHEMA_WRITE, useSearch: false, remaining,
             });
 
@@ -649,7 +664,7 @@ exports.handler = async (event) => {
                         history:     section('history'),
                         careNotes:   TRACKS[track].careNotes ? str(raw.careNotes) : '',
                     },
-                    phase, track, mode, model: GEMINI_MODEL,
+                    phase, track, mode, model: MODEL_WRITE,
                     elapsedMs: elapsed(), budgetMs: BUDGET_MS,
                 }),
             };
@@ -666,7 +681,7 @@ exports.handler = async (event) => {
 
     try {
         const { attempt, mode } = await runPhase({
-            apiKey, prompt: researchPrompt(track), input: buildQuery(payload, name),
+            apiKey, model: MODEL_RESEARCH, prompt: researchPrompt(track), input: buildQuery(payload, name),
             schema: SCHEMA_RESEARCH, useSearch: true, remaining,
         });
 
@@ -736,7 +751,7 @@ exports.handler = async (event) => {
                 grounded:      didSearch || sources.length > 0,
                 searchQueries: Array.isArray(queries) ? queries : [],
                 droppedFacts:  dropped > 0 ? dropped : 0,
-                phase, track, mode, model: GEMINI_MODEL,
+                phase, track, mode, model: MODEL_RESEARCH,
                 elapsedMs: elapsed(), budgetMs: BUDGET_MS,
             }),
         };
