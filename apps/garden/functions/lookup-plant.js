@@ -32,12 +32,18 @@
 //  The Gemini API key is read from the GEMINI_API_KEY environment
 //  variable and NEVER sent to the browser.
 //
+//  TWO TRACKS, requested independently. "details" covers what the
+//  plant is and how to grow it; "origins" covers the name's meaning
+//  and how the plant reached cultivation. Most plants only need the
+//  first. Asking for both fires two concurrent lookups.
+//
 //  Request  (POST JSON):
-//    { phase: "research", genus, species, subspecies, variety,
-//      cultivar, commonName }        — or { phase, name: "…" }
-//    { phase: "write", research: <the research phase's result> }
+//    { phase: "research", track: "details"|"origins",
+//      genus, species, subspecies, variety, cultivar, commonName }
+//                                    — or { phase, track, name: "…" }
+//    { phase: "write", track, research: <the research result> }
 //  Response (200 JSON):
-//    { result: {…}, grounded, mode, model, elapsedMs, budgetMs }
+//    { result: {…}, grounded, track, mode, model, elapsedMs, budgetMs }
 // =============================================================
 
 // Kept in step with scan-label.js. Google retires Gemini models quickly, so
@@ -59,10 +65,58 @@ const THINKING_BUDGET = Number(process.env.GEMINI_THINKING_BUDGET || 0);
 const CATEGORIES = ['description', 'cultivation', 'etymology', 'history'];
 
 // -------------------------------------------------------------
+//  Two independent lookups, requested separately.
+//
+//  "details" is the everyday one: what the plant is and how to grow
+//  it. "origins" is the one worth running on a rarer or more
+//  interesting plant: where the name came from and how the plant
+//  reached cultivation.
+//
+//  Keeping them apart is a product decision — most plants only need
+//  the first — but it also halves the searching in any one call,
+//  which is what makes each fit inside a Netlify function's timeout.
+//  Ask for both and the browser fires them concurrently, so the wait
+//  is the slower of the two rather than the sum.
+// -------------------------------------------------------------
+const TRACKS = {
+    details: {
+        categories: ['description', 'cultivation'],
+        fields:     true,
+        label:      'plant details',
+        careNotes:  true,
+    },
+    origins: {
+        categories: ['etymology', 'history'],
+        fields:     false,
+        label:      'origins and history',
+        careNotes:  false,
+    },
+};
+
+const CATEGORY_GUIDE = {
+    description:
+        '  - description: habit, eventual size, foliage, flower color and form, season of\n' +
+        '    interest, scent, fruit, fall color, evergreen or deciduous.',
+    cultivation:
+        '  - cultivation: aspect, soil, drainage, watering, hardiness (USDA zone, or the RHS\n' +
+        '    rating where that is what the source gives), pruning, feeding, pests and diseases.\n' +
+        '    Also whether it is invasive, self-seeds, is toxic, or spreads by runners.',
+    etymology:
+        '  - etymology: the meaning and derivation of the genus and the specific epithet, who\n' +
+        '    the genus honors if a source says so, and the origin of the common name where it\n' +
+        '    is recorded.',
+    history:
+        '  - history: native range and habitat, when and by whom it was collected or introduced,\n' +
+        '    and recorded historical, medicinal, culinary or cultural use. For a cultivar: how it\n' +
+        '    arose (a seedling, a sport, a deliberate cross, and of what), who found or bred it,\n' +
+        '    where and when, when it was released and by whom, and any patent or award.',
+};
+
+// -------------------------------------------------------------
 //  PHASE 1 — research. This is where the anti-fabrication rules
 //  live, because this is the only phase that can see the web.
 // -------------------------------------------------------------
-const PROMPT_RESEARCH = `You are researching a single plant for a private horticultural
+const PROMPT_RESEARCH_HEAD = `You are researching a single plant for a private horticultural
 collection database. You are the fact-gathering half of a two-step process: you find and
 record facts, and a second step turns your facts into prose. You do not write prose.
 
@@ -124,35 +178,14 @@ answer, the rule wins.
 Each entry in "facts" is one self-contained statement, at most about 25 words, written
 plainly in AMERICAN English. No markdown. Each carries:
   - text:        the fact itself.
-  - category:    one of description, cultivation, etymology, history.
+  - category:    see the scope below.
   - level:       cultivar, species, or genus — what the fact is actually about (rule 5).
   - sourceIndex: the 0-based position in your "sources" array of the page it came from.
 
-Return at most 18 facts. Prefer the specific and the interesting over the generic: how a
-cultivar arose and who raised it is worth more than the observation that it likes well-drained
-soil. Cover the categories you have material for and skip the ones you do not.
+Prefer the specific and the interesting over the generic. Return fewer facts rather than
+padding: there is no minimum, and an empty list is a valid answer.`;
 
-What belongs in each category:
-  - description: habit, eventual size, foliage, flower color and form, season of interest,
-    scent, fruit, fall color, evergreen or deciduous.
-  - cultivation: aspect, soil, drainage, watering, hardiness (USDA zone, or the RHS rating
-    where that is what the source gives), pruning, feeding, pests and diseases. Also whether
-    it is invasive, self-seeds, is toxic, or spreads by runners.
-  - etymology: the meaning and derivation of genus and specific epithet, who the genus honors
-    if a source says, and the origin of the common name where it is recorded.
-  - history: native range and habitat, when and by whom it was collected or introduced,
-    recorded historical, medicinal, culinary or cultural use. For a cultivar: how it arose
-    (a seedling, a sport, a deliberate cross, and of what), who found or bred it, where and
-    when, when it was released and by whom, and any patent or award.
-
-=== THE DISCRETE FIELDS ===
-  - height / width: ultimate size in the source's own units, keeping ranges ("3-4 ft",
-    "24-30 in", "60 cm"). Do not convert — a conversion you perform is one more chance to put
-    an error into a number. If the only sizes you found are for the species and you were asked
-    about a cultivar, leave these EMPTY and record the species size as a fact instead (rule 5).
-  - family, commonNames: if found. commonNames comma separated.
-
-=== SOURCES ===
+const PROMPT_RESEARCH_TAIL = `=== SOURCES ===
 List in "sources" the pages you actually used, with title and URL, in the order your facts
 refer to them. Prefer botanic gardens, university extension services, the RHS, national plant
 societies, monographs, plant patent records, and established nurseries' own catalog entries.
@@ -160,6 +193,46 @@ Do not list a source you did not use. Do not invent a URL: if you cannot give a 
 the title alone.
 
 Return the result as JSON matching the provided schema.`;
+
+// The scope block is the only part that varies by track. Narrowing it is what
+// keeps a single call's searching inside the function timeout.
+function researchPrompt(trackKey) {
+    const t = TRACKS[trackKey];
+    const guide = t.categories.map((c) => CATEGORY_GUIDE[c]).join('\n');
+
+    const scope = [
+        '=== THE SCOPE OF THIS LOOKUP ===',
+        `You are gathering ONLY ${t.label}. Use these categories and no others:`,
+        `  ${t.categories.join(', ')}`,
+        '',
+        'A separate lookup covers the rest, so do not stray outside these categories even if',
+        'you come across something interesting. A fact in any other category will be discarded,',
+        'and the search it cost is time this lookup does not have.',
+        '',
+        'What belongs in each category:',
+        guide,
+        '',
+        `Return at most ${t.categories.length * 6} facts.`,
+    ].join('\n');
+
+    const fields = t.fields
+        ? [
+            '=== THE DISCRETE FIELDS ===',
+            '  - height / width: ultimate size in the source\'s own units, keeping ranges ("3-4 ft",',
+            '    "24-30 in", "60 cm"). Do not convert — a conversion you perform is one more chance to',
+            '    put an error into a number. If the only sizes you found are for the species and you',
+            '    were asked about a cultivar, leave these EMPTY and record the species size as a fact',
+            '    instead (rule 5).',
+            '  - family, commonNames: if found. commonNames comma separated.',
+          ].join('\n')
+        : [
+            '=== THE DISCRETE FIELDS ===',
+            'Leave height, width, family and commonNames EMPTY. The other lookup covers them, and',
+            'searching for them here would cost time this one does not have.',
+          ].join('\n');
+
+    return [PROMPT_RESEARCH_HEAD, scope, fields, PROMPT_RESEARCH_TAIL].join('\n\n');
+}
 
 const SCHEMA_RESEARCH = {
     type: 'OBJECT',
@@ -203,7 +276,7 @@ const SCHEMA_RESEARCH = {
 // -------------------------------------------------------------
 //  PHASE 2 — write. No search tool. Nothing but the facts above.
 // -------------------------------------------------------------
-const PROMPT_WRITE = `You are writing reference notes about a plant for a private
+const PROMPT_WRITE_HEAD = `You are writing reference notes about a plant for a private
 horticultural collection database, in the style of a good nursery catalog: accurate,
 specific, and interesting about where a plant came from.
 
@@ -233,15 +306,32 @@ Combine related facts into flowing sentences rather than listing them one per se
 do not invent connective claims to join them.
 
 This is a reference note, not an essay. Hold description, cultivation and etymology to 2-4
-sentences each; history may run to 6 where the supplied facts support it. Never pad.
+sentences each; history may run to 6 where the supplied facts support it. Never pad.`;
 
-Write these four sections from the facts of the matching category, plus one extra field:
-  - description, cultivation, etymology, history
-  - careNotes: one or two sentences of the most practical guidance, drawn from the
-    cultivation facts. A condensed version for a small form field, not a repeat of the
-    whole paragraph. Empty if there are no cultivation facts.
+const WRITE_CARE_NOTES =
+    '  - careNotes: one or two sentences of the most practical guidance, drawn from the\n' +
+    '    cultivation facts. A condensed version for a small form field, not a repeat of the\n' +
+    '    whole paragraph. Empty if there are no cultivation facts.';
 
-Return the result as JSON matching the provided schema.`;
+// Only ask for the sections this track gathered facts for. Naming the others
+// would invite the model to fill them from memory, which is the one thing the
+// two-phase split exists to prevent.
+function writePrompt(trackKey) {
+    const t = TRACKS[trackKey];
+    const lines = [
+        '=== WHAT TO WRITE ===',
+        'Write ONLY these sections, from the facts of the matching category:',
+        `  - ${t.categories.join(', ')}`,
+        '',
+        'Return an empty string for every other section in the schema. Another lookup covers',
+        'them; writing anything there would mean inventing it.',
+    ];
+    if (t.careNotes) lines.push('', 'Also fill this one extra field:', WRITE_CARE_NOTES);
+    else lines.push('', 'Return careNotes as an empty string.');
+
+    return [PROMPT_WRITE_HEAD, lines.join('\n'),
+            'Return the result as JSON matching the provided schema.'].join('\n\n');
+}
 
 const SCHEMA_WRITE = {
     type: 'OBJECT',
@@ -484,12 +574,22 @@ exports.handler = async (event) => {
     const elapsed   = () => Date.now() - started;
     const remaining = () => BUDGET_MS - elapsed();
     const phase     = str(payload.phase) || 'research';
+    const track     = str(payload.track) || 'details';
 
     const fail = (statusCode, body) => ({
         statusCode,
         headers: CORS,
-        body: JSON.stringify({ ...body, phase, elapsedMs: elapsed(), budgetMs: BUDGET_MS, model: GEMINI_MODEL }),
+        body: JSON.stringify({
+            ...body, phase, track,
+            elapsedMs: elapsed(), budgetMs: BUDGET_MS, model: GEMINI_MODEL,
+        }),
     });
+
+    if (!TRACKS[track]) {
+        return fail(400, {
+            error: `Unknown track "${track}" — expected ${Object.keys(TRACKS).join(' or ')}.`,
+        });
+    }
 
     const timedOut = (mode) => fail(504, {
         error: `The ${phase} step ran past its ${BUDGET_MS} ms budget and was stopped. Raise ` +
@@ -510,7 +610,7 @@ exports.handler = async (event) => {
 
         try {
             const { attempt, mode } = await runPhase({
-                apiKey, prompt: PROMPT_WRITE, input: buildWriterInput(research),
+                apiKey, prompt: writePrompt(track), input: buildWriterInput(research),
                 schema: SCHEMA_WRITE, useSearch: false, remaining,
             });
 
@@ -530,20 +630,27 @@ exports.handler = async (event) => {
                 return fail(502, { error: 'The write step came back in a form we could not read. Try again.', mode });
             }
 
-            console.log('lookup-plant write: ok in', elapsed(), 'ms —', research.resolvedName);
+            console.log('lookup-plant write:', track, 'ok in', elapsed(), 'ms —', research.resolvedName);
+
+            // Belt and braces: keep only the sections this track was asked for,
+            // so a section filled from memory despite the instruction cannot
+            // reach the note.
+            const allowed = TRACKS[track].categories;
+            const section = (key) => (allowed.includes(key) ? str(raw[key]) : '');
 
             return {
                 statusCode: 200,
                 headers: CORS,
                 body: JSON.stringify({
                     result: {
-                        description: str(raw.description),
-                        cultivation: str(raw.cultivation),
-                        etymology:   str(raw.etymology),
-                        history:     str(raw.history),
-                        careNotes:   str(raw.careNotes),
+                        description: section('description'),
+                        cultivation: section('cultivation'),
+                        etymology:   section('etymology'),
+                        history:     section('history'),
+                        careNotes:   TRACKS[track].careNotes ? str(raw.careNotes) : '',
                     },
-                    phase, mode, model: GEMINI_MODEL, elapsedMs: elapsed(), budgetMs: BUDGET_MS,
+                    phase, track, mode, model: GEMINI_MODEL,
+                    elapsedMs: elapsed(), budgetMs: BUDGET_MS,
                 }),
             };
         } catch (e) {
@@ -559,7 +666,7 @@ exports.handler = async (event) => {
 
     try {
         const { attempt, mode } = await runPhase({
-            apiKey, prompt: PROMPT_RESEARCH, input: buildQuery(payload, name),
+            apiKey, prompt: researchPrompt(track), input: buildQuery(payload, name),
             schema: SCHEMA_RESEARCH, useSearch: true, remaining,
         });
 
@@ -581,21 +688,30 @@ exports.handler = async (event) => {
 
         const scope   = str(raw.scope).toLowerCase();
         const sources = mergeSources(raw.sources, sourcesFromGrounding(candidate));
+        const allowed = TRACKS[track].categories;
 
+        // Drop anything outside this track's categories. The prompt says not to
+        // stray, but a fact in the wrong category would otherwise reach a writer
+        // that has been told to ignore that section, and vanish silently.
         const facts = (Array.isArray(raw.facts) ? raw.facts : [])
             .map((f) => ({
                 text:        str(f?.text),
-                category:    CATEGORIES.includes(str(f?.category)) ? str(f.category) : 'description',
+                category:    str(f?.category),
                 level:       str(f?.level).toLowerCase(),
                 sourceIndex: Number.isInteger(f?.sourceIndex) ? f.sourceIndex : -1,
             }))
-            .filter((f) => f.text);
+            .filter((f) => f.text && allowed.includes(f.category));
+
+        const dropped = (Array.isArray(raw.facts) ? raw.facts.length : 0) - facts.length;
+        if (dropped > 0) {
+            console.warn('lookup-plant research:', track, 'dropped', dropped, 'out-of-scope facts.');
+        }
 
         const queries   = candidate?.groundingMetadata?.webSearchQueries;
         const didSearch = Array.isArray(queries) && queries.length > 0;
 
         console.log(
-            'lookup-plant research: ok in', elapsed(), 'ms —', name,
+            'lookup-plant research:', track, 'ok in', elapsed(), 'ms —', name,
             '—', facts.length, 'facts,', sources.length, 'sources, grounded:', didSearch,
         );
 
@@ -619,7 +735,9 @@ exports.handler = async (event) => {
                 },
                 grounded:      didSearch || sources.length > 0,
                 searchQueries: Array.isArray(queries) ? queries : [],
-                phase, mode, model: GEMINI_MODEL, elapsedMs: elapsed(), budgetMs: BUDGET_MS,
+                droppedFacts:  dropped > 0 ? dropped : 0,
+                phase, track, mode, model: GEMINI_MODEL,
+                elapsedMs: elapsed(), budgetMs: BUDGET_MS,
             }),
         };
     } catch (e) {

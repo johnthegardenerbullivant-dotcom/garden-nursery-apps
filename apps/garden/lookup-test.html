@@ -10,13 +10,18 @@
 
     Standalone, like compress-photos.html: no Firebase, no auth, no shared CSS,
     not reachable from the app's navigation. It exists so the lookup-plant
-    function's prompt can be hammered against real plants on a deploy preview
+    function's prompts can be hammered against real plants on a deploy preview
     before any of it is wired into the Garden plant form or the Nursery batch
     form.
 
     DELETE THIS FILE BEFORE MERGING TO MAIN. It calls a metered API from an
     unauthenticated public page, which is fine on a short-lived preview and not
     fine on the live site.
+
+    Two independent lookups, matching the function's two tracks:
+      details — what the plant is and how to grow it
+      origins — what the name means and where the plant came from
+    Most plants only need the first. Running both fires them concurrently.
 
     The assembleNotes() function below is the draft of the house style. Once it
     is right, it moves into the shared client module.
@@ -104,10 +109,10 @@
 
 <h1>Plant lookup — prompt test harness</h1>
 <p class="lede">Calls <code>/.netlify/functions/lookup-plant</code> and shows exactly what would be
-   inserted into the Notes field, plus the raw response.</p>
+   inserted into the Notes field, plus the facts behind it and the raw responses.</p>
 
 <div class="warn">
-    <strong>Temporary.</strong> This page is for tuning the prompt on a deploy preview and must be
+    <strong>Temporary.</strong> This page is for tuning the prompts on a deploy preview and must be
     deleted before merging to <code>main</code>. It calls a metered API and has no sign-in.
 </div>
 
@@ -124,10 +129,12 @@
     <div class="presets" id="presets"></div>
 
     <div class="row">
-        <button id="go">Look it up</button>
+        <button id="go-details">Look up plant details</button>
+        <button id="go-origins">Look up origins &amp; history</button>
+        <button id="go-both" class="secondary">Both (in parallel)</button>
         <button id="clear" class="secondary">Clear</button>
-        <span class="status" id="status"></span>
     </div>
+    <div class="row"><span class="status" id="status"></span></div>
 </div>
 
 <div id="out" hidden>
@@ -169,13 +176,15 @@
 //  Test set. Chosen to probe the rules, not just to succeed:
 //  the last four should mostly come back EMPTY or flagged, and
 //  a confident answer to any of them is a prompt failure.
+//  Presets only fill the fields — pick a lookup yourself, so no
+//  preset click quietly spends two API calls.
 // -------------------------------------------------------------
 const PRESETS = [
     { label: "Abelia 'Kaleidoscope' (documented sport)", v: { genus: 'Abelia', species: 'grandiflora', cultivar: 'Kaleidoscope' } },
     { label: 'Acanthus mollis (rich etymology)',         v: { genus: 'Acanthus', species: 'mollis' } },
+    { label: "Acer 'Brilliantissimum'",                  v: { genus: 'Acer', species: 'pseudoplatanus', cultivar: 'Brilliantissimum' } },
     { label: "Hydrangea 'Limelight' (size trap)",        v: { genus: 'Hydrangea', species: 'paniculata', cultivar: 'Limelight' } },
     { label: "Rosa 'Zephirine Drouhin' (named person)",  v: { genus: 'Rosa', cultivar: 'Zephirine Drouhin' } },
-    { label: "Heuchera 'Palace Purple' (AGM history)",   v: { genus: 'Heuchera', species: 'micrantha', cultivar: 'Palace Purple' } },
     { label: 'Trillium (genus only)',                    v: { genus: 'Trillium' } },
     { label: 'Echinacia purperea (misspelt)',            v: { genus: 'Echinacia', species: 'purperea' } },
     { label: "Hosta 'Emerald Whisper of Dawn' (invented)", v: { genus: 'Hosta', cultivar: 'Emerald Whisper of Dawn' } },
@@ -183,6 +192,20 @@ const PRESETS = [
 
 const IDS = ['genus', 'species', 'subspecies', 'variety', 'cultivar', 'commonName'];
 const $ = (id) => document.getElementById(id);
+
+// Whatever has been looked up so far, by track. Running one track then the
+// other adds to the note rather than replacing it — which is how the real
+// form will behave when you enrich a plant you looked up last week.
+const state = { details: null, origins: null };
+
+function resetState() {
+    state.details = null;
+    state.origins = null;
+    $('out').hidden = true;
+    $('notes').value = '';
+    $('facts').textContent = '';
+    $('flags').textContent = '';
+}
 
 const presetBox = $('presets');
 PRESETS.forEach((p) => {
@@ -192,14 +215,15 @@ PRESETS.forEach((p) => {
     b.textContent = p.label;
     b.addEventListener('click', () => {
         IDS.forEach((k) => { $(k).value = p.v[k] || ''; });
-        $('go').click();
+        resetState();
+        $('status').textContent = 'Fields filled — now choose a lookup.';
     });
     presetBox.appendChild(b);
 });
 
 $('clear').addEventListener('click', () => {
     IDS.forEach((k) => { $(k).value = ''; });
-    $('out').hidden = true;
+    resetState();
     $('status').textContent = '';
 });
 
@@ -207,32 +231,42 @@ $('clear').addEventListener('click', () => {
 //  assembleNotes() — DRAFT OF THE HOUSE STYLE.
 //  The application composes the note, not the model, so every
 //  entry comes out with the same shape however chatty the model
-//  is feeling. Sections that came back empty are simply absent.
+//  is feeling. Sections not looked up are simply absent, and a
+//  second lookup slots its sections into the same running order.
 // -------------------------------------------------------------
-function assembleNotes(r, prose, meta) {
+function assembleNotes(st) {
+    const tracks = [st.details, st.origins].filter(Boolean);
+    if (!tracks.length) return '';
+
     const blocks = [];
     const section = (heading, body) => {
         if (body && body.trim()) blocks.push(heading + '\n' + body.trim());
     };
+    const firstOf = (key) => {
+        for (const t of tracks) {
+            const v = (t.research[key] || '').trim();
+            if (v) return v;
+        }
+        return '';
+    };
 
-    if (r.identityNote && r.identityNote.trim()) {
-        blocks.push('NOTE ON IDENTITY\n' + r.identityNote.trim());
-    }
+    const identity = firstOf('identityNote');
+    if (identity) blocks.push('NOTE ON IDENTITY\n' + identity);
 
-    section('DESCRIPTION', prose.description);
-    section('CULTIVATION', prose.cultivation);
-    section('NAME AND ETYMOLOGY', prose.etymology);
-    section('ORIGIN AND HISTORY', prose.history);
+    section('DESCRIPTION',        st.details && st.details.prose.description);
+    section('CULTIVATION',        st.details && st.details.prose.cultivation);
+    section('NAME AND ETYMOLOGY', st.origins && st.origins.prose.etymology);
+    section('ORIGIN AND HISTORY', st.origins && st.origins.prose.history);
 
-    if (r.caveats && r.caveats.trim()) {
-        blocks.push('WHERE SOURCES DISAGREE\n' + r.caveats.trim());
-    }
-    if (r.notFound && r.notFound.trim()) {
-        blocks.push('NOT VERIFIED\n' + r.notFound.trim());
-    }
+    const caveats = tracks.map((t) => (t.research.caveats || '').trim()).filter(Boolean);
+    if (caveats.length) blocks.push('WHERE SOURCES DISAGREE\n' + [...new Set(caveats)].join(' '));
 
-    if (Array.isArray(r.sources) && r.sources.length) {
-        const lines = r.sources.map((s) => {
+    const notFound = tracks.map((t) => (t.research.notFound || '').trim()).filter(Boolean);
+    if (notFound.length) blocks.push('NOT VERIFIED\n' + [...new Set(notFound)].join(' '));
+
+    const sources = mergedSources(st);
+    if (sources.length) {
+        const lines = sources.map((s) => {
             const t = (s.title || '').trim();
             const u = (s.url || '').trim();
             if (t && u) return `  ${t} — ${u}`;
@@ -245,10 +279,43 @@ function assembleNotes(r, prose, meta) {
 
     // Provenance line, so a note's origin is obvious a year from now.
     const stamp = new Date().toISOString().slice(0, 10);
-    const how = meta && meta.grounded ? 'AI lookup with web search' : 'AI lookup (NOT web-grounded)';
+    const allGrounded = tracks.every((t) => t.meta.grounded);
+    const how = allGrounded ? 'AI lookup with web search' : 'AI lookup (NOT fully web-grounded)';
     blocks.push(`[${how}, ${stamp}. Unverified details were omitted. Please check before relying on it.]`);
 
     return blocks.join('\n\n');
+}
+
+// Sources across both tracks, deduped, with each track's facts remapped onto
+// the merged list so the fact table's [n] links still point somewhere real.
+function mergedSources(st) {
+    const out = [];
+    const seen = new Map();
+    [st.details, st.origins].filter(Boolean).forEach((t) => {
+        (t.research.sources || []).forEach((s) => {
+            const key = ((s.url || s.title || '')).toLowerCase();
+            if (!key || seen.has(key)) return;
+            seen.set(key, out.length);
+            out.push(s);
+        });
+    });
+    return out;
+}
+
+function mergedFacts(st) {
+    const sources = mergedSources(st);
+    const indexOf = (s) => {
+        const key = ((s && (s.url || s.title)) || '').toLowerCase();
+        return sources.findIndex((x) => ((x.url || x.title || '')).toLowerCase() === key);
+    };
+    const out = [];
+    [st.details, st.origins].filter(Boolean).forEach((t) => {
+        (t.research.facts || []).forEach((f) => {
+            const own = (t.research.sources || [])[f.sourceIndex];
+            out.push({ ...f, mergedIndex: own ? indexOf(own) : -1 });
+        });
+    });
+    return out;
 }
 
 function flag(text, kind) {
@@ -258,7 +325,166 @@ function flag(text, kind) {
     return el;
 }
 
-$('go').addEventListener('click', async () => {
+// -------------------------------------------------------------
+//  Rendering — always redrawn from `state`, never patched, so one
+//  track then the other gives the same result as both at once.
+// -------------------------------------------------------------
+function render() {
+    const tracks = [state.details, state.origins].filter(Boolean);
+    if (!tracks.length) { $('out').hidden = true; return; }
+    $('out').hidden = false;
+
+    const sources = mergedSources(state);
+    const facts   = mergedFacts(state);
+    const first   = tracks[0].research;
+    const details = state.details && state.details.research;
+
+    const flags = $('flags');
+    flags.textContent = '';
+    tracks.forEach((t) => {
+        flags.appendChild(flag(t.name + ' ' + t.secs.toFixed(1) + 's', t.secs > 8 ? 'warn' : 'good'));
+    });
+    flags.appendChild(flag(tracks.every((t) => t.meta.grounded) ? 'web-grounded' : 'NOT GROUNDED',
+                           tracks.every((t) => t.meta.grounded) ? 'good' : 'bad'));
+    flags.appendChild(flag(first.identified ? 'identified' : 'NOT IDENTIFIED', first.identified ? 'good' : 'warn'));
+    flags.appendChild(flag('scope: ' + (first.scope || 'unset'), first.scope ? '' : 'warn'));
+    flags.appendChild(flag(facts.length + ' facts', facts.length ? 'good' : 'warn'));
+    flags.appendChild(flag(sources.length + ' sources', sources.length ? 'good' : 'bad'));
+    const dropped = tracks.reduce((n, t) => n + (t.meta.droppedFacts || 0), 0);
+    if (dropped) flags.appendChild(flag(dropped + ' out-of-scope facts dropped', 'warn'));
+    flags.appendChild(flag('mode: ' + (tracks[0].meta.mode || '?')));
+    flags.appendChild(flag(tracks[0].meta.model || ''));
+
+    $('notes').value            = assembleNotes(state);
+    $('f-resolved').textContent = first.resolvedName || '';
+    $('f-scope').textContent    = first.scope || '';
+    $('f-identity').textContent = first.identityNote || '';
+    $('f-family').textContent   = (details && details.family) || '';
+    $('f-height').textContent   = (details && details.height) || '';
+    $('f-width').textContent    = (details && details.width) || '';
+    $('f-care').textContent     = (state.details && state.details.prose.careNotes) || '';
+    $('f-caveats').textContent  = tracks.map((t) => t.research.caveats).filter(Boolean).join(' ');
+    $('f-notfound').textContent = tracks.map((t) => t.research.notFound).filter(Boolean).join(' ');
+    $('f-queries').textContent  = tracks.flatMap((t) => t.meta.searchQueries || []).join(' · ');
+
+    const list = $('f-sources');
+    list.textContent = '';
+    sources.forEach((s) => {
+        const li = document.createElement('li');
+        if (s.url) {
+            const a = document.createElement('a');
+            a.href = s.url;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.textContent = s.title || s.url;
+            li.appendChild(a);
+        } else {
+            li.textContent = s.title || '';
+        }
+        list.appendChild(li);
+    });
+
+    // The fact table is the audit trail: every sentence in the note above
+    // should be traceable to a row here, and a row flagged species or genus
+    // must not have become a claim about the cultivar.
+    const table = $('facts');
+    table.textContent = '';
+    if (!facts.length) {
+        const td = table.insertRow().insertCell();
+        td.className = 'empty';
+        td.textContent = 'No facts were verified. An empty note is the correct outcome here.';
+    }
+    facts.forEach((f) => {
+        const tr = table.insertRow();
+        const cat = tr.insertCell(); cat.className = 'cat'; cat.textContent = f.category || '';
+        const lvl = tr.insertCell(); lvl.className = 'lvl';
+        const span = document.createElement('span');
+        span.className = f.level || '';
+        span.textContent = f.level || '?';
+        lvl.appendChild(span);
+        tr.insertCell().textContent = f.text || '';
+        const src = tr.insertCell(); src.className = 'src';
+        const s = sources[f.mergedIndex];
+        if (s && s.url) {
+            const a = document.createElement('a');
+            a.href = s.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+            a.textContent = '[' + f.mergedIndex + ']';
+            a.title = s.title || s.url;
+            src.appendChild(a);
+        } else {
+            src.textContent = f.mergedIndex >= 0 ? '[' + f.mergedIndex + ']' : '—';
+        }
+    });
+
+    $('raw').textContent = JSON.stringify(state, null, 2);
+}
+
+// -------------------------------------------------------------
+//  Running a lookup
+// -------------------------------------------------------------
+const TRACK_NAMES = { details: 'plant details', origins: 'origins & history' };
+const BUTTONS = ['go-details', 'go-origins', 'go-both'];
+
+async function post(body) {
+    const t0 = Date.now();
+    const resp = await fetch('/.netlify/functions/lookup-plant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    let data = {};
+    try { data = await resp.json(); } catch { /* empty or non-JSON body */ }
+    return { ok: resp.ok, status: resp.status, data, secs: (Date.now() - t0) / 1000 };
+}
+
+function describeFailure(step, res) {
+    // An empty body on a 502/504 means the platform killed the function before
+    // it could answer — that is Netlify's timeout, not ours, and it looks
+    // identical to a crash unless we say so.
+    const platformKill = !res.data.error && (res.status === 502 || res.status === 504);
+    return platformKill
+        ? `${step} failed (${res.status}) after ${res.secs.toFixed(1)}s with an empty body — ` +
+          `Netlify almost certainly killed the function at its timeout. Check the function log ` +
+          `for "Task timed out after N seconds" to see the real limit.`
+        : `${step} failed (${res.status}) after ${res.secs.toFixed(1)}s — ` +
+          `${res.data.error || 'unknown error'}` +
+          (res.data.elapsedMs ? ` [server spent ${(res.data.elapsedMs / 1000).toFixed(1)}s]` : '') +
+          (res.data.detail ? ` — ${String(res.data.detail).slice(0, 300)}` : '');
+}
+
+// One track, end to end. Returns null and reports on failure.
+async function runTrack(track, payload, problems) {
+    const name = TRACK_NAMES[track];
+
+    const one = await post({ ...payload, phase: 'research', track });
+    if (!one.ok) { problems.push(describeFailure(`Research (${name})`, one)); return null; }
+
+    const research = one.data.result || {};
+
+    // Skipped when the researcher verified nothing: there is nothing to write
+    // from, and asking anyway is exactly how a plausible essay gets made up.
+    let prose = { description: '', cultivation: '', etymology: '', history: '', careNotes: '' };
+    let writeSecs = 0;
+    let wrote = false;
+
+    if (research.identified && (research.facts || []).length) {
+        const two = await post({ phase: 'write', track, research });
+        if (!two.ok) { problems.push(describeFailure(`Write (${name})`, two)); return null; }
+        prose = two.data.result || prose;
+        writeSecs = two.secs;
+        wrote = true;
+    }
+
+    return {
+        name, research, prose, wrote,
+        secs: one.secs + writeSecs,
+        researchSecs: one.secs,
+        writeSecs,
+        meta: one.data,
+    };
+}
+
+async function runTracks(tracks) {
     const payload = {};
     IDS.forEach((k) => { const v = $(k).value.trim(); if (v) payload[k] = v; });
 
@@ -267,153 +493,46 @@ $('go').addEventListener('click', async () => {
         return;
     }
 
-    const btn = $('go');
-    btn.disabled = true;
+    BUTTONS.forEach((b) => { $(b).disabled = true; });
+    $('status').textContent = tracks.length > 1
+        ? 'Running both lookups at once…'
+        : `Looking up ${TRACK_NAMES[tracks[0]]}…`;
 
-    // One POST per phase. Returns { ok, data, secs } and never throws for an
-    // HTTP error — the caller decides what to report.
-    async function post(body, label) {
-        const t0 = Date.now();
-        $('status').textContent = label;
-        const resp = await fetch('/.netlify/functions/lookup-plant', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-        });
-        let data = {};
-        try { data = await resp.json(); } catch { /* empty or non-JSON body */ }
-        return { ok: resp.ok, status: resp.status, data, secs: (Date.now() - t0) / 1000 };
-    }
-
-    function reportFailure(step, res) {
-        // An empty body on a 502/504 means the platform killed the function
-        // before it could answer — that is Netlify's timeout, not ours, and it
-        // looks identical to a crash unless we say so.
-        const platformKill = !res.data.error && (res.status === 502 || res.status === 504);
-        $('status').textContent = platformKill
-            ? `${step} failed (${res.status}) after ${res.secs.toFixed(1)}s with an empty body — ` +
-              `Netlify almost certainly killed the function at its timeout. Check the function ` +
-              `log for "Task timed out after N seconds" to see the real limit.`
-            : `${step} failed (${res.status}) after ${res.secs.toFixed(1)}s — ` +
-              `${res.data.error || 'unknown error'}` +
-              (res.data.elapsedMs ? ` [server spent ${(res.data.elapsedMs / 1000).toFixed(1)}s]` : '') +
-              (res.data.detail ? ` — ${String(res.data.detail).slice(0, 300)}` : '');
-        $('out').hidden = false;
-        $('flags').textContent = '';
-        $('notes').value = '';
-        $('facts').textContent = '';
-        $('raw').textContent = JSON.stringify(res.data, null, 2);
-    }
+    const problems = [];
+    const t0 = Date.now();
 
     try {
-        // ---- phase 1: research (slow — this is the one doing the searching)
-        const one = await post({ ...payload, phase: 'research' }, 'Step 1 of 2 — searching…');
-        if (!one.ok) { reportFailure('Research', one); return; }
+        // Concurrent on purpose: two function invocations, so the wait is the
+        // slower of the two rather than the sum.
+        const results = await Promise.all(tracks.map((t) => runTrack(t, payload, problems)));
 
-        const r = one.data.result || {};
+        tracks.forEach((t, i) => { if (results[i]) state[t] = results[i]; });
 
-        // ---- phase 2: write (fast — no search tool at all)
-        // Skipped when the researcher found nothing: there is nothing to write
-        // from, and asking anyway is exactly how a plausible essay gets made up.
-        let prose = { description: '', cultivation: '', etymology: '', history: '', careNotes: '' };
-        let two = null;
+        const done = results.filter(Boolean);
+        const wall = ((Date.now() - t0) / 1000).toFixed(1);
 
-        if (r.identified && (r.facts || []).length) {
-            two = await post({ phase: 'write', research: r }, 'Step 2 of 2 — writing the note…');
-            if (!two.ok) { reportFailure('Write', two); return; }
-            prose = two.data.result || prose;
+        if (done.length) {
+            const parts = done.map((r) =>
+                `${r.name} ${r.researchSecs.toFixed(1)}s research` +
+                (r.wrote ? ` + ${r.writeSecs.toFixed(1)}s write` : ' (write skipped, no facts)'));
+            $('status').textContent = `Done in ${wall}s wall clock — ${parts.join('; ')}.` +
+                (problems.length ? '  ' + problems.join('  ') : '');
+        } else {
+            $('status').textContent = problems.join('  ') || 'Nothing came back.';
         }
 
-        const total = one.secs + (two ? two.secs : 0);
-        $('status').textContent =
-            `Done in ${total.toFixed(1)}s — research ${one.secs.toFixed(1)}s` +
-            (two ? `, write ${two.secs.toFixed(1)}s` : ', write skipped (no facts)') +
-            ` (budget ${((one.data.budgetMs || 0) / 1000).toFixed(1)}s per step).`;
-        $('out').hidden = false;
-
-        const flags = $('flags');
-        flags.textContent = '';
-        const nSrc = (r.sources || []).length;
-        const nFac = (r.facts || []).length;
-        flags.appendChild(flag(one.data.grounded ? 'web-grounded' : 'NOT GROUNDED', one.data.grounded ? 'good' : 'bad'));
-        flags.appendChild(flag(r.identified ? 'identified' : 'NOT IDENTIFIED', r.identified ? 'good' : 'warn'));
-        flags.appendChild(flag('scope: ' + (r.scope || 'unset'), r.scope ? '' : 'warn'));
-        flags.appendChild(flag(nFac + ' facts', nFac ? 'good' : 'warn'));
-        flags.appendChild(flag(nSrc + ' sources', nSrc ? 'good' : 'bad'));
-        flags.appendChild(flag('research ' + one.secs.toFixed(1) + 's', one.secs > 8 ? 'warn' : 'good'));
-        if (two) flags.appendChild(flag('write ' + two.secs.toFixed(1) + 's', two.secs > 8 ? 'warn' : 'good'));
-        flags.appendChild(flag('mode: ' + (one.data.mode || '?')));
-        flags.appendChild(flag(one.data.model || ''));
-
-        $('notes').value            = assembleNotes(r, prose, one.data);
-        $('f-resolved').textContent = r.resolvedName || '';
-        $('f-scope').textContent    = r.scope || '';
-        $('f-identity').textContent = r.identityNote || '';
-        $('f-family').textContent   = r.family || '';
-        $('f-height').textContent   = r.height || '';
-        $('f-width').textContent    = r.width || '';
-        $('f-care').textContent     = prose.careNotes || '';
-        $('f-caveats').textContent  = r.caveats || '';
-        $('f-notfound').textContent = r.notFound || '';
-        $('f-queries').textContent  = (one.data.searchQueries || []).join(' · ');
-
-        const list = $('f-sources');
-        list.textContent = '';
-        (r.sources || []).forEach((s) => {
-            const li = document.createElement('li');
-            if (s.url) {
-                const a = document.createElement('a');
-                a.href = s.url;
-                a.target = '_blank';
-                a.rel = 'noopener noreferrer';
-                a.textContent = s.title || s.url;
-                li.appendChild(a);
-            } else {
-                li.textContent = s.title || '';
-            }
-            list.appendChild(li);
-        });
-
-        // The fact table is the audit trail: every sentence in the note above
-        // should be traceable to a row here, and a row flagged species or genus
-        // must not have become a claim about the cultivar.
-        const facts = $('facts');
-        facts.textContent = '';
-        if (!nFac) {
-            const tr = facts.insertRow();
-            const td = tr.insertCell();
-            td.className = 'empty';
-            td.textContent = 'No facts were verified. An empty note is the correct outcome here.';
-        }
-        (r.facts || []).forEach((f) => {
-            const tr = facts.insertRow();
-            const cat = tr.insertCell(); cat.className = 'cat'; cat.textContent = f.category || '';
-            const lvl = tr.insertCell(); lvl.className = 'lvl';
-            const span = document.createElement('span');
-            span.className = f.level || '';
-            span.textContent = f.level || '?';
-            lvl.appendChild(span);
-            tr.insertCell().textContent = f.text || '';
-            const src = tr.insertCell(); src.className = 'src';
-            const s = (r.sources || [])[f.sourceIndex];
-            if (s && s.url) {
-                const a = document.createElement('a');
-                a.href = s.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
-                a.textContent = '[' + f.sourceIndex + ']';
-                a.title = s.title || s.url;
-                src.appendChild(a);
-            } else {
-                src.textContent = f.sourceIndex >= 0 ? '[' + f.sourceIndex + ']' : '—';
-            }
-        });
-
-        $('raw').textContent = JSON.stringify({ research: one.data, write: two && two.data }, null, 2);
+        render();
+        if (!done.length) { $('out').hidden = false; $('raw').textContent = JSON.stringify(problems, null, 2); }
     } catch (e) {
         $('status').textContent = 'Could not reach the lookup function: ' + e;
     } finally {
-        btn.disabled = false;
+        BUTTONS.forEach((b) => { $(b).disabled = false; });
     }
-});
+}
+
+$('go-details').addEventListener('click', () => runTracks(['details']));
+$('go-origins').addEventListener('click', () => runTracks(['origins']));
+$('go-both').addEventListener('click', () => runTracks(['details', 'origins']));
 </script>
 </div>
 </body>
