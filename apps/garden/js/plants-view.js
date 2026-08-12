@@ -1067,7 +1067,6 @@ function buildPlantFormHTML(plant, areas = [], photos = [], preselectedAreaId = 
     return `
         <form id="plant-form" autocomplete="off">
             ${!isEdit ? scanPanelHTML() : ''}
-            ${lookupPanelHTML()}
             <div class="form-section-label">Botanical Identity</div>
 
             <div class="form-row">
@@ -1107,6 +1106,10 @@ function buildPlantFormHTML(plant, areas = [], photos = [], preselectedAreaId = 
                 <input class="form-input" id="cultivar" name="cultivar" value="${v('cultivar')}" placeholder="e.g. Albertine" autocapitalize="words">
                 <div class="form-hint">Will be displayed in single quotes per ICNCP convention, e.g. 'Albertine'</div>
             </div>
+
+            <!-- Sits here rather than at the top of the form because it follows the
+                 order of work: name the plant, look it up, then fill in the rest. -->
+            ${lookupPanelHTML()}
 
             <div class="form-group">
                 <label class="form-label" for="authority">Authority / Author citation <span class="optional">optional</span></label>

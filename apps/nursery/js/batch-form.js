@@ -90,7 +90,6 @@ async function showBatchForm(existing, locations, onSaved, prefill = null) {
         <form id="batch-form" novalidate>
 
             ${!isEdit ? scanPanelHTML() : ''}
-            ${lookupPanelHTML()}
 
             <!-- METHOD -->
             <div class="form-section-label">Method</div>
@@ -268,6 +267,13 @@ async function showBatchForm(existing, locations, onSaved, prefill = null) {
                                placeholder="e.g. L. or Thunb." autocomplete="off" autocapitalize="words">
                     </div>
                 </div>
+
+                <!-- Follows the order of work: name the plant, look it up, fill in the
+                     rest. Deliberately INSIDE botanical-group, so it disappears when a
+                     batch is linked to an existing plant — the lookup reads the botanical
+                     inputs, and those are empty in that case. -->
+                ${lookupPanelHTML()}
+
                 <div class="form-group">
                     <label class="form-label" for="common-name-input">Common name (optional)</label>
                     <input class="form-input" type="text" id="common-name-input" name="commonName"
