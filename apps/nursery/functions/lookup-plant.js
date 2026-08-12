@@ -102,6 +102,11 @@ application adds its own headings. Use full sentences and AMERICAN English spell
 usage throughout — color, gray, fertilize, favorite, meter. In prose, give sizes in feet
 and inches with metric in parentheses, for example "3-4 ft (0.9-1.2 m)".
 
+LENGTH — this is a reference note, not an essay, and a long answer is a slow answer.
+Hold description, cultivation and etymology to 2-4 sentences each. History may run to 6
+where there is a real story on record. Never pad a section to make it look complete;
+under-filling is the intended behavior, not a failure.
+
 - description: what the plant looks like and does through the year — habit, eventual size
   in the text, foliage, flower color and form, season of interest, scent, fruit, fall
   color. Evergreen or deciduous. What it is actually like to have in a garden.
@@ -316,16 +321,34 @@ function shapeResult(raw, fallbackName) {
     };
 }
 
-async function callGemini(apiKey, body) {
-    const resp = await fetch(`${ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(body),
-    });
-    const text = await resp.text();
-    let json = null;
-    try { json = JSON.parse(text); } catch { /* non-JSON error body */ }
-    return { ok: resp.ok, status: resp.status, json, text };
+// A grounded lookup is slow: Gemini runs several web searches and then writes
+// a few hundred words. Netlify kills a synchronous function at 10s by default
+// (26s on Pro, on request), and a kill arrives as an opaque 504 with no clue
+// in it. So we impose our own deadline slightly inside the platform's and
+// return a diagnostic instead. Raise it with LOOKUP_BUDGET_MS once you know
+// what your site's real limit is.
+const BUDGET_MS = Number(process.env.LOOKUP_BUDGET_MS || 8500);
+
+async function callGemini(apiKey, body, remainingMs) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), Math.max(1000, remainingMs));
+    try {
+        const resp = await fetch(`${ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(body),
+            signal:  controller.signal,
+        });
+        const text = await resp.text();
+        let json = null;
+        try { json = JSON.parse(text); } catch { /* non-JSON error body */ }
+        return { ok: resp.ok, status: resp.status, json, text };
+    } catch (e) {
+        if (e && e.name === 'AbortError') return { ok: false, status: 0, aborted: true, json: null, text: '' };
+        throw e;
+    } finally {
+        clearTimeout(timer);
+    }
 }
 
 exports.handler = async (event) => {
@@ -361,48 +384,88 @@ exports.handler = async (event) => {
         };
     }
 
+    const started   = Date.now();
+    const elapsed   = () => Date.now() - started;
+    const remaining = () => BUDGET_MS - elapsed();
+
     const contents = [{ parts: [{ text: `${PROMPT}\n\n=== THE REQUEST ===\n${buildQuery(payload, name)}` }] }];
     const tools    = [{ google_search: {} }];
+
+    // Latency is the binding constraint, and output tokens dominate it, so the
+    // model is told to think as little as possible. Set GEMINI_THINKING_BUDGET
+    // above 0 to trade speed back for quality. Not every model accepts this
+    // field, so a 400 that mentions it retries without it (see below).
+    const thinkingBudget = Number(process.env.GEMINI_THINKING_BUDGET || 0);
+
+    const genConfig = {
+        temperature:      0,
+        responseMimeType: 'application/json',
+        responseSchema:   RESPONSE_SCHEMA,
+        thinkingConfig:   { thinkingBudget },
+    };
 
     // Preferred shape: search grounding AND a response schema in one call. This
     // works on the Gemini 3 family through the REST API. If this deployment's
     // model rejects the combination (older models return 400 INVALID_ARGUMENT),
     // fall back to grounded free-form output and parse the JSON ourselves —
     // grounding matters more than the schema, so the schema is what we drop.
-    const groundedStructured = {
-        contents,
-        tools,
-        generationConfig: {
-            temperature:      0,
-            responseMimeType: 'application/json',
-            responseSchema:   RESPONSE_SCHEMA,
-        },
-    };
+    const groundedStructured = { contents, tools, generationConfig: genConfig };
+
+    const freeformInstruction =
+        `\n\nReturn ONLY a JSON object with these keys and no other text: resolvedName, ` +
+        `identified (boolean), identityNote, scope, family, commonNames, description, ` +
+        `cultivation, etymology, history, height, width, careNotes, caveats, notFound, ` +
+        `sources (array of {title, url}).`;
 
     const groundedFreeform = {
-        contents: [{
-            parts: [{
-                text: `${contents[0].parts[0].text}\n\nReturn ONLY a JSON object with these keys ` +
-                      `and no other text: resolvedName, identified (boolean), identityNote, scope, ` +
-                      `family, commonNames, description, cultivation, etymology, history, height, ` +
-                      `width, careNotes, caveats, notFound, sources (array of {title, url}).`,
-            }],
-        }],
+        contents: [{ parts: [{ text: contents[0].parts[0].text + freeformInstruction }] }],
         tools,
-        generationConfig: { temperature: 0 },
+        generationConfig: { temperature: 0, thinkingConfig: { thinkingBudget } },
     };
 
-    try {
-        let attempt   = await callGemini(apiKey, groundedStructured);
-        let usedMode  = 'grounded+schema';
+    // Strip a config key the model rejected and try that same shape again.
+    const withoutThinking = (body) => {
+        const { thinkingConfig, ...rest } = body.generationConfig;
+        return { ...body, generationConfig: rest };
+    };
 
-        if (!attempt.ok && attempt.status === 400) {
+    const timedOut = (mode) => ({
+        statusCode: 504,
+        headers: CORS,
+        body: JSON.stringify({
+            error: `The lookup ran past its ${BUDGET_MS} ms budget and was stopped. A grounded ` +
+                   `search plus several paragraphs often needs longer than a Netlify function is ` +
+                   `allowed. Raise LOOKUP_BUDGET_MS if this site's function timeout permits it, ` +
+                   `or the lookup needs to move to a background function.`,
+            elapsedMs: elapsed(),
+            budgetMs:  BUDGET_MS,
+            mode,
+            model:     GEMINI_MODEL,
+        }),
+    });
+
+    try {
+        let attempt  = await callGemini(apiKey, groundedStructured, remaining());
+        let usedMode = 'grounded+schema';
+
+        // Model does not know thinkingConfig — drop it and retry once.
+        if (!attempt.ok && attempt.status === 400 && /thinking/i.test(attempt.text)) {
+            console.warn('lookup-plant: model rejected thinkingConfig — retrying without it.');
+            attempt = await callGemini(apiKey, withoutThinking(groundedStructured), remaining());
+        }
+
+        if (!attempt.ok && attempt.status === 400 && !attempt.aborted) {
             console.warn(
                 'lookup-plant: grounded+schema rejected (HTTP 400) on model', GEMINI_MODEL,
                 '— retrying grounded free-form. Detail:', attempt.text.slice(0, 300),
             );
-            attempt  = await callGemini(apiKey, groundedFreeform);
+            attempt  = await callGemini(apiKey, groundedFreeform, remaining());
             usedMode = 'grounded+freeform';
+        }
+
+        if (attempt.aborted) {
+            console.error('lookup-plant: aborted at', elapsed(), 'ms — budget', BUDGET_MS, 'ms, model', GEMINI_MODEL);
+            return timedOut(usedMode);
         }
 
         if (!attempt.ok) {
@@ -411,7 +474,10 @@ exports.handler = async (event) => {
             return {
                 statusCode: 502,
                 headers: CORS,
-                body: JSON.stringify({ error: 'Lookup service error', status: attempt.status, model: GEMINI_MODEL, detail }),
+                body: JSON.stringify({
+                    error: 'Lookup service error', status: attempt.status,
+                    model: GEMINI_MODEL, elapsedMs: elapsed(), detail,
+                }),
             };
         }
 
@@ -442,6 +508,8 @@ exports.handler = async (event) => {
         const queries = candidate?.groundingMetadata?.webSearchQueries;
         const didSearch = Array.isArray(queries) && queries.length > 0;
 
+        console.log('lookup-plant: ok in', elapsed(), 'ms —', name, '— mode', usedMode);
+
         return {
             statusCode: 200,
             headers: CORS,
@@ -451,13 +519,19 @@ exports.handler = async (event) => {
                 searchQueries:  Array.isArray(queries) ? queries : [],
                 mode:           usedMode,
                 model:          GEMINI_MODEL,
+                elapsedMs:      elapsed(),
+                budgetMs:       BUDGET_MS,
             }),
         };
     } catch (e) {
         return {
             statusCode: 500,
             headers: CORS,
-            body: JSON.stringify({ error: 'Request to lookup service failed', detail: String(e).slice(0, 300) }),
+            body: JSON.stringify({
+                error: 'Request to lookup service failed',
+                elapsedMs: elapsed(),
+                detail: String(e).slice(0, 300),
+            }),
         };
     }
 };

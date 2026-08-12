@@ -272,16 +272,29 @@ $('go').addEventListener('click', async () => {
         const secs = ((Date.now() - started) / 1000).toFixed(1);
 
         if (!resp.ok) {
-            $('status').textContent =
-                `Failed (${resp.status}) after ${secs}s — ${data.error || 'unknown error'}` +
-                (data.detail ? ` — ${String(data.detail).slice(0, 300)}` : '');
+            // An empty body on a 502/504 means the platform killed the function
+            // before it could answer — that is Netlify's timeout, not ours, and
+            // it looks identical to a crash unless we say so.
+            const platformKill = !data.error && (resp.status === 502 || resp.status === 504);
+            const msg = platformKill
+                ? `Failed (${resp.status}) after ${secs}s with an empty body — Netlify almost ` +
+                  `certainly killed the function at its timeout. Check the function log for ` +
+                  `"Task timed out after N seconds" to see the real limit.`
+                : `Failed (${resp.status}) after ${secs}s — ${data.error || 'unknown error'}` +
+                  (data.elapsedMs ? ` [server spent ${(data.elapsedMs / 1000).toFixed(1)}s]` : '') +
+                  (data.detail ? ` — ${String(data.detail).slice(0, 300)}` : '');
+            $('status').textContent = msg;
             $('out').hidden = false;
+            $('flags').textContent = '';
+            $('notes').value = '';
             $('raw').textContent = JSON.stringify(data, null, 2);
             return;
         }
 
         const r = data.result || {};
-        $('status').textContent = `Done in ${secs}s.`;
+        $('status').textContent = `Done in ${secs}s` +
+            (data.elapsedMs ? ` (server ${(data.elapsedMs / 1000).toFixed(1)}s of a ` +
+                              `${(data.budgetMs / 1000).toFixed(1)}s budget)` : '') + '.';
         $('out').hidden = false;
 
         const flags = $('flags');
