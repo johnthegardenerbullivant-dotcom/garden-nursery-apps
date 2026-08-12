@@ -211,17 +211,17 @@ omits `indexes` and `hosting`, so deploying rules can't clobber composite indexe
 
 ## Standing rules
 
-1. **`node --check` every JS file after generating or moving any of them.** All 35: 14 Garden
-   modules, 19 Nursery modules, 2 `functions/scan-label.js`. If it reports an error, treat it as
-   real — never dismiss it as a false alarm.
+1. **`node --check` every JS file after generating or moving any of them.** All 37: 14 Garden
+   modules, 19 Nursery modules, 2 `functions/scan-label.js`, 2 `functions/lookup-plant.js`. If it
+   reports an error, treat it as real — never dismiss it as a false alarm.
 2. **No AI-authored production deploys without John's review.** Push to a branch, look at the
    Netlify deploy preview, then merge. Never straight to `main`.
 3. **A new Firestore collection in a `db.js` needs its rule block in `firebase/firestore.rules` in
    the same commit.** Firestore denies anything not explicitly matched, and it fails *silently* in
    the app. This has bitten before: in May 2026 `irrigationZones` and `irrigationLogs` were in
    `db.js` but missing from the rules, and the Admin panel broke.
-4. **Run `node tools/check-drift.mjs` before pushing changes to `auth.js`, `ui-utils.js` or
-   `scan-label.js`.** Exit 0 is clean; warnings are known deltas.
+4. **Run `node tools/check-drift.mjs` before pushing changes to `auth.js`, `ui-utils.js`,
+   `scan-label.js` or `lookup-plant.js`.** Exit 0 is clean; warnings are known deltas.
 5. **Never commit a backup JSON or `plant-import.json`.** They belong in `Garden Data\`.
 6. **Commit style:** conventional prefixes — `feat:`, `fix:`, `chore:`, `docs:`. Branches:
    `feature/…`, `fix/…`.

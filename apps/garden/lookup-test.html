@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Plant lookup — prompt test harness</title>
+<!--
+    lookup-test.html — TEMPORARY prompt-tuning harness for the plant lookup.
+
+    Standalone, like compress-photos.html: no Firebase, no auth, no shared CSS,
+    not reachable from the app's navigation. It exists so the lookup-plant
+    function's prompt can be hammered against real plants on a deploy preview
+    before any of it is wired into the Garden plant form or the Nursery batch
+    form.
+
+    DELETE THIS FILE BEFORE MERGING TO MAIN. It calls a metered API from an
+    unauthenticated public page, which is fine on a short-lived preview and not
+    fine on the live site.
+
+    The assembleNotes() function below is the draft of the house style. Once it
+    is right, it moves into the shared client module.
+-->
+<style>
+    :root {
+        --ink: #24312a; --muted: #6b7a70; --line: #d9e0da;
+        --bg: #f6f8f6; --card: #fff; --green: #3c7a52; --amber: #a86a1f; --red: #a33;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0; padding: 1.5rem; background: var(--bg); color: var(--ink);
+        font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    h1 { font-size: 1.3rem; margin: 0 0 .25rem; }
+    .lede { color: var(--muted); margin: 0 0 1.25rem; font-size: .9rem; }
+    .warn {
+        background: #fff6e6; border: 1px solid #e8d3a8; color: #6d4c14;
+        padding: .6rem .8rem; border-radius: 6px; font-size: .85rem; margin-bottom: 1.25rem;
+    }
+    .card {
+        background: var(--card); border: 1px solid var(--line);
+        border-radius: 8px; padding: 1rem; margin-bottom: 1rem;
+    }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .6rem; }
+    label { display: block; font-size: .72rem; text-transform: uppercase;
+            letter-spacing: .05em; color: var(--muted); font-weight: 600; margin-bottom: .2rem; }
+    input[type=text] {
+        width: 100%; padding: .45rem .55rem; border: 1px solid var(--line);
+        border-radius: 5px; font: inherit; background: #fff; color: inherit;
+    }
+    button {
+        font: inherit; padding: .5rem .9rem; border-radius: 6px; cursor: pointer;
+        border: 1px solid var(--green); background: var(--green); color: #fff;
+    }
+    button.secondary { background: #fff; color: var(--ink); border-color: var(--line); }
+    button:disabled { opacity: .55; cursor: default; }
+    .presets { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
+    .presets button { font-size: .78rem; padding: .3rem .6rem; }
+    .row { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-top: .9rem; }
+    .status { font-size: .85rem; color: var(--muted); }
+    .flags { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .8rem; }
+    .flag {
+        font-size: .72rem; font-weight: 600; padding: .2rem .5rem; border-radius: 999px;
+        border: 1px solid var(--line); background: #fff;
+    }
+    .flag.good { color: var(--green); border-color: #b7d4c1; background: #f2f9f4; }
+    .flag.bad  { color: var(--red);   border-color: #e3bcbc; background: #fdf4f4; }
+    .flag.warn { color: var(--amber); border-color: #e8d3a8; background: #fff8ec; }
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 820px) { .cols { grid-template-columns: 1fr; } }
+    h2 { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em;
+         color: var(--muted); margin: 0 0 .5rem; }
+    textarea {
+        width: 100%; min-height: 380px; padding: .7rem; border: 1px solid var(--line);
+        border-radius: 6px; font: 13.5px/1.6 ui-monospace, "Cascadia Code", Consolas, monospace;
+        white-space: pre-wrap; background: #fff; color: inherit; resize: vertical;
+    }
+    .kv { border-top: 1px solid var(--line); padding: .4rem 0; display: flex; gap: .8rem; font-size: .88rem; }
+    .kv:first-child { border-top: none; }
+    .kv .k { flex: 0 0 110px; color: var(--muted); font-size: .72rem;
+             text-transform: uppercase; letter-spacing: .05em; font-weight: 600; padding-top: .15rem; }
+    .kv .v { flex: 1; white-space: pre-wrap; }
+    .kv .v:empty::after { content: "—"; color: #b8c4bc; }
+    ol.sources { margin: 0; padding-left: 1.2rem; font-size: .85rem; }
+    ol.sources li { margin-bottom: .3rem; word-break: break-word; }
+    a { color: var(--green); }
+    details { margin-top: 1rem; }
+    summary { cursor: pointer; font-size: .85rem; color: var(--muted); }
+    pre { background: #f2f5f2; padding: .8rem; border-radius: 6px; overflow-x: auto; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Plant lookup — prompt test harness</h1>
+<p class="lede">Calls <code>/.netlify/functions/lookup-plant</code> and shows exactly what would be
+   inserted into the Notes field, plus the raw response.</p>
+
+<div class="warn">
+    <strong>Temporary.</strong> This page is for tuning the prompt on a deploy preview and must be
+    deleted before merging to <code>main</code>. It calls a metered API and has no sign-in.
+</div>
+
+<div class="card">
+    <div class="grid">
+        <div><label for="genus">Genus</label><input type="text" id="genus" placeholder="Abelia"></div>
+        <div><label for="species">Species</label><input type="text" id="species" placeholder="grandiflora"></div>
+        <div><label for="subspecies">Subspecies</label><input type="text" id="subspecies"></div>
+        <div><label for="variety">Variety</label><input type="text" id="variety"></div>
+        <div><label for="cultivar">Cultivar</label><input type="text" id="cultivar" placeholder="Kaleidoscope"></div>
+        <div><label for="commonName">Common name</label><input type="text" id="commonName"></div>
+    </div>
+
+    <div class="presets" id="presets"></div>
+
+    <div class="row">
+        <button id="go">Look it up</button>
+        <button id="clear" class="secondary">Clear</button>
+        <span class="status" id="status"></span>
+    </div>
+</div>
+
+<div id="out" hidden>
+    <div class="flags" id="flags"></div>
+    <div class="cols">
+        <div class="card">
+            <h2>Notes block — what would be inserted</h2>
+            <textarea id="notes" spellcheck="false"></textarea>
+        </div>
+        <div class="card">
+            <h2>Form fields &amp; verification</h2>
+            <div class="kv"><span class="k">Resolved</span><span class="v" id="f-resolved"></span></div>
+            <div class="kv"><span class="k">Scope</span><span class="v" id="f-scope"></span></div>
+            <div class="kv"><span class="k">Identity</span><span class="v" id="f-identity"></span></div>
+            <div class="kv"><span class="k">Family</span><span class="v" id="f-family"></span></div>
+            <div class="kv"><span class="k">Height</span><span class="v" id="f-height"></span></div>
+            <div class="kv"><span class="k">Width</span><span class="v" id="f-width"></span></div>
+            <div class="kv"><span class="k">Care notes</span><span class="v" id="f-care"></span></div>
+            <div class="kv"><span class="k">Caveats</span><span class="v" id="f-caveats"></span></div>
+            <div class="kv"><span class="k">Not found</span><span class="v" id="f-notfound"></span></div>
+            <h2 style="margin-top:1rem">Sources</h2>
+            <ol class="sources" id="f-sources"></ol>
+            <h2 style="margin-top:1rem">Search queries the model ran</h2>
+            <div class="kv"><span class="v" id="f-queries"></span></div>
+        </div>
+    </div>
+    <details>
+        <summary>Raw response</summary>
+        <pre id="raw"></pre>
+    </details>
+</div>
+
+<script>
+// -------------------------------------------------------------
+//  Test set. Chosen to probe the rules, not just to succeed:
+//  the last four should mostly come back EMPTY or flagged, and
+//  a confident answer to any of them is a prompt failure.
+// -------------------------------------------------------------
+const PRESETS = [
+    { label: "Abelia 'Kaleidoscope' (documented sport)", v: { genus: 'Abelia', species: 'grandiflora', cultivar: 'Kaleidoscope' } },
+    { label: 'Acanthus mollis (rich etymology)',         v: { genus: 'Acanthus', species: 'mollis' } },
+    { label: "Hydrangea 'Limelight' (size trap)",        v: { genus: 'Hydrangea', species: 'paniculata', cultivar: 'Limelight' } },
+    { label: "Rosa 'Zephirine Drouhin' (named person)",  v: { genus: 'Rosa', cultivar: 'Zephirine Drouhin' } },
+    { label: "Heuchera 'Palace Purple' (AGM history)",   v: { genus: 'Heuchera', species: 'micrantha', cultivar: 'Palace Purple' } },
+    { label: 'Trillium (genus only)',                    v: { genus: 'Trillium' } },
+    { label: 'Echinacia purperea (misspelt)',            v: { genus: 'Echinacia', species: 'purperea' } },
+    { label: "Hosta 'Emerald Whisper of Dawn' (invented)", v: { genus: 'Hosta', cultivar: 'Emerald Whisper of Dawn' } },
+];
+
+const IDS = ['genus', 'species', 'subspecies', 'variety', 'cultivar', 'commonName'];
+const $ = (id) => document.getElementById(id);
+
+const presetBox = $('presets');
+PRESETS.forEach((p) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'secondary';
+    b.textContent = p.label;
+    b.addEventListener('click', () => {
+        IDS.forEach((k) => { $(k).value = p.v[k] || ''; });
+        $('go').click();
+    });
+    presetBox.appendChild(b);
+});
+
+$('clear').addEventListener('click', () => {
+    IDS.forEach((k) => { $(k).value = ''; });
+    $('out').hidden = true;
+    $('status').textContent = '';
+});
+
+// -------------------------------------------------------------
+//  assembleNotes() — DRAFT OF THE HOUSE STYLE.
+//  The application composes the note, not the model, so every
+//  entry comes out with the same shape however chatty the model
+//  is feeling. Sections that came back empty are simply absent.
+// -------------------------------------------------------------
+function assembleNotes(r, meta) {
+    const blocks = [];
+    const section = (heading, body) => {
+        if (body && body.trim()) blocks.push(heading + '\n' + body.trim());
+    };
+
+    if (r.identityNote && r.identityNote.trim()) {
+        blocks.push('NOTE ON IDENTITY\n' + r.identityNote.trim());
+    }
+
+    section('DESCRIPTION', r.description);
+    section('CULTIVATION', r.cultivation);
+    section('NAME AND ETYMOLOGY', r.etymology);
+    section('ORIGIN AND HISTORY', r.history);
+
+    if (r.caveats && r.caveats.trim()) {
+        blocks.push('WHERE SOURCES DISAGREE\n' + r.caveats.trim());
+    }
+    if (r.notFound && r.notFound.trim()) {
+        blocks.push('NOT VERIFIED\n' + r.notFound.trim());
+    }
+
+    if (Array.isArray(r.sources) && r.sources.length) {
+        const lines = r.sources.map((s) => {
+            const t = (s.title || '').trim();
+            const u = (s.url || '').trim();
+            if (t && u) return `  ${t} — ${u}`;
+            return '  ' + (t || u);
+        });
+        blocks.push('SOURCES\n' + lines.join('\n'));
+    }
+
+    if (!blocks.length) return '';
+
+    // Provenance line, so a note's origin is obvious a year from now.
+    const stamp = new Date().toISOString().slice(0, 10);
+    const how = meta && meta.grounded ? 'AI lookup with web search' : 'AI lookup (NOT web-grounded)';
+    blocks.push(`[${how}, ${stamp}. Unverified details were omitted. Please check before relying on it.]`);
+
+    return blocks.join('\n\n');
+}
+
+function flag(text, kind) {
+    const el = document.createElement('span');
+    el.className = 'flag' + (kind ? ' ' + kind : '');
+    el.textContent = text;
+    return el;
+}
+
+$('go').addEventListener('click', async () => {
+    const payload = {};
+    IDS.forEach((k) => { const v = $(k).value.trim(); if (v) payload[k] = v; });
+
+    if (!payload.genus && !payload.commonName) {
+        $('status').textContent = 'Give at least a genus.';
+        return;
+    }
+
+    const btn = $('go');
+    btn.disabled = true;
+    $('status').textContent = 'Searching and compiling…';
+    const started = Date.now();
+
+    try {
+        const resp = await fetch('/.netlify/functions/lookup-plant', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        let data = {};
+        try { data = await resp.json(); } catch { /* non-JSON */ }
+
+        const secs = ((Date.now() - started) / 1000).toFixed(1);
+
+        if (!resp.ok) {
+            $('status').textContent =
+                `Failed (${resp.status}) after ${secs}s — ${data.error || 'unknown error'}` +
+                (data.detail ? ` — ${String(data.detail).slice(0, 300)}` : '');
+            $('out').hidden = false;
+            $('raw').textContent = JSON.stringify(data, null, 2);
+            return;
+        }
+
+        const r = data.result || {};
+        $('status').textContent = `Done in ${secs}s.`;
+        $('out').hidden = false;
+
+        const flags = $('flags');
+        flags.textContent = '';
+        flags.appendChild(flag(data.grounded ? 'web-grounded' : 'NOT GROUNDED', data.grounded ? 'good' : 'bad'));
+        flags.appendChild(flag(r.identified ? 'identified' : 'NOT IDENTIFIED', r.identified ? 'good' : 'warn'));
+        flags.appendChild(flag('scope: ' + (r.scope || 'unset'), r.scope ? '' : 'warn'));
+        flags.appendChild(flag((r.sources || []).length + ' sources', (r.sources || []).length ? 'good' : 'bad'));
+        flags.appendChild(flag('mode: ' + (data.mode || '?')));
+        flags.appendChild(flag(data.model || ''));
+
+        $('notes').value      = assembleNotes(r, data);
+        $('f-resolved').textContent = r.resolvedName || '';
+        $('f-scope').textContent    = r.scope || '';
+        $('f-identity').textContent = r.identityNote || '';
+        $('f-family').textContent   = r.family || '';
+        $('f-height').textContent   = r.height || '';
+        $('f-width').textContent    = r.width || '';
+        $('f-care').textContent     = r.careNotes || '';
+        $('f-caveats').textContent  = r.caveats || '';
+        $('f-notfound').textContent = r.notFound || '';
+        $('f-queries').textContent  = (data.searchQueries || []).join(' · ');
+
+        const list = $('f-sources');
+        list.textContent = '';
+        (r.sources || []).forEach((s) => {
+            const li = document.createElement('li');
+            if (s.url) {
+                const a = document.createElement('a');
+                a.href = s.url;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                a.textContent = s.title || s.url;
+                li.appendChild(a);
+            } else {
+                li.textContent = s.title || '';
+            }
+            list.appendChild(li);
+        });
+
+        $('raw').textContent = JSON.stringify(data, null, 2);
+    } catch (e) {
+        $('status').textContent = 'Could not reach the lookup function: ' + e;
+    } finally {
+        btn.disabled = false;
+    }
+});
+</script>
+</div>
+</body>
+</html>

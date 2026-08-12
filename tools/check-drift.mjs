@@ -16,7 +16,8 @@
  *
  * Exit codes:  0 = clean (warnings allowed)   1 = drift that needs fixing
  *
- * Run this before pushing changes to auth.js, ui-utils.js or scan-label.js.
+ * Run this before pushing changes to auth.js, ui-utils.js, scan-label.js or
+ * lookup-plant.js.
  */
 
 import { readFileSync, existsSync } from 'node:fs';
@@ -43,6 +44,11 @@ const PAIRS = [
     path: 'functions/scan-label.js',
     severity: 'error',
     note: 'One Gemini label-scan function, deployed as a Netlify function by both sites.',
+  },
+  {
+    path: 'functions/lookup-plant.js',
+    severity: 'error',
+    note: 'One Gemini plant-lookup function, deployed as a Netlify function by both sites.',
   },
   {
     path: 'js/ui-utils.js',
