@@ -181,9 +181,11 @@ answer, the rule wins.
    "identityNote", and return no facts. If the name is a recognized synonym of an accepted
    name you may research the accepted plant, but say so in "identityNote".
 
-7. PRESERVE DISAGREEMENT. Where sources conflict — commonly on ultimate size, hardiness, or
-   who raised a cultivar — do not average them and do not pick a favorite. Record the range,
-   or note the disagreement in "caveats".
+7. PRESERVE DISAGREEMENT — BUT STILL ANSWER. Where sources conflict, commonly on ultimate
+   size, do not average them and do not pick a favorite. Record the range that SPANS them,
+   and ALSO note the disagreement in "caveats". Both, not either. Describing a conflict in
+   "caveats" is never a substitute for recording what you actually found: a reader who is
+   told the sources disagree, and not told what any of them said, has been given nothing.
 
 8. REPORT YOUR GAPS. Use "notFound" to say briefly what you looked for and could not verify,
    so the reader can tell "nothing is recorded" from "this lookup did not cover it".
@@ -233,18 +235,25 @@ function researchPrompt(trackKey) {
         ? [
             '=== THE DISCRETE FIELDS ===',
             'These fill single-line form inputs. Each must be a BARE VALUE of at most 40',
-            'characters: no sentences, no explanation, no reasoning, no "depending on". If you',
-            'cannot give a bare value, leave the field empty and record what you found as a',
-            'fact instead. Anything longer than 40 characters will be thrown away.',
+            'characters: no sentences, no explanation, no reasoning, no "depending on".',
+            'Anything longer than 40 characters is thrown away before it reaches the form.',
             '',
             '  - height / width: ultimate size in the source\'s own units, keeping ranges ("3-4 ft",',
             '    "24-30 in", "5-6 m"). Do not convert — a conversion you perform is one more chance',
-            '    to put an error into a number. If sources conflict, give the range that spans',
-            '    them ("5-8 m") and note the disagreement in "caveats" — a span is more use than',
-            '    a blank, and rule 7 says record the range. Only leave the field empty if you',
-            '    cannot express what you found in a few characters. If the only sizes you found',
-            '    are for the species and you were asked about a cultivar, leave these EMPTY and',
-            '    record the species size as a fact instead (rule 5).',
+            '    to put an error into a number.',
+            '',
+            '    IF YOU FOUND ANY SIZE AT ALL, THIS FIELD IS NOT EMPTY. Conflicting sources are',
+            '    the normal case, not a reason to give up. Worked example — sources say "5-7 m",',
+            '    "up to 8 m", and "compact":',
+            '        height:  "5-8 m"                          <- correct: the span',
+            '        caveats: "Sources give 5-7 m, up to 8 m,   <- correct: also record this',
+            '                  or compact depending on age."',
+            '        height:  ""                               <- WRONG. You found three sizes.',
+            '        height:  "6.5 m"                          <- WRONG. That is an average.',
+            '',
+            '    There is exactly ONE case for leaving these empty: you were asked about a',
+            '    cultivar and every size you found was for the species. Then leave them empty',
+            '    and record the species size as a fact instead (rule 5). Nothing else qualifies.',
             '  - family, commonNames: if found. commonNames comma separated.',
           ].join('\n')
         : [
@@ -767,11 +776,19 @@ exports.handler = async (event) => {
 
         const discarded = [];
 
-        // The model has come back with "Cultivar", "cultivar-level" and similar.
-        // Match on what it contains rather than demanding an exact word — an
-        // unset scope loses rule 5's whole point.
+        // Scope kept coming back unset even after loosening the matching, so
+        // stop depending on the model for it. What level the SUBJECT sits at is
+        // something the form already knows — it is the question we asked, not a
+        // finding. The model's answer is still preferred when it gives one, but
+        // the request is the fallback. (What actually varies is each fact's own
+        // `level`, which is asked for separately and does come back.)
+        const askedScope = (payload.cultivar && 'cultivar')
+                        || (payload.species && 'species')
+                        || (payload.genus && 'genus')
+                        || '';
         const rawScope = str(raw.scope).toLowerCase();
-        const scope = ['cultivar', 'species', 'genus', 'mixed'].find((s) => rawScope.includes(s)) || '';
+        const scope = ['cultivar', 'species', 'genus', 'mixed'].find((s) => rawScope.includes(s))
+                   || askedScope;
         const sources = mergeSources(raw.sources, sourcesFromGrounding(candidate));
         const allowed = TRACKS[track].categories;
 
