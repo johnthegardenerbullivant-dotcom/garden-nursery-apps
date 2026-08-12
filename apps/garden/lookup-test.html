@@ -85,6 +85,15 @@
     ol.sources { margin: 0; padding-left: 1.2rem; font-size: .85rem; }
     ol.sources li { margin-bottom: .3rem; word-break: break-word; }
     a { color: var(--green); }
+    table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    table td { border-top: 1px solid var(--line); padding: .35rem .5rem; vertical-align: top; }
+    table tr:first-child td { border-top: none; }
+    td.cat { white-space: nowrap; color: var(--muted); font-size: .72rem;
+             text-transform: uppercase; letter-spacing: .04em; font-weight: 600; width: 1%; }
+    td.lvl { white-space: nowrap; width: 1%; font-size: .72rem; }
+    td.lvl .species, td.lvl .genus { color: var(--amber); font-weight: 600; }
+    td.src { width: 1%; white-space: nowrap; font-size: .78rem; }
+    .empty { color: var(--muted); font-style: italic; font-size: .85rem; }
     details { margin-top: 1rem; }
     summary { cursor: pointer; font-size: .85rem; color: var(--muted); }
     pre { background: #f2f5f2; padding: .8rem; border-radius: 6px; overflow-x: auto; font-size: 12px; }
@@ -145,8 +154,12 @@
             <div class="kv"><span class="v" id="f-queries"></span></div>
         </div>
     </div>
+    <div class="card">
+        <h2>Verified facts the researcher found — the writer saw only these</h2>
+        <table id="facts"></table>
+    </div>
     <details>
-        <summary>Raw response</summary>
+        <summary>Raw responses</summary>
         <pre id="raw"></pre>
     </details>
 </div>
@@ -196,7 +209,7 @@ $('clear').addEventListener('click', () => {
 //  entry comes out with the same shape however chatty the model
 //  is feeling. Sections that came back empty are simply absent.
 // -------------------------------------------------------------
-function assembleNotes(r, meta) {
+function assembleNotes(r, prose, meta) {
     const blocks = [];
     const section = (heading, body) => {
         if (body && body.trim()) blocks.push(heading + '\n' + body.trim());
@@ -206,10 +219,10 @@ function assembleNotes(r, meta) {
         blocks.push('NOTE ON IDENTITY\n' + r.identityNote.trim());
     }
 
-    section('DESCRIPTION', r.description);
-    section('CULTIVATION', r.cultivation);
-    section('NAME AND ETYMOLOGY', r.etymology);
-    section('ORIGIN AND HISTORY', r.history);
+    section('DESCRIPTION', prose.description);
+    section('CULTIVATION', prose.cultivation);
+    section('NAME AND ETYMOLOGY', prose.etymology);
+    section('ORIGIN AND HISTORY', prose.history);
 
     if (r.caveats && r.caveats.trim()) {
         blocks.push('WHERE SOURCES DISAGREE\n' + r.caveats.trim());
@@ -256,67 +269,93 @@ $('go').addEventListener('click', async () => {
 
     const btn = $('go');
     btn.disabled = true;
-    $('status').textContent = 'Searching and compiling…';
-    const started = Date.now();
 
-    try {
+    // One POST per phase. Returns { ok, data, secs } and never throws for an
+    // HTTP error — the caller decides what to report.
+    async function post(body, label) {
+        const t0 = Date.now();
+        $('status').textContent = label;
         const resp = await fetch('/.netlify/functions/lookup-plant', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
+            body: JSON.stringify(body),
         });
-
         let data = {};
-        try { data = await resp.json(); } catch { /* non-JSON */ }
+        try { data = await resp.json(); } catch { /* empty or non-JSON body */ }
+        return { ok: resp.ok, status: resp.status, data, secs: (Date.now() - t0) / 1000 };
+    }
 
-        const secs = ((Date.now() - started) / 1000).toFixed(1);
+    function reportFailure(step, res) {
+        // An empty body on a 502/504 means the platform killed the function
+        // before it could answer — that is Netlify's timeout, not ours, and it
+        // looks identical to a crash unless we say so.
+        const platformKill = !res.data.error && (res.status === 502 || res.status === 504);
+        $('status').textContent = platformKill
+            ? `${step} failed (${res.status}) after ${res.secs.toFixed(1)}s with an empty body — ` +
+              `Netlify almost certainly killed the function at its timeout. Check the function ` +
+              `log for "Task timed out after N seconds" to see the real limit.`
+            : `${step} failed (${res.status}) after ${res.secs.toFixed(1)}s — ` +
+              `${res.data.error || 'unknown error'}` +
+              (res.data.elapsedMs ? ` [server spent ${(res.data.elapsedMs / 1000).toFixed(1)}s]` : '') +
+              (res.data.detail ? ` — ${String(res.data.detail).slice(0, 300)}` : '');
+        $('out').hidden = false;
+        $('flags').textContent = '';
+        $('notes').value = '';
+        $('facts').textContent = '';
+        $('raw').textContent = JSON.stringify(res.data, null, 2);
+    }
 
-        if (!resp.ok) {
-            // An empty body on a 502/504 means the platform killed the function
-            // before it could answer — that is Netlify's timeout, not ours, and
-            // it looks identical to a crash unless we say so.
-            const platformKill = !data.error && (resp.status === 502 || resp.status === 504);
-            const msg = platformKill
-                ? `Failed (${resp.status}) after ${secs}s with an empty body — Netlify almost ` +
-                  `certainly killed the function at its timeout. Check the function log for ` +
-                  `"Task timed out after N seconds" to see the real limit.`
-                : `Failed (${resp.status}) after ${secs}s — ${data.error || 'unknown error'}` +
-                  (data.elapsedMs ? ` [server spent ${(data.elapsedMs / 1000).toFixed(1)}s]` : '') +
-                  (data.detail ? ` — ${String(data.detail).slice(0, 300)}` : '');
-            $('status').textContent = msg;
-            $('out').hidden = false;
-            $('flags').textContent = '';
-            $('notes').value = '';
-            $('raw').textContent = JSON.stringify(data, null, 2);
-            return;
+    try {
+        // ---- phase 1: research (slow — this is the one doing the searching)
+        const one = await post({ ...payload, phase: 'research' }, 'Step 1 of 2 — searching…');
+        if (!one.ok) { reportFailure('Research', one); return; }
+
+        const r = one.data.result || {};
+
+        // ---- phase 2: write (fast — no search tool at all)
+        // Skipped when the researcher found nothing: there is nothing to write
+        // from, and asking anyway is exactly how a plausible essay gets made up.
+        let prose = { description: '', cultivation: '', etymology: '', history: '', careNotes: '' };
+        let two = null;
+
+        if (r.identified && (r.facts || []).length) {
+            two = await post({ phase: 'write', research: r }, 'Step 2 of 2 — writing the note…');
+            if (!two.ok) { reportFailure('Write', two); return; }
+            prose = two.data.result || prose;
         }
 
-        const r = data.result || {};
-        $('status').textContent = `Done in ${secs}s` +
-            (data.elapsedMs ? ` (server ${(data.elapsedMs / 1000).toFixed(1)}s of a ` +
-                              `${(data.budgetMs / 1000).toFixed(1)}s budget)` : '') + '.';
+        const total = one.secs + (two ? two.secs : 0);
+        $('status').textContent =
+            `Done in ${total.toFixed(1)}s — research ${one.secs.toFixed(1)}s` +
+            (two ? `, write ${two.secs.toFixed(1)}s` : ', write skipped (no facts)') +
+            ` (budget ${((one.data.budgetMs || 0) / 1000).toFixed(1)}s per step).`;
         $('out').hidden = false;
 
         const flags = $('flags');
         flags.textContent = '';
-        flags.appendChild(flag(data.grounded ? 'web-grounded' : 'NOT GROUNDED', data.grounded ? 'good' : 'bad'));
+        const nSrc = (r.sources || []).length;
+        const nFac = (r.facts || []).length;
+        flags.appendChild(flag(one.data.grounded ? 'web-grounded' : 'NOT GROUNDED', one.data.grounded ? 'good' : 'bad'));
         flags.appendChild(flag(r.identified ? 'identified' : 'NOT IDENTIFIED', r.identified ? 'good' : 'warn'));
         flags.appendChild(flag('scope: ' + (r.scope || 'unset'), r.scope ? '' : 'warn'));
-        flags.appendChild(flag((r.sources || []).length + ' sources', (r.sources || []).length ? 'good' : 'bad'));
-        flags.appendChild(flag('mode: ' + (data.mode || '?')));
-        flags.appendChild(flag(data.model || ''));
+        flags.appendChild(flag(nFac + ' facts', nFac ? 'good' : 'warn'));
+        flags.appendChild(flag(nSrc + ' sources', nSrc ? 'good' : 'bad'));
+        flags.appendChild(flag('research ' + one.secs.toFixed(1) + 's', one.secs > 8 ? 'warn' : 'good'));
+        if (two) flags.appendChild(flag('write ' + two.secs.toFixed(1) + 's', two.secs > 8 ? 'warn' : 'good'));
+        flags.appendChild(flag('mode: ' + (one.data.mode || '?')));
+        flags.appendChild(flag(one.data.model || ''));
 
-        $('notes').value      = assembleNotes(r, data);
+        $('notes').value            = assembleNotes(r, prose, one.data);
         $('f-resolved').textContent = r.resolvedName || '';
         $('f-scope').textContent    = r.scope || '';
         $('f-identity').textContent = r.identityNote || '';
         $('f-family').textContent   = r.family || '';
         $('f-height').textContent   = r.height || '';
         $('f-width').textContent    = r.width || '';
-        $('f-care').textContent     = r.careNotes || '';
+        $('f-care').textContent     = prose.careNotes || '';
         $('f-caveats').textContent  = r.caveats || '';
         $('f-notfound').textContent = r.notFound || '';
-        $('f-queries').textContent  = (data.searchQueries || []).join(' · ');
+        $('f-queries').textContent  = (one.data.searchQueries || []).join(' · ');
 
         const list = $('f-sources');
         list.textContent = '';
@@ -335,7 +374,40 @@ $('go').addEventListener('click', async () => {
             list.appendChild(li);
         });
 
-        $('raw').textContent = JSON.stringify(data, null, 2);
+        // The fact table is the audit trail: every sentence in the note above
+        // should be traceable to a row here, and a row flagged species or genus
+        // must not have become a claim about the cultivar.
+        const facts = $('facts');
+        facts.textContent = '';
+        if (!nFac) {
+            const tr = facts.insertRow();
+            const td = tr.insertCell();
+            td.className = 'empty';
+            td.textContent = 'No facts were verified. An empty note is the correct outcome here.';
+        }
+        (r.facts || []).forEach((f) => {
+            const tr = facts.insertRow();
+            const cat = tr.insertCell(); cat.className = 'cat'; cat.textContent = f.category || '';
+            const lvl = tr.insertCell(); lvl.className = 'lvl';
+            const span = document.createElement('span');
+            span.className = f.level || '';
+            span.textContent = f.level || '?';
+            lvl.appendChild(span);
+            tr.insertCell().textContent = f.text || '';
+            const src = tr.insertCell(); src.className = 'src';
+            const s = (r.sources || [])[f.sourceIndex];
+            if (s && s.url) {
+                const a = document.createElement('a');
+                a.href = s.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+                a.textContent = '[' + f.sourceIndex + ']';
+                a.title = s.title || s.url;
+                src.appendChild(a);
+            } else {
+                src.textContent = f.sourceIndex >= 0 ? '[' + f.sourceIndex + ']' : '—';
+            }
+        });
+
+        $('raw').textContent = JSON.stringify({ research: one.data, write: two && two.data }, null, 2);
     } catch (e) {
         $('status').textContent = 'Could not reach the lookup function: ' + e;
     } finally {

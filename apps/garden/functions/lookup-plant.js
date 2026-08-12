@@ -2,24 +2,42 @@
 //  lookup-plant.js — Netlify serverless function
 //  Looks up reference information about a plant from its botanical
 //  name (and optional cultivar) using Google Gemini WITH Google
-//  Search grounding, and returns structured prose for the Notes
-//  field plus a few discrete form fields.
+//  Search grounding, and returns prose for the Notes field plus a
+//  few discrete form fields.
 //
 //  This is the mirror image of scan-label.js. That function is
 //  forbidden from using outside knowledge — it reads only what is
 //  printed on the label. This one is nothing BUT outside knowledge,
-//  so the whole design is about not making things up: every claim
-//  must come from a search result, and anything unverified is
-//  omitted rather than softened.
+//  so the whole design is about not making things up.
+//
+//  TWO PHASES, one call each. A single grounded call that both
+//  searched and wrote several paragraphs could not finish inside a
+//  Netlify function's timeout (10s by default, 26s on Pro), so the
+//  work is split and the browser makes both calls:
+//
+//    phase "research" — searches the web and returns a list of short
+//                       facts, each tagged with the source it came
+//                       from. Slow because of the searching, but the
+//                       output is tiny.
+//    phase "write"    — is handed that fact list and turns it into
+//                       prose. NO search tool, so no round trips, and
+//                       the output is short. Fast.
+//
+//  The split is not only about latency. The writer never touches the
+//  web and is given nothing but the researcher's facts, so it has
+//  nothing to invent from — "don't fabricate" stops being an
+//  instruction we hope the model follows and becomes a property of
+//  the arrangement.
 //
 //  The Gemini API key is read from the GEMINI_API_KEY environment
 //  variable and NEVER sent to the browser.
 //
 //  Request  (POST JSON):
-//    { genus, species, subspecies, variety, cultivar, commonName }
-//    — or { name: "Abelia x grandiflora 'Kaleidoscope'" }
+//    { phase: "research", genus, species, subspecies, variety,
+//      cultivar, commonName }        — or { phase, name: "…" }
+//    { phase: "write", research: <the research phase's result> }
 //  Response (200 JSON):
-//    { result: { …sections, fields, sources… }, grounded: bool }
+//    { result: {…}, grounded, mode, model, elapsedMs, budgetMs }
 // =============================================================
 
 // Kept in step with scan-label.js. Google retires Gemini models quickly, so
@@ -29,151 +47,145 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
 const ENDPOINT =
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
-// -------------------------------------------------------------
-//  The prompt. This is the feature — read it before changing it.
-// -------------------------------------------------------------
-const PROMPT = `You are compiling reference notes about a single plant for a private
-horticultural collection database. The house style is that of a good nursery catalog:
-accurate, specific, and genuinely interesting about where a plant came from — its name,
-its discovery, who bred or selected it, and how it reached cultivation.
+// Our own deadline, set just inside the platform's, so a timeout returns a
+// diagnostic instead of the empty 504 Netlify sends when it kills a function.
+// Raise it with LOOKUP_BUDGET_MS if this site's function timeout allows.
+const BUDGET_MS = Number(process.env.LOOKUP_BUDGET_MS || 8500);
 
-The reader is an experienced gardener. He does not want padding, marketing language, or
-generalities that would be true of any plant. He would far rather have three sourced
-sentences than six paragraphs of confident guesswork.
+// Output tokens dominate latency, so thinking is off by default. Raise with
+// GEMINI_THINKING_BUDGET to trade speed back for quality.
+const THINKING_BUDGET = Number(process.env.GEMINI_THINKING_BUDGET || 0);
+
+const CATEGORIES = ['description', 'cultivation', 'etymology', 'history'];
+
+// -------------------------------------------------------------
+//  PHASE 1 — research. This is where the anti-fabrication rules
+//  live, because this is the only phase that can see the web.
+// -------------------------------------------------------------
+const PROMPT_RESEARCH = `You are researching a single plant for a private horticultural
+collection database. You are the fact-gathering half of a two-step process: you find and
+record facts, and a second step turns your facts into prose. You do not write prose.
+
+Search the web and return a list of short, separate, individually-sourced facts.
 
 === ABSOLUTE RULES ===
-These override everything else in this prompt. When a rule conflicts with producing a
-full-looking answer, the rule wins.
+These override everything else. When a rule conflicts with producing a full-looking
+answer, the rule wins.
 
-1. SEARCH FIRST, ALWAYS. Use Google Search and base every statement on what you actually
-   find. Do not write from memory. If you did not find it, you do not know it.
+1. SEARCH FIRST, ALWAYS. Every fact must come from something you actually found. Do not
+   write from memory. If you did not find it, you do not know it.
 
-2. OMIT WHAT YOU CANNOT VERIFY. If a fact is not supported by something you found, leave
-   it out completely. Do not soften it, do not hedge it, do not write "possibly",
-   "is thought to be", "may have been" as a way of smuggling in a guess. An empty field is
-   a correct and welcome answer. A short entry is better than a padded one.
+2. RECORD ONLY WHAT YOU CAN VERIFY. If you cannot point a fact at a source you retrieved,
+   leave it out. Do not soften it, do not hedge it, do not write "possibly" or "is thought
+   to be" as a way of smuggling in a guess. Returning few facts is a correct and welcome
+   outcome. There is no minimum.
 
-3. NEVER INVENT A SPECIFIC. Every one of the following must come from a source you found,
-   or be omitted entirely:
+3. NEVER INVENT A SPECIFIC. Each of the following must come from a source you found, or be
+   omitted entirely:
      - a person's name (botanist, breeder, collector, nurseryman, or someone honored)
      - a nursery, garden, botanic institution, university or company
      - a place or country
      - any year or date
      - a plant patent, trademark, or plant breeders' rights number
      - an award (RHS Award of Garden Merit, gold medals, and so on)
-   These are the details most likely to be wrong and least likely to be questioned by the
-   reader, because an invented one reads exactly like a real one. Hold them to the highest
-   standard in this prompt. If you find a claim like this but cannot tell where it came
-   from, leave it out.
+   These are the details most likely to be wrong and least likely to be questioned,
+   because an invented one reads exactly like a real one. Hold them to the highest
+   standard here. If you find such a claim but cannot tell where it came from, drop it.
 
-4. DO NOT GUESS AN ETYMOLOGY FROM THE SHAPE OF A WORD. Give a derivation only where you
-   found it stated. In particular: a genus ending in -ia is NOT necessarily named after a
-   person, and you must not invent a person for it. Do not reason from Latin or Greek
-   roots to a meaning that no source states. Cultivar names in particular are often
-   arbitrary and have no recorded meaning — say nothing rather than construct one.
+4. DO NOT GUESS AN ETYMOLOGY FROM THE SHAPE OF A WORD. Record a derivation only where you
+   found it stated. A genus ending in -ia is NOT necessarily named after a person, and you
+   must not invent a person for it. Do not reason from Latin or Greek roots to a meaning
+   no source states. Cultivar names are often arbitrary and have no recorded meaning — record
+   nothing rather than construct something.
 
-5. KEEP CULTIVAR, SPECIES AND GENUS FACTS SEPARATE. This is the most common way these
-   notes go wrong. If you were given a cultivar, a claim about that cultivar needs a
-   source about that cultivar. Where you only found information about the species or the
-   genus, you may still use it, but you must say so in the text itself (for example
-   "the species is native to …") and you must set "scope" accordingly. Never quietly
-   present a species fact as though it were specific to the cultivar. Sizes are the
-   usual casualty: a named cultivar is frequently chosen for being more compact than the
-   species, so an unsourced species height is actively misleading.
+5. KEEP CULTIVAR, SPECIES AND GENUS FACTS SEPARATE. This is the most common way these notes
+   go wrong. If you were given a cultivar, a claim about that cultivar needs a source about
+   that cultivar. Where you only found information about the species or the genus, you may
+   still record it, but the fact's text must say so ("the species is native to …") and
+   "level" must be set to species or genus. Never present a species fact as though it were
+   specific to the cultivar. Sizes are the usual casualty: a named cultivar is frequently
+   chosen for being more compact than the species, so an unsourced species height is
+   actively misleading.
 
-6. DO NOT SILENTLY ANSWER ABOUT A DIFFERENT PLANT. If the name you were given appears to
-   be a misspelling, a synonym, or a name you cannot find at all, do not quietly answer
-   about the nearest plant you can think of. Set "identified" to false, explain what you
-   found or did not find in "identityNote", and leave the content sections empty. If the
-   name is a recognized synonym of an accepted name, you may answer about the accepted
-   plant, but say so in "identityNote".
+6. DO NOT SILENTLY RESEARCH A DIFFERENT PLANT. If the name appears to be a misspelling, a
+   synonym, or a name you cannot find at all, do not quietly research the nearest plant you
+   can think of. Set "identified" to false, explain what you did and did not find in
+   "identityNote", and return no facts. If the name is a recognized synonym of an accepted
+   name you may research the accepted plant, but say so in "identityNote".
 
-7. PRESERVE DISAGREEMENT. Where sources conflict — commonly on ultimate size, hardiness,
-   or who raised a cultivar — do not average them and do not pick a favourite. Give the
-   range or note the disagreement in "caveats".
+7. PRESERVE DISAGREEMENT. Where sources conflict — commonly on ultimate size, hardiness, or
+   who raised a cultivar — do not average them and do not pick a favorite. Record the range,
+   or note the disagreement in "caveats".
 
-8. REPORT YOUR GAPS. Use "notFound" to say briefly which things you looked for and could
-   not verify, so the reader can tell the difference between "there is nothing recorded"
-   and "this lookup did not cover it". This is useful information, not an apology.
+8. REPORT YOUR GAPS. Use "notFound" to say briefly what you looked for and could not verify,
+   so the reader can tell "nothing is recorded" from "this lookup did not cover it".
 
-=== WHAT TO WRITE ===
-Write plain prose. No markdown, no bullet points, no headings inside the fields — the
-application adds its own headings. Use full sentences and AMERICAN English spelling and
-usage throughout — color, gray, fertilize, favorite, meter. In prose, give sizes in feet
-and inches with metric in parentheses, for example "3-4 ft (0.9-1.2 m)".
+=== HOW TO RECORD A FACT ===
+Each entry in "facts" is one self-contained statement, at most about 25 words, written
+plainly in AMERICAN English. No markdown. Each carries:
+  - text:        the fact itself.
+  - category:    one of description, cultivation, etymology, history.
+  - level:       cultivar, species, or genus — what the fact is actually about (rule 5).
+  - sourceIndex: the 0-based position in your "sources" array of the page it came from.
 
-LENGTH — this is a reference note, not an essay, and a long answer is a slow answer.
-Hold description, cultivation and etymology to 2-4 sentences each. History may run to 6
-where there is a real story on record. Never pad a section to make it look complete;
-under-filling is the intended behavior, not a failure.
+Return at most 18 facts. Prefer the specific and the interesting over the generic: how a
+cultivar arose and who raised it is worth more than the observation that it likes well-drained
+soil. Cover the categories you have material for and skip the ones you do not.
 
-- description: what the plant looks like and does through the year — habit, eventual size
-  in the text, foliage, flower color and form, season of interest, scent, fruit, fall
-  color. Evergreen or deciduous. What it is actually like to have in a garden.
-
-- cultivation: growing requirements — aspect, soil, drainage, watering, hardiness (give
-  the USDA zone, or the RHS rating where that is what the source states), pruning, feeding,
-  and any pest or
-  disease it is particularly prone to. Also note if it is invasive, self-seeds freely, is
-  toxic, or spreads by runners, where a source says so.
-
-- etymology: the meaning and derivation of the botanical name. Deal with the genus and the
-  specific epithet separately where you found both. Where the genus honors a real person,
-  name them and say who they were — but only from a source (see rule 3 and rule 4). Cover
-  the common name too where its origin is recorded and interesting; some common names are
-  much older than the botanical one and have a story worth having.
-
-- history: where the plant came from and how it got here. For a species: native range and
-  habitat, when and by whom it was collected or introduced to cultivation, and any
-  historical, medicinal, culinary or cultural use recorded for it. For a cultivar: this is
-  the important one — how it arose (a seedling, a sport, a deliberate cross, and of what),
-  who found or bred it, where, and when; when it was released and by whom; any patent or
-  award. This is the section the reader most wants and the section where invention is most
-  tempting. Rule 3 applies with full force.
-
-Leave any section as an empty string if you did not find enough to say. Do not write
-"no information found" inside a section — that is what "notFound" is for.
+What belongs in each category:
+  - description: habit, eventual size, foliage, flower color and form, season of interest,
+    scent, fruit, fall color, evergreen or deciduous.
+  - cultivation: aspect, soil, drainage, watering, hardiness (USDA zone, or the RHS rating
+    where that is what the source gives), pruning, feeding, pests and diseases. Also whether
+    it is invasive, self-seeds, is toxic, or spreads by runners.
+  - etymology: the meaning and derivation of genus and specific epithet, who the genus honors
+    if a source says, and the origin of the common name where it is recorded.
+  - history: native range and habitat, when and by whom it was collected or introduced,
+    recorded historical, medicinal, culinary or cultural use. For a cultivar: how it arose
+    (a seedling, a sport, a deliberate cross, and of what), who found or bred it, where and
+    when, when it was released and by whom, and any patent or award.
 
 === THE DISCRETE FIELDS ===
-These populate form inputs, so keep them short and literal:
-
-- height / width: ultimate size, as the source gives it, keeping ranges and units
-  (for example "3-4 ft", "24-30 in", "60 cm"). Keep whatever unit the source used rather
-  than converting it — a conversion you perform yourself is one more chance to introduce
-  an error into a number. If the only sizes you found are for the species and you
-  were asked about a cultivar, leave these EMPTY and mention the species size in the
-  description text instead. See rule 5.
-- careNotes: one or two sentences of the most practical guidance — the condensed version
-  of "cultivation" for a small form field. Not a duplicate of the whole paragraph.
-- family: the botanical family, if found.
-- commonNames: the common names in use, comma separated, if found.
+  - height / width: ultimate size in the source's own units, keeping ranges ("3-4 ft",
+    "24-30 in", "60 cm"). Do not convert — a conversion you perform is one more chance to put
+    an error into a number. If the only sizes you found are for the species and you were asked
+    about a cultivar, leave these EMPTY and record the species size as a fact instead (rule 5).
+  - family, commonNames: if found. commonNames comma separated.
 
 === SOURCES ===
-Populate "sources" with the pages you actually used — title and URL. Prefer botanic
-gardens, university extension services, the RHS, national plant societies, monographs, plant
-patent records, and established nurseries' own catalog entries. Do not list a source you
-did not use. Do not invent a URL: if you cannot give a real one, give the title alone.
+List in "sources" the pages you actually used, with title and URL, in the order your facts
+refer to them. Prefer botanic gardens, university extension services, the RHS, national plant
+societies, monographs, plant patent records, and established nurseries' own catalog entries.
+Do not list a source you did not use. Do not invent a URL: if you cannot give a real one, give
+the title alone.
 
 Return the result as JSON matching the provided schema.`;
 
-const RESPONSE_SCHEMA = {
+const SCHEMA_RESEARCH = {
     type: 'OBJECT',
     properties: {
         resolvedName: { type: 'STRING' },
         identified:   { type: 'BOOLEAN' },
         identityNote: { type: 'STRING' },
-        scope:        { type: 'STRING' },   // cultivar | species | genus | mixed
+        scope:        { type: 'STRING' },
         family:       { type: 'STRING' },
         commonNames:  { type: 'STRING' },
-        description:  { type: 'STRING' },
-        cultivation:  { type: 'STRING' },
-        etymology:    { type: 'STRING' },
-        history:      { type: 'STRING' },
         height:       { type: 'STRING' },
         width:        { type: 'STRING' },
-        careNotes:    { type: 'STRING' },
         caveats:      { type: 'STRING' },
         notFound:     { type: 'STRING' },
+        facts: {
+            type: 'ARRAY',
+            items: {
+                type: 'OBJECT',
+                properties: {
+                    text:        { type: 'STRING' },
+                    category:    { type: 'STRING' },
+                    level:       { type: 'STRING' },
+                    sourceIndex: { type: 'INTEGER' },
+                },
+            },
+        },
         sources: {
             type: 'ARRAY',
             items: {
@@ -186,6 +198,60 @@ const RESPONSE_SCHEMA = {
         },
     },
     required: ['resolvedName', 'identified', 'scope'],
+};
+
+// -------------------------------------------------------------
+//  PHASE 2 — write. No search tool. Nothing but the facts above.
+// -------------------------------------------------------------
+const PROMPT_WRITE = `You are writing reference notes about a plant for a private
+horticultural collection database, in the style of a good nursery catalog: accurate,
+specific, and interesting about where a plant came from.
+
+You will be given a list of facts that a previous step verified against sources. That list
+is the ONLY material you may use.
+
+=== ABSOLUTE RULES ===
+1. ADD NOTHING. Every statement you write must be traceable to a supplied fact. You have no
+   web access and no licence to fill gaps from memory. Do not add context, background,
+   comparisons to other plants, or general horticultural advice, however safe it seems.
+   Adding a true fact that was not supplied is still a failure, because nothing verified it.
+
+2. DO NOT PROMOTE A FACT'S LEVEL. Each fact is marked cultivar, species or genus. A fact
+   marked species or genus must stay marked in the prose — write "the species is native to …",
+   not "it is native to …", when the fact is about the species and the subject is a cultivar.
+
+3. AN EMPTY SECTION IS CORRECT. If no facts were supplied for a section, return an empty
+   string for it. Never write "no information found" — say nothing.
+
+4. DO NOT EMBELLISH A NUMBER OR A NAME. Sizes, dates, people and places appear exactly as
+   supplied. Do not convert units, round figures, or expand an initial into a full name.
+
+=== STYLE ===
+Plain prose. No markdown, no bullet points, no headings — the application adds its own.
+Full sentences, AMERICAN English spelling and usage throughout (color, gray, fertilize).
+Combine related facts into flowing sentences rather than listing them one per sentence, but
+do not invent connective claims to join them.
+
+This is a reference note, not an essay. Hold description, cultivation and etymology to 2-4
+sentences each; history may run to 6 where the supplied facts support it. Never pad.
+
+Write these four sections from the facts of the matching category, plus one extra field:
+  - description, cultivation, etymology, history
+  - careNotes: one or two sentences of the most practical guidance, drawn from the
+    cultivation facts. A condensed version for a small form field, not a repeat of the
+    whole paragraph. Empty if there are no cultivation facts.
+
+Return the result as JSON matching the provided schema.`;
+
+const SCHEMA_WRITE = {
+    type: 'OBJECT',
+    properties: {
+        description: { type: 'STRING' },
+        cultivation: { type: 'STRING' },
+        etymology:   { type: 'STRING' },
+        history:     { type: 'STRING' },
+        careNotes:   { type: 'STRING' },
+    },
 };
 
 const CORS = {
@@ -212,22 +278,21 @@ function buildName(p) {
     return typeof p.commonName === 'string' ? p.commonName.trim() : '';
 }
 
-// Describe what we were asked about, so the model knows how much is a cultivar
-// question and how much is a species question (rule 5).
+// Tell the researcher how much of this is a cultivar question (rule 5).
 function buildQuery(p, name) {
-    const lines = [`The plant to look up is: ${name}`];
+    const lines = [`The plant to research is: ${name}`];
 
     if (p.cultivar) {
         lines.push(
             `This is a named CULTIVAR ('${String(p.cultivar).trim().replace(/^['"]|['"]$/g, '')}'). ` +
-            'Cultivar-level claims need cultivar-level sources — see rule 5. Its origin, who ' +
+            'Cultivar-level claims need cultivar-level sources — see rule 5. How it arose, and who ' +
             'raised or found it and when, is the most valuable thing you can find.',
         );
     } else if (p.species) {
         lines.push('This is a species, not a cultivar. Do not attribute cultivar traits to it.');
     } else if (p.genus) {
         lines.push(
-            'Only a genus was supplied. Answer at genus level, set scope to "genus", and do not ' +
+            'Only a genus was supplied. Work at genus level, set scope to "genus", and do not ' +
             'invent a species. Say in identityNote that a species would give a better answer.',
         );
     }
@@ -240,10 +305,34 @@ function buildQuery(p, name) {
     return lines.join('\n');
 }
 
+// Render the researcher's output as the writer's input.
+function buildWriterInput(research) {
+    const facts   = Array.isArray(research.facts) ? research.facts : [];
+    const sources = Array.isArray(research.sources) ? research.sources : [];
+
+    const lines = [`The plant is: ${research.resolvedName || 'unnamed'}`];
+    if (research.scope)  lines.push(`The subject is at ${research.scope} level.`);
+    if (research.family) lines.push(`Family: ${research.family}`);
+    if (research.commonNames) lines.push(`Common names: ${research.commonNames}`);
+
+    lines.push('', 'VERIFIED FACTS — the only material you may use:');
+    if (!facts.length) {
+        lines.push('  (none were verified — return empty strings for every section)');
+    }
+    for (const f of facts) {
+        const cat   = CATEGORIES.includes(str(f.category)) ? str(f.category) : 'description';
+        const level = str(f.level) || 'unspecified';
+        const src   = sources[f.sourceIndex];
+        const where = src ? ` [source: ${src.title || src.url || '?'}]` : '';
+        lines.push(`  - (${cat}, ${level}) ${str(f.text)}${where}`);
+    }
+    return lines.join('\n');
+}
+
 // Pull sources out of Gemini's grounding metadata. These are the real citations
-// when they are present; when structured output is combined with the search tool
-// they have been reported to come back empty, which is why the schema also asks
-// the model for its own source list. We merge both and dedupe.
+// when present; when structured output is combined with the search tool they
+// have been reported to come back empty, which is why the schema also asks the
+// model for its own source list. We merge both and dedupe.
 function sourcesFromGrounding(candidate) {
     const chunks = candidate?.groundingMetadata?.groundingChunks;
     if (!Array.isArray(chunks)) return [];
@@ -256,8 +345,8 @@ function mergeSources(modelSources, groundedSources) {
     const out = [];
     const seen = new Set();
     const all = [
-        ...(Array.isArray(groundedSources) ? groundedSources : []),
         ...(Array.isArray(modelSources) ? modelSources : []),
+        ...(Array.isArray(groundedSources) ? groundedSources : []),
     ];
     for (const s of all) {
         if (!s || typeof s !== 'object') continue;
@@ -296,38 +385,7 @@ function parseJsonLoosely(text) {
     return null;
 }
 
-const str = (v) => (typeof v === 'string' ? v.trim() : '');
-
-// Normalise whatever came back so the client always sees the same shape.
-function shapeResult(raw, fallbackName) {
-    const scope = str(raw.scope).toLowerCase();
-    return {
-        resolvedName: str(raw.resolvedName) || fallbackName,
-        identified:   raw.identified !== false,
-        identityNote: str(raw.identityNote),
-        scope:        ['cultivar', 'species', 'genus', 'mixed'].includes(scope) ? scope : '',
-        family:       str(raw.family),
-        commonNames:  str(raw.commonNames),
-        description:  str(raw.description),
-        cultivation:  str(raw.cultivation),
-        etymology:    str(raw.etymology),
-        history:      str(raw.history),
-        height:       str(raw.height),
-        width:        str(raw.width),
-        careNotes:    str(raw.careNotes),
-        caveats:      str(raw.caveats),
-        notFound:     str(raw.notFound),
-        sources:      [],
-    };
-}
-
-// A grounded lookup is slow: Gemini runs several web searches and then writes
-// a few hundred words. Netlify kills a synchronous function at 10s by default
-// (26s on Pro, on request), and a kill arrives as an opaque 504 with no clue
-// in it. So we impose our own deadline slightly inside the platform's and
-// return a diagnostic instead. Raise it with LOOKUP_BUDGET_MS once you know
-// what your site's real limit is.
-const BUDGET_MS = Number(process.env.LOOKUP_BUDGET_MS || 8500);
+function str(v) { return typeof v === 'string' ? v.trim() : ''; }
 
 async function callGemini(apiKey, body, remainingMs) {
     const controller = new AbortController();
@@ -349,6 +407,53 @@ async function callGemini(apiKey, body, remainingMs) {
     } finally {
         clearTimeout(timer);
     }
+}
+
+// Run one Gemini call, coping with a model that rejects thinkingConfig and,
+// for the grounded phase, with one that rejects search-plus-schema. Grounding
+// matters more than the schema, so the schema is what gets dropped.
+async function runPhase({ apiKey, prompt, input, schema, useSearch, remaining }) {
+    const text = `${prompt}\n\n=== THE REQUEST ===\n${input}`;
+    const base = {
+        contents: [{ parts: [{ text }] }],
+        generationConfig: {
+            temperature:      0,
+            responseMimeType: 'application/json',
+            responseSchema:   schema,
+            thinkingConfig:   { thinkingBudget: THINKING_BUDGET },
+        },
+    };
+    if (useSearch) base.tools = [{ google_search: {} }];
+
+    const stripThinking = (b) => {
+        const { thinkingConfig, ...rest } = b.generationConfig;
+        return { ...b, generationConfig: rest };
+    };
+    const stripSchema = (b) => {
+        const { responseMimeType, responseSchema, ...rest } = b.generationConfig;
+        return { ...b, generationConfig: rest };
+    };
+
+    let mode = useSearch ? 'grounded+schema' : 'schema';
+    let attempt = await callGemini(apiKey, base, remaining());
+
+    if (!attempt.ok && attempt.status === 400 && /thinking/i.test(attempt.text)) {
+        console.warn('lookup-plant: model rejected thinkingConfig — retrying without it.');
+        attempt = await callGemini(apiKey, stripThinking(base), remaining());
+    }
+
+    if (useSearch && !attempt.ok && attempt.status === 400 && !attempt.aborted) {
+        console.warn(
+            'lookup-plant: grounded+schema rejected on', GEMINI_MODEL,
+            '— retrying grounded free-form. Detail:', attempt.text.slice(0, 300),
+        );
+        const freeform = stripSchema(base);
+        freeform.contents = [{ parts: [{ text: `${text}\n\nReturn ONLY a JSON object, no other text.` }] }];
+        attempt = await callGemini(apiKey, freeform, remaining());
+        mode = 'grounded+freeform';
+    }
+
+    return { attempt, mode };
 }
 
 exports.handler = async (event) => {
@@ -375,163 +480,149 @@ exports.handler = async (event) => {
         return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Invalid JSON body' }) };
     }
 
-    const name = buildName(payload);
-    if (!name) {
-        return {
-            statusCode: 400,
-            headers: CORS,
-            body: JSON.stringify({ error: 'Give at least a genus, or a plant name, to look up.' }),
-        };
-    }
-
     const started   = Date.now();
     const elapsed   = () => Date.now() - started;
     const remaining = () => BUDGET_MS - elapsed();
+    const phase     = str(payload.phase) || 'research';
 
-    const contents = [{ parts: [{ text: `${PROMPT}\n\n=== THE REQUEST ===\n${buildQuery(payload, name)}` }] }];
-    const tools    = [{ google_search: {} }];
-
-    // Latency is the binding constraint, and output tokens dominate it, so the
-    // model is told to think as little as possible. Set GEMINI_THINKING_BUDGET
-    // above 0 to trade speed back for quality. Not every model accepts this
-    // field, so a 400 that mentions it retries without it (see below).
-    const thinkingBudget = Number(process.env.GEMINI_THINKING_BUDGET || 0);
-
-    const genConfig = {
-        temperature:      0,
-        responseMimeType: 'application/json',
-        responseSchema:   RESPONSE_SCHEMA,
-        thinkingConfig:   { thinkingBudget },
-    };
-
-    // Preferred shape: search grounding AND a response schema in one call. This
-    // works on the Gemini 3 family through the REST API. If this deployment's
-    // model rejects the combination (older models return 400 INVALID_ARGUMENT),
-    // fall back to grounded free-form output and parse the JSON ourselves —
-    // grounding matters more than the schema, so the schema is what we drop.
-    const groundedStructured = { contents, tools, generationConfig: genConfig };
-
-    const freeformInstruction =
-        `\n\nReturn ONLY a JSON object with these keys and no other text: resolvedName, ` +
-        `identified (boolean), identityNote, scope, family, commonNames, description, ` +
-        `cultivation, etymology, history, height, width, careNotes, caveats, notFound, ` +
-        `sources (array of {title, url}).`;
-
-    const groundedFreeform = {
-        contents: [{ parts: [{ text: contents[0].parts[0].text + freeformInstruction }] }],
-        tools,
-        generationConfig: { temperature: 0, thinkingConfig: { thinkingBudget } },
-    };
-
-    // Strip a config key the model rejected and try that same shape again.
-    const withoutThinking = (body) => {
-        const { thinkingConfig, ...rest } = body.generationConfig;
-        return { ...body, generationConfig: rest };
-    };
-
-    const timedOut = (mode) => ({
-        statusCode: 504,
+    const fail = (statusCode, body) => ({
+        statusCode,
         headers: CORS,
-        body: JSON.stringify({
-            error: `The lookup ran past its ${BUDGET_MS} ms budget and was stopped. A grounded ` +
-                   `search plus several paragraphs often needs longer than a Netlify function is ` +
-                   `allowed. Raise LOOKUP_BUDGET_MS if this site's function timeout permits it, ` +
-                   `or the lookup needs to move to a background function.`,
-            elapsedMs: elapsed(),
-            budgetMs:  BUDGET_MS,
-            mode,
-            model:     GEMINI_MODEL,
-        }),
+        body: JSON.stringify({ ...body, phase, elapsedMs: elapsed(), budgetMs: BUDGET_MS, model: GEMINI_MODEL }),
     });
 
-    try {
-        let attempt  = await callGemini(apiKey, groundedStructured, remaining());
-        let usedMode = 'grounded+schema';
+    const timedOut = (mode) => fail(504, {
+        error: `The ${phase} step ran past its ${BUDGET_MS} ms budget and was stopped. Raise ` +
+               `LOOKUP_BUDGET_MS if this site's function timeout permits it.`,
+        mode,
+    });
 
-        // Model does not know thinkingConfig — drop it and retry once.
-        if (!attempt.ok && attempt.status === 400 && /thinking/i.test(attempt.text)) {
-            console.warn('lookup-plant: model rejected thinkingConfig — retrying without it.');
-            attempt = await callGemini(apiKey, withoutThinking(groundedStructured), remaining());
+    if (phase !== 'research' && phase !== 'write') {
+        return fail(400, { error: `Unknown phase "${phase}" — expected "research" or "write".` });
+    }
+
+    // ----- phase 2: write -------------------------------------
+    if (phase === 'write') {
+        const research = payload.research;
+        if (!research || typeof research !== 'object') {
+            return fail(400, { error: 'The write phase needs the research phase result in "research".' });
         }
 
-        if (!attempt.ok && attempt.status === 400 && !attempt.aborted) {
-            console.warn(
-                'lookup-plant: grounded+schema rejected (HTTP 400) on model', GEMINI_MODEL,
-                '— retrying grounded free-form. Detail:', attempt.text.slice(0, 300),
-            );
-            attempt  = await callGemini(apiKey, groundedFreeform, remaining());
-            usedMode = 'grounded+freeform';
-        }
+        try {
+            const { attempt, mode } = await runPhase({
+                apiKey, prompt: PROMPT_WRITE, input: buildWriterInput(research),
+                schema: SCHEMA_WRITE, useSearch: false, remaining,
+            });
 
-        if (attempt.aborted) {
-            console.error('lookup-plant: aborted at', elapsed(), 'ms — budget', BUDGET_MS, 'ms, model', GEMINI_MODEL);
-            return timedOut(usedMode);
-        }
+            if (attempt.aborted) {
+                console.error('lookup-plant write: aborted at', elapsed(), 'ms');
+                return timedOut(mode);
+            }
+            if (!attempt.ok) {
+                const detail = attempt.text.slice(0, 600);
+                console.error('lookup-plant write: HTTP', attempt.status, 'detail:', detail);
+                return fail(502, { error: 'Lookup service error', status: attempt.status, detail });
+            }
 
-        if (!attempt.ok) {
-            const detail = attempt.text.slice(0, 600);
-            console.error('Gemini API error — HTTP', attempt.status, 'model:', GEMINI_MODEL, 'detail:', detail);
+            const candidate = attempt.json?.candidates?.[0];
+            const raw = parseJsonLoosely(candidate?.content?.parts?.map((p) => p?.text || '').join('') || '');
+            if (!raw || typeof raw !== 'object') {
+                return fail(502, { error: 'The write step came back in a form we could not read. Try again.', mode });
+            }
+
+            console.log('lookup-plant write: ok in', elapsed(), 'ms —', research.resolvedName);
+
             return {
-                statusCode: 502,
+                statusCode: 200,
                 headers: CORS,
                 body: JSON.stringify({
-                    error: 'Lookup service error', status: attempt.status,
-                    model: GEMINI_MODEL, elapsedMs: elapsed(), detail,
+                    result: {
+                        description: str(raw.description),
+                        cultivation: str(raw.cultivation),
+                        etymology:   str(raw.etymology),
+                        history:     str(raw.history),
+                        careNotes:   str(raw.careNotes),
+                    },
+                    phase, mode, model: GEMINI_MODEL, elapsedMs: elapsed(), budgetMs: BUDGET_MS,
                 }),
             };
+        } catch (e) {
+            return fail(500, { error: 'Request to lookup service failed', detail: String(e).slice(0, 300) });
+        }
+    }
+
+    // ----- phase 1: research ----------------------------------
+    const name = buildName(payload);
+    if (!name) {
+        return fail(400, { error: 'Give at least a genus, or a plant name, to look up.' });
+    }
+
+    try {
+        const { attempt, mode } = await runPhase({
+            apiKey, prompt: PROMPT_RESEARCH, input: buildQuery(payload, name),
+            schema: SCHEMA_RESEARCH, useSearch: true, remaining,
+        });
+
+        if (attempt.aborted) {
+            console.error('lookup-plant research: aborted at', elapsed(), 'ms — budget', BUDGET_MS, 'ms');
+            return timedOut(mode);
+        }
+        if (!attempt.ok) {
+            const detail = attempt.text.slice(0, 600);
+            console.error('lookup-plant research: HTTP', attempt.status, 'detail:', detail);
+            return fail(502, { error: 'Lookup service error', status: attempt.status, detail });
         }
 
         const candidate = attempt.json?.candidates?.[0];
-        const text      = candidate?.content?.parts?.map((p) => p?.text || '').join('') || '';
-        const raw       = parseJsonLoosely(text);
-
+        const raw = parseJsonLoosely(candidate?.content?.parts?.map((p) => p?.text || '').join('') || '');
         if (!raw || typeof raw !== 'object') {
-            return {
-                statusCode: 502,
-                headers: CORS,
-                body: JSON.stringify({
-                    error: 'The lookup came back in a form we could not read. Try again.',
-                    mode:  usedMode,
-                    raw:   text.slice(0, 400),
-                }),
-            };
+            return fail(502, { error: 'The research step came back in a form we could not read. Try again.', mode });
         }
 
-        const grounded = sourcesFromGrounding(candidate);
-        const result   = shapeResult(raw, name);
-        result.sources = mergeSources(raw.sources, grounded);
+        const scope   = str(raw.scope).toLowerCase();
+        const sources = mergeSources(raw.sources, sourcesFromGrounding(candidate));
 
-        // Did the search tool actually run? webSearchQueries is populated even
-        // when groundingChunks is not, so it is the more reliable signal — and
-        // an ungrounded answer is exactly what this feature must not ship
-        // silently, so the client is told.
-        const queries = candidate?.groundingMetadata?.webSearchQueries;
+        const facts = (Array.isArray(raw.facts) ? raw.facts : [])
+            .map((f) => ({
+                text:        str(f?.text),
+                category:    CATEGORIES.includes(str(f?.category)) ? str(f.category) : 'description',
+                level:       str(f?.level).toLowerCase(),
+                sourceIndex: Number.isInteger(f?.sourceIndex) ? f.sourceIndex : -1,
+            }))
+            .filter((f) => f.text);
+
+        const queries   = candidate?.groundingMetadata?.webSearchQueries;
         const didSearch = Array.isArray(queries) && queries.length > 0;
 
-        console.log('lookup-plant: ok in', elapsed(), 'ms —', name, '— mode', usedMode);
+        console.log(
+            'lookup-plant research: ok in', elapsed(), 'ms —', name,
+            '—', facts.length, 'facts,', sources.length, 'sources, grounded:', didSearch,
+        );
 
         return {
             statusCode: 200,
             headers: CORS,
             body: JSON.stringify({
-                result,
-                grounded:       didSearch || grounded.length > 0,
-                searchQueries:  Array.isArray(queries) ? queries : [],
-                mode:           usedMode,
-                model:          GEMINI_MODEL,
-                elapsedMs:      elapsed(),
-                budgetMs:       BUDGET_MS,
+                result: {
+                    resolvedName: str(raw.resolvedName) || name,
+                    identified:   raw.identified !== false,
+                    identityNote: str(raw.identityNote),
+                    scope:        ['cultivar', 'species', 'genus', 'mixed'].includes(scope) ? scope : '',
+                    family:       str(raw.family),
+                    commonNames:  str(raw.commonNames),
+                    height:       str(raw.height),
+                    width:        str(raw.width),
+                    caveats:      str(raw.caveats),
+                    notFound:     str(raw.notFound),
+                    facts,
+                    sources,
+                },
+                grounded:      didSearch || sources.length > 0,
+                searchQueries: Array.isArray(queries) ? queries : [],
+                phase, mode, model: GEMINI_MODEL, elapsedMs: elapsed(), budgetMs: BUDGET_MS,
             }),
         };
     } catch (e) {
-        return {
-            statusCode: 500,
-            headers: CORS,
-            body: JSON.stringify({
-                error: 'Request to lookup service failed',
-                elapsedMs: elapsed(),
-                detail: String(e).slice(0, 300),
-            }),
-        };
+        return fail(500, { error: 'Request to lookup service failed', detail: String(e).slice(0, 300) });
     }
 };
