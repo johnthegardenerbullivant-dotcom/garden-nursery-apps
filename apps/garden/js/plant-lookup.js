@@ -29,7 +29,16 @@ const TRACK_LABEL = { details: 'plant details', origins: 'origins & history' };
 // Gemini returns citations as vertexaisearch redirect links rather than the
 // real page. They resolve today and expire later, so they are no use in a note
 // somebody reads in three years — keep the title, drop the link.
-const OPAQUE_URL = /^https?:\/\/vertexaisearch\.cloud\.google\.com\//i;
+//
+// Matched loosely on purpose. The first version pinned the host to
+// vertexaisearch.cloud.google.com and one came through on cloud5.google.com —
+// Google shards those hosts with a number. So: anything carrying the
+// vertexaisearch name, anything on the grounding-redirect path, and as a
+// backstop anything absurdly long, which no citation worth reading ever is.
+const OPAQUE_URL = /vertexaisearch|\/grounding-api-redirect\//i;
+const MAX_URL_LEN = 180;
+
+const isOpaqueUrl = (url) => !url || OPAQUE_URL.test(url) || url.length > MAX_URL_LEN;
 
 const esc = (s) => String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -90,7 +99,7 @@ function assembleNote(research, prose) {
 
     const lines = (research.sources || []).map((s) => {
         const title = (s.title || '').trim();
-        const url   = OPAQUE_URL.test(s.url || '') ? '' : (s.url || '').trim();
+        const url   = isOpaqueUrl((s.url || '').trim()) ? '' : (s.url || '').trim();
         if (title && url) return `  ${title} — ${url}`;
         return title ? `  ${title}` : (url ? `  ${url}` : '');
     }).filter(Boolean);

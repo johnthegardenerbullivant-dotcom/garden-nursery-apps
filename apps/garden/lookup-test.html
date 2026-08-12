@@ -237,7 +237,11 @@ $('clear').addEventListener('click', () => {
 // Gemini returns citations as vertexaisearch redirect links rather than the
 // real page. They resolve today and expire later, so they are worth keeping as
 // something to click in this harness but not worth writing into a note.
-const OPAQUE_URL = /^https?:\/\/vertexaisearch\.cloud\.google\.com\//i;
+// Matched loosely: one came through on cloud5.google.com, because Google
+// shards those redirect hosts with a number. Also catch the redirect path, and
+// anything absurdly long, which no citation worth reading ever is.
+const OPAQUE_URL = /vertexaisearch|\/grounding-api-redirect\//i;
+const isOpaqueUrl = (url) => !url || OPAQUE_URL.test(url) || url.length > 180;
 
 function assembleNotes(st) {
     const tracks = [st.details, st.origins].filter(Boolean);
@@ -276,7 +280,7 @@ function assembleNotes(st) {
             // Google's grounding citations come back as 200-character redirect
             // URLs that expire. Fine to click now, useless in a note you will
             // read in three years — so the note keeps the title alone.
-            const u = OPAQUE_URL.test(s.url || '') ? '' : (s.url || '').trim();
+            const u = isOpaqueUrl((s.url || '').trim()) ? '' : (s.url || '').trim();
             if (t && u) return `  ${t} — ${u}`;
             if (t) return `  ${t}`;
             return u ? `  ${u}` : '';

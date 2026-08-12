@@ -341,6 +341,11 @@ Full sentences, AMERICAN English spelling and usage throughout (color, gray, fer
 Combine related facts into flowing sentences rather than listing them one per sentence, but
 do not invent connective claims to join them.
 
+Say each thing ONCE. Two supplied facts often overlap — one says a plant needs full sun,
+another says full sun gives the best foliage color. Merge them into a single statement
+rather than writing both, which reads as though you lost your place. Merging overlapping
+facts is not the same as dropping one: keep whatever either fact adds.
+
 This is a reference note, not an essay. Hold description, cultivation and etymology to 2-4
 sentences each; history may run to 6 where the supplied facts support it. Never pad.`;
 
