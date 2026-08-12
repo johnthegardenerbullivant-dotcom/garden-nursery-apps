@@ -232,11 +232,17 @@ function researchPrompt(trackKey) {
     const fields = t.fields
         ? [
             '=== THE DISCRETE FIELDS ===',
+            'These fill single-line form inputs. Each must be a BARE VALUE of at most 40',
+            'characters: no sentences, no explanation, no reasoning, no "depending on". If you',
+            'cannot give a bare value, leave the field empty and record what you found as a',
+            'fact instead. Anything longer than 40 characters will be thrown away.',
+            '',
             '  - height / width: ultimate size in the source\'s own units, keeping ranges ("3-4 ft",',
-            '    "24-30 in", "60 cm"). Do not convert — a conversion you perform is one more chance to',
-            '    put an error into a number. If the only sizes you found are for the species and you',
-            '    were asked about a cultivar, leave these EMPTY and record the species size as a fact',
-            '    instead (rule 5).',
+            '    "24-30 in", "5-6 m"). Do not convert — a conversion you perform is one more chance',
+            '    to put an error into a number. If sources conflict, leave the field EMPTY and put',
+            '    the disagreement in "caveats" (rule 7). If the only sizes you found are for the',
+            '    species and you were asked about a cultivar, leave these EMPTY and record the',
+            '    species size as a fact instead (rule 5).',
             '  - family, commonNames: if found. commonNames comma separated.',
           ].join('\n')
         : [
@@ -248,19 +254,14 @@ function researchPrompt(trackKey) {
     return [PROMPT_RESEARCH_HEAD, scope, fields, PROMPT_RESEARCH_TAIL].join('\n\n');
 }
 
+// Property order matters: structured output is generated in schema order, so
+// anything that might ramble must come AFTER the payload. Flash-Lite once
+// deliberated at length inside "width" and ran out of output tokens before it
+// reached the facts, returning sources and nothing to write from. Facts and
+// sources therefore come first, and the free-text fields last.
 const SCHEMA_RESEARCH = {
     type: 'OBJECT',
     properties: {
-        resolvedName: { type: 'STRING' },
-        identified:   { type: 'BOOLEAN' },
-        identityNote: { type: 'STRING' },
-        scope:        { type: 'STRING' },
-        family:       { type: 'STRING' },
-        commonNames:  { type: 'STRING' },
-        height:       { type: 'STRING' },
-        width:        { type: 'STRING' },
-        caveats:      { type: 'STRING' },
-        notFound:     { type: 'STRING' },
         facts: {
             type: 'ARRAY',
             items: {
@@ -283,8 +284,18 @@ const SCHEMA_RESEARCH = {
                 },
             },
         },
+        resolvedName: { type: 'STRING' },
+        identified:   { type: 'BOOLEAN' },
+        scope:        { type: 'STRING' },
+        family:       { type: 'STRING' },
+        commonNames:  { type: 'STRING' },
+        height:       { type: 'STRING' },
+        width:        { type: 'STRING' },
+        identityNote: { type: 'STRING' },
+        caveats:      { type: 'STRING' },
+        notFound:     { type: 'STRING' },
     },
-    required: ['resolvedName', 'identified', 'scope'],
+    required: ['facts', 'sources', 'resolvedName', 'identified', 'scope'],
 };
 
 // -------------------------------------------------------------
@@ -454,7 +465,9 @@ function mergeSources(modelSources, groundedSources) {
     ];
     for (const s of all) {
         if (!s || typeof s !== 'object') continue;
-        const title = typeof s.title === 'string' ? s.title.trim() : '';
+        // Titles come back with stray backslashes before apostrophes — a
+        // cultivar name in single quotes is very common, so this shows up a lot.
+        const title = typeof s.title === 'string' ? s.title.replace(/\\(['"])/g, '$1').trim() : '';
         let url = typeof s.url === 'string' ? s.url.trim() : '';
         // Drop anything that is not a real http(s) URL rather than showing a
         // fabricated-looking one. A bare title is honest; an invented URL is not.
@@ -490,6 +503,23 @@ function parseJsonLoosely(text) {
 }
 
 function str(v) { return typeof v === 'string' ? v.trim() : ''; }
+
+// A weaker model with no thinking channel deliberates inside the output, and a
+// single-line form field is where that shows up worst — we have seen a "width"
+// containing several sentences of the model arguing with itself about which
+// rule applied. Never let that reach a form. Anything that is not a short bare
+// value is discarded: an empty field is honest, a rambling one is not.
+const RAMBLE = /\b(wait|let's|let me|however|but the rule|rule says|i should|instead of|depending on|approx)\b/i;
+
+function shortField(v, label) {
+    const s = str(v);
+    if (!s) return '';
+    if (s.length > 40 || RAMBLE.test(s) || /[.;]\s/.test(s)) {
+        console.warn(`lookup-plant: discarded ${label} — not a bare value:`, s.slice(0, 120));
+        return '';
+    }
+    return s;
+}
 
 async function callGemini(apiKey, model, body, remainingMs) {
     const controller = new AbortController();
@@ -533,7 +563,10 @@ function requestVariants({ text, schema, useSearch }) {
     ];
 
     return shapes.map(({ label, thinking, structured }) => {
-        const generationConfig = { temperature: 0 };
+        // An explicit ceiling: the default is not guaranteed to be generous, and
+        // running out mid-object silently truncates the JSON. Facts come first in
+        // the schema, so if anything is lost it is the trailing free text.
+        const generationConfig = { temperature: 0, maxOutputTokens: 4096 };
         if (thinking) generationConfig.thinkingConfig = { thinkingBudget: THINKING_BUDGET };
         if (structured) {
             generationConfig.responseMimeType = 'application/json';
@@ -756,10 +789,10 @@ exports.handler = async (event) => {
                     identified:   raw.identified !== false,
                     identityNote: str(raw.identityNote),
                     scope:        ['cultivar', 'species', 'genus', 'mixed'].includes(scope) ? scope : '',
-                    family:       str(raw.family),
-                    commonNames:  str(raw.commonNames),
-                    height:       str(raw.height),
-                    width:        str(raw.width),
+                    family:       shortField(raw.family, 'family'),
+                    commonNames:  shortField(raw.commonNames, 'commonNames'),
+                    height:       shortField(raw.height, 'height'),
+                    width:        shortField(raw.width, 'width'),
                     caveats:      str(raw.caveats),
                     notFound:     str(raw.notFound),
                     facts,

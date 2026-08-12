@@ -234,6 +234,11 @@ $('clear').addEventListener('click', () => {
 //  is feeling. Sections not looked up are simply absent, and a
 //  second lookup slots its sections into the same running order.
 // -------------------------------------------------------------
+// Gemini returns citations as vertexaisearch redirect links rather than the
+// real page. They resolve today and expire later, so they are worth keeping as
+// something to click in this harness but not worth writing into a note.
+const OPAQUE_URL = /^https?:\/\/vertexaisearch\.cloud\.google\.com\//i;
+
 function assembleNotes(st) {
     const tracks = [st.details, st.origins].filter(Boolean);
     if (!tracks.length) return '';
@@ -268,11 +273,15 @@ function assembleNotes(st) {
     if (sources.length) {
         const lines = sources.map((s) => {
             const t = (s.title || '').trim();
-            const u = (s.url || '').trim();
+            // Google's grounding citations come back as 200-character redirect
+            // URLs that expire. Fine to click now, useless in a note you will
+            // read in three years — so the note keeps the title alone.
+            const u = OPAQUE_URL.test(s.url || '') ? '' : (s.url || '').trim();
             if (t && u) return `  ${t} — ${u}`;
-            return '  ' + (t || u);
-        });
-        blocks.push('SOURCES\n' + lines.join('\n'));
+            if (t) return `  ${t}`;
+            return u ? `  ${u}` : '';
+        }).filter(Boolean);
+        if (lines.length) blocks.push('SOURCES\n' + lines.join('\n'));
     }
 
     if (!blocks.length) return '';
@@ -341,11 +350,15 @@ function render() {
 
     const flags = $('flags');
     flags.textContent = '';
+    // Per track, not collapsed: with two tracks running, one ungrounded result
+    // would otherwise turn the whole row red and hide which half was at fault.
     tracks.forEach((t) => {
-        flags.appendChild(flag(t.name + ' ' + t.secs.toFixed(1) + 's', t.secs > 8 ? 'warn' : 'good'));
+        const ok = t.meta.grounded;
+        flags.appendChild(flag(
+            `${t.name} ${t.secs.toFixed(1)}s · ${ok ? 'grounded' : 'NOT GROUNDED'}`,
+            !ok ? 'bad' : (t.secs > 8 ? 'warn' : 'good'),
+        ));
     });
-    flags.appendChild(flag(tracks.every((t) => t.meta.grounded) ? 'web-grounded' : 'NOT GROUNDED',
-                           tracks.every((t) => t.meta.grounded) ? 'good' : 'bad'));
     flags.appendChild(flag(first.identified ? 'identified' : 'NOT IDENTIFIED', first.identified ? 'good' : 'warn'));
     flags.appendChild(flag('scope: ' + (first.scope || 'unset'), first.scope ? '' : 'warn'));
     flags.appendChild(flag(facts.length + ' facts', facts.length ? 'good' : 'warn'));
