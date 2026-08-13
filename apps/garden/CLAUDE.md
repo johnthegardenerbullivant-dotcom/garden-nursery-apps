@@ -29,8 +29,8 @@ Environment variables on the Garden site:
 |---|---|
 | `GEMINI_API_KEY` | Google AI Studio key for the label-scan function. Set and verified working. |
 | `GEMINI_MODEL` | Optional; defaults to `gemini-flash-latest` |
-| `GEMINI_MODEL_RESEARCH` | Optional; model for the lookup's research phase. Set to `gemini-3.5-flash-lite` — the full Flash could not finish a grounded search inside the function timeout. |
-| `LOOKUP_BUDGET_MS` | Optional; the lookup's self-imposed deadline, default 8500. Raise once Netlify grants a longer function timeout. |
+| `GEMINI_MODEL_RESEARCH` | Not set — research runs on full Flash since the 30s timeout increase. Only needed if that is ever lost. |
+| `LOOKUP_BUDGET_MS` | `27000`, just inside Netlify's 30s function timeout. Code default is 8500. |
 | `SECRETS_SCAN_OMIT_PATHS` | `firebase-config.js` — stops the secret scanner failing the build |
 
 ---
@@ -96,8 +96,8 @@ the scan was trialled there first and then ported here. Spec:
 **Plant lookup.** `js/plant-lookup.js` researches a plant from the botanical name in the form and
 offers the result for Notes; nothing reaches the form until the button is pressed. Two tracks, two
 phases, and a set of anti-fabrication rules that are the point of the feature. Read
-[`docs/plant-lookup.md`](../../docs/plant-lookup.md) before changing the prompts — and note what to
-change there once Netlify grants the 26-second function timeout.
+[`docs/plant-lookup.md`](../../docs/plant-lookup.md) before changing the prompts, and note the
+settings recorded there for the 30-second function timeout granted 2026-08-12.
 
 **Transfer to Nursery.** `transferToNursery()` in `db.js` sends a Garden plant to Nursery as a new
 batch, and `getNurseryLocations()` reads Nursery's `nursery_locations` so the form can offer a

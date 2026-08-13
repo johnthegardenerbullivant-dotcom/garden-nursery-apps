@@ -31,8 +31,8 @@ Environment variables on the Nursery site:
 |---|---|
 | `GEMINI_API_KEY` | Google AI Studio key for the label-scan function. Set and working. |
 | `GEMINI_MODEL` | Optional; defaults to `gemini-flash-latest` |
-| `GEMINI_MODEL_RESEARCH` | Optional; model for the lookup's research phase. See Garden's CLAUDE.md. |
-| `LOOKUP_BUDGET_MS` | Optional; the lookup's self-imposed deadline, default 8500. |
+| `GEMINI_MODEL_RESEARCH` | Not set — research runs on full Flash since the 30s timeout increase. Only needed if that is ever lost. |
+| `LOOKUP_BUDGET_MS` | `27000`, just inside Netlify's 30s function timeout. Code default is 8500. |
 | `SECRETS_SCAN_OMIT_PATHS` | `firebase-config.js` — stops the secret scanner failing the build |
 
 > **Label scanning started here.** The Gemini plant-tag scan was trialled in Nursery first and then
