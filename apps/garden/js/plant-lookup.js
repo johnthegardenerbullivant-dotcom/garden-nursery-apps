@@ -65,7 +65,7 @@ export function lookupPanelHTML() {
 
         <div class="plant-lookup-preview" id="pl-preview" hidden>
             <p class="plant-lookup-meta" id="pl-meta"></p>
-            <textarea class="form-textarea plant-lookup-text" id="pl-text" rows="12"
+            <textarea class="plant-lookup-text" id="pl-text" rows="12"
                       spellcheck="false" aria-label="Researched notes, editable before inserting"></textarea>
             <p class="plant-lookup-hint" id="pl-hint"></p>
             <div class="plant-lookup-actions">

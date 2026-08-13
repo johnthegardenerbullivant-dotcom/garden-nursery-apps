@@ -820,13 +820,34 @@ code {
     margin: 0 0 8px;
 }
 .plant-lookup-warn { color: var(--red-700, #a33); font-weight: 600; }
-/* Monospace so the plain-text headings line up as they will in the note
+/* Fully self-contained on purpose. Form field styles are NOT in the shared
+   layer — each app defines its own, and .form-textarea exists only in Garden.
+   Borrowing it left this box at the browser's default width in Nursery, about
+   a third of the panel. Anything that lives in /shared has to stand alone.
+
+   Monospace so the plain-text headings line up as they will in the note
    itself — what you read here is exactly what gets stored. */
 .plant-lookup-text {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 220px;
+    resize: vertical;
+    padding: 10px 12px;
+    border: 1.5px solid var(--grey-200);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    color: var(--grey-800);
+    outline: none;
+    transition: border-color var(--transition), box-shadow var(--transition);
     font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
     font-size: 0.85rem;
     line-height: 1.55;
     white-space: pre-wrap;
+}
+.plant-lookup-text:focus {
+    border-color: var(--green-500);
+    box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.15);
 }
 .plant-lookup-hint { font-size: 0.78rem; color: var(--grey-600); margin: 6px 0 10px; }
 .plant-lookup-actions { display: flex; gap: 8px; }
