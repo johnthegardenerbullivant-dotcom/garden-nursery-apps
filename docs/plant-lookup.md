@@ -104,14 +104,18 @@ Settings on both sites from that date:
 Each phase is a separate function invocation, so the 30 seconds applies to research and to write
 independently, not to the pair.
 
-Worth revisiting now there is headroom, in this order and only once full Flash is confirmed working:
+**Confirmed working 2026-08-12** after both sites were redeployed: full Flash completes inside the
+budget on both tracks. Noticeably slower than Flash-Lite, as expected, but no timeouts.
 
-- `GEMINI_THINKING_BUDGET` currently defaults to 0. Thinking was disabled to save latency, and its
+Two things were tuned for the old 8.5s budget and are now worth revisiting, one at a time so a
+regression has one possible cause:
+
+- `GEMINI_THINKING_BUDGET` defaults to 0. Thinking was disabled purely to save latency, and its
   absence is what made Flash-Lite deliberate inside a form field. With room to spare, letting the
-  model think properly should improve fact quality. The request ladder drops `thinkingConfig`
-  automatically if a model rejects the value, so a bad setting degrades rather than breaks.
-- The per-track fact cap (`t.categories.length * 6`) and the terse-prose instructions were both
-  tuned for a budget that no longer applies.
+  model think should improve fact quality. The request ladder drops `thinkingConfig` automatically
+  if a model rejects the value, so a bad setting degrades rather than breaks.
+- The per-track fact cap (`t.categories.length * 6`) and the terse-prose instructions. The origins
+  track in particular could afford more thorough research.
 
 ## Env vars (per site — Netlify env is not shared between them)
 
@@ -138,6 +142,6 @@ Worth revisiting now there is headroom, in this order and only once full Flash i
 
 - Grounded search is nondeterministic: the same plant can return different sources run to run, and a
   slow tail still occasionally overruns the budget. Re-running usually works.
-- Fact quality now depends on full Flash, restored once the 30s timeout landed. If lookups are ever
+- Fact quality depends on full Flash, restored and confirmed working 2026-08-12. If lookups are ever
   moved back to Flash-Lite, expect weaker categorisation and watch the discard warnings.
 - `scope` is derived from the request rather than the model, which kept returning nothing for it.
