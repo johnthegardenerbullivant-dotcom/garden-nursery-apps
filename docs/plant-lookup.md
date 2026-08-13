@@ -86,7 +86,7 @@ diagnostic naming the elapsed time instead of a blank 504. **The code default st
 is the value that is safe on a site whose timeout has not been raised, and a too-generous default
 fails as a blank 504 with no clue in it. Sites with more headroom set the variable explicitly.
 
-### Timeout increase — granted 2026-08-12
+### Timeout increase — granted 2026-08-13
 
 Netlify raised the account's function timeout to **30 seconds** on request via their support forum.
 Their reply notes that **existing sites must be redeployed** before the new limit applies, which an
@@ -104,7 +104,7 @@ Settings on both sites from that date:
 Each phase is a separate function invocation, so the 30 seconds applies to research and to write
 independently, not to the pair.
 
-**Confirmed working 2026-08-12** after both sites were redeployed: full Flash completes inside the
+**Confirmed working 2026-08-13** after both sites were redeployed: full Flash completes inside the
 budget on both tracks. Noticeably slower than Flash-Lite, as expected, but no timeouts.
 
 Two things were tuned for the old 8.5s budget and are now worth revisiting, one at a time so a
@@ -142,6 +142,6 @@ regression has one possible cause:
 
 - Grounded search is nondeterministic: the same plant can return different sources run to run, and a
   slow tail still occasionally overruns the budget. Re-running usually works.
-- Fact quality depends on full Flash, restored and confirmed working 2026-08-12. If lookups are ever
+- Fact quality depends on full Flash, restored and confirmed working 2026-08-13. If lookups are ever
   moved back to Flash-Lite, expect weaker categorisation and watch the discard warnings.
 - `scope` is derived from the request rather than the model, which kept returning nothing for it.
