@@ -189,3 +189,5 @@ index requirement; that's a deployment step, not just a code change.
 
 - [`docs/nursery-design.md`](../../docs/nursery-design.md) (and `nursery-design.pdf`)
 - [`docs/label-scan-spec.md`](../../docs/label-scan-spec.md)
+- [`docs/plant-lookup.md`](../../docs/plant-lookup.md) — the AI plant lookup: two tracks, two
+  phases, the anti-fabrication rules, and the env vars this site needs

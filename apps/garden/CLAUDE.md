@@ -93,6 +93,12 @@ byte-identical to Nursery's copy — change one, run `check-drift.mjs`. **Nurser
 the scan was trialled there first and then ported here. Spec:
 [`docs/label-scan-spec.md`](../../docs/label-scan-spec.md).
 
+**Plant lookup.** `js/plant-lookup.js` researches a plant from the botanical name in the form and
+offers the result for Notes; nothing reaches the form until the button is pressed. Two tracks, two
+phases, and a set of anti-fabrication rules that are the point of the feature. Read
+[`docs/plant-lookup.md`](../../docs/plant-lookup.md) before changing the prompts — and note what to
+change there once Netlify grants the 26-second function timeout.
+
 **Transfer to Nursery.** `transferToNursery()` in `db.js` sends a Garden plant to Nursery as a new
 batch, and `getNurseryLocations()` reads Nursery's `nursery_locations` so the form can offer a
 destination. This is the Garden→Nursery direction; Nursery's `plantOutToGarden()` is the return leg.
