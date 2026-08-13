@@ -31,6 +31,8 @@ Environment variables on the Nursery site:
 |---|---|
 | `GEMINI_API_KEY` | Google AI Studio key for the label-scan function. Set and working. |
 | `GEMINI_MODEL` | Optional; defaults to `gemini-flash-latest` |
+| `GEMINI_MODEL_RESEARCH` | Optional; model for the lookup's research phase. See Garden's CLAUDE.md. |
+| `LOOKUP_BUDGET_MS` | Optional; the lookup's self-imposed deadline, default 8500. |
 | `SECRETS_SCAN_OMIT_PATHS` | `firebase-config.js` — stops the secret scanner failing the build |
 
 > **Label scanning started here.** The Gemini plant-tag scan was trialled in Nursery first and then
@@ -50,13 +52,15 @@ apps/nursery/
 ├── robots.txt  _headers     ← Netlify config
 ├── netlify.toml             ← functions directory + esbuild bundler
 ├── icons/                   ← favicon-32, icon-192, icon-512
-├── functions/scan-label.js  ← byte-identical to Garden's
-└── js/                      ← 19 ES modules
+├── functions/               ← 2 Netlify serverless functions, both byte-identical
+│   ├── scan-label.js        ←   to Garden's copies
+│   └── lookup-plant.js      ←
+└── js/                      ← 20 ES modules
 ```
 
 ---
 
-## JS module map (19 modules)
+## JS module map (20 modules)
 
 ### Core
 
@@ -97,6 +101,7 @@ so `main.js` has one import site while the implementation lives in focused modul
 | `stats-view.js` | Success rates and method comparisons | `renderStats` |
 | `plans-view.js` | Propagation plans and wishlist | `renderPlansView` |
 | `label-scan.js` | Client half of the Gemini label scan. **Near-identical to Garden's.** | `scanPanelHTML`, `focusScanCard`, `initLabelScan` |
+| `plant-lookup.js` | Client half of the AI plant lookup. **Byte-identical to Garden's** — field IDs are passed in by `batch-form.js`. | `lookupPanelHTML`, `initPlantLookup` |
 | `admin-view.js` | Admin panel: export, user roles, locations | `renderAdminView` |
 
 **Navigation (bottom bar, 6 tabs):** Dashboard · Batches · Plants · Stats · Plans · Admin.
@@ -184,3 +189,5 @@ index requirement; that's a deployment step, not just a code change.
 
 - [`docs/nursery-design.md`](../../docs/nursery-design.md) (and `nursery-design.pdf`)
 - [`docs/label-scan-spec.md`](../../docs/label-scan-spec.md)
+- [`docs/plant-lookup.md`](../../docs/plant-lookup.md) — the AI plant lookup: two tracks, two
+  phases, the anti-fabrication rules, and the env vars this site needs

@@ -10,6 +10,7 @@ import {
 } from './db.js';
 import { showModal, hideModal, showToast, initDatePickers, datePicker, isValidDateStr } from './ui-utils.js';
 import { scanPanelHTML, initLabelScan } from './label-scan.js';
+import { lookupPanelHTML, initPlantLookup } from './plant-lookup.js';
 
 // Cache garden plants for the session (fetched once per form open)
 let _gardenPlantsCache = null;
@@ -266,6 +267,13 @@ async function showBatchForm(existing, locations, onSaved, prefill = null) {
                                placeholder="e.g. L. or Thunb." autocomplete="off" autocapitalize="words">
                     </div>
                 </div>
+
+                <!-- Follows the order of work: name the plant, look it up, fill in the
+                     rest. Deliberately INSIDE botanical-group, so it disappears when a
+                     batch is linked to an existing plant — the lookup reads the botanical
+                     inputs, and those are empty in that case. -->
+                ${lookupPanelHTML()}
+
                 <div class="form-group">
                     <label class="form-label" for="common-name-input">Common name (optional)</label>
                     <input class="form-input" type="text" id="common-name-input" name="commonName"
@@ -410,6 +418,25 @@ async function showBatchForm(existing, locations, onSaved, prefill = null) {
     if (!isEdit) {
         initLabelScan();
     }
+
+    // Plant lookup — offered when editing too, unlike the scanner. Nursery's
+    // botanical fields carry an -input suffix, hence the mapping.
+    initPlantLookup({
+        fields: {
+            genus:      'genus-input',
+            species:    'species-input',
+            subspecies: 'subspecies-input',
+            variety:    'variety-input',
+            cultivar:   'cultivar-input',
+            commonName: 'common-name-input',
+        },
+        targets: {
+            notes:     'description-input',
+            careNotes: 'care-input',
+            height:    'height-input',
+            width:     'width-input',
+        },
+    });
 
     // ---- Plant picker ----
     const plantInput  = document.getElementById('plant-input');

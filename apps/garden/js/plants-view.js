@@ -15,6 +15,7 @@ import { showModal, hideModal, showToast, setLoading, navigate, goBack, initPhot
 import { isAtLeast } from './auth.js';
 import { DEATH_CAUSES } from './compost-view.js';
 import { scanPanelHTML, initLabelScan, focusScanCard } from './label-scan.js';
+import { lookupPanelHTML, initPlantLookup } from './plant-lookup.js';
 
 // Plain-text botanical name (strips the HTML that formatBotanicalName returns)
 function plainName(plant) {
@@ -844,6 +845,25 @@ export async function showPlantForm(plant, onSave, preselectedAreaId = null, opt
         if (opts && opts.focusScan) focusScanCard();
     }
 
+    // Plant lookup — offered when editing too. Enriching a plant added years
+    // ago is the main thing it is for, and it only ever appends to Notes.
+    initPlantLookup({
+        fields: {
+            genus:      'genus',
+            species:    'species',
+            subspecies: 'subspecies',
+            variety:    'variety',
+            cultivar:   'cultivar',
+            commonName: 'commonName',
+        },
+        targets: {
+            notes:     'notes',
+            careNotes: 'careReminders',
+            height:    'height',
+            width:     'width',
+        },
+    });
+
     // Location visibility toggle (add mode only)
     if (!isEdit) {
         const areaSelect = document.getElementById('new-plant-area');
@@ -1086,6 +1106,10 @@ function buildPlantFormHTML(plant, areas = [], photos = [], preselectedAreaId = 
                 <input class="form-input" id="cultivar" name="cultivar" value="${v('cultivar')}" placeholder="e.g. Albertine" autocapitalize="words">
                 <div class="form-hint">Will be displayed in single quotes per ICNCP convention, e.g. 'Albertine'</div>
             </div>
+
+            <!-- Sits here rather than at the top of the form because it follows the
+                 order of work: name the plant, look it up, then fill in the rest. -->
+            ${lookupPanelHTML()}
 
             <div class="form-group">
                 <label class="form-label" for="authority">Authority / Author citation <span class="optional">optional</span></label>

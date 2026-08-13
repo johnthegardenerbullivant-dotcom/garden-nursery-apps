@@ -796,6 +796,62 @@ code {
     padding: 14px 16px;
     margin-bottom: 14px;
 }
+/* ---- AI plant lookup ----------------------------------------------------
+   Shares the scan card's head/status classes so the two sit together as one
+   pair of tools. Its own container is solid rather than dashed: the scan card
+   is a thing you feed photos into, this one acts on the form as it stands. */
+.plant-lookup {
+    border: 1px solid var(--green-500);
+    background: var(--green-50);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    margin-bottom: 20px;
+}
+.plant-lookup-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.plant-lookup-btns .btn { flex: 1 1 auto; }
+.plant-lookup-preview {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--green-300);
+}
+.plant-lookup-meta {
+    font-size: 0.8rem;
+    color: var(--grey-700);
+    margin: 0 0 8px;
+}
+.plant-lookup-warn { color: var(--red-700, #a33); font-weight: 600; }
+/* Fully self-contained on purpose. Form field styles are NOT in the shared
+   layer — each app defines its own, and .form-textarea exists only in Garden.
+   Borrowing it left this box at the browser's default width in Nursery, about
+   a third of the panel. Anything that lives in /shared has to stand alone.
+
+   Monospace so the plain-text headings line up as they will in the note
+   itself — what you read here is exactly what gets stored. */
+.plant-lookup-text {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 220px;
+    resize: vertical;
+    padding: 10px 12px;
+    border: 1.5px solid var(--grey-200);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    color: var(--grey-800);
+    outline: none;
+    transition: border-color var(--transition), box-shadow var(--transition);
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+}
+.plant-lookup-text:focus {
+    border-color: var(--green-500);
+    box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.15);
+}
+.plant-lookup-hint { font-size: 0.78rem; color: var(--grey-600); margin: 6px 0 10px; }
+.plant-lookup-actions { display: flex; gap: 8px; }
+
 .label-scan-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
 .label-scan-title { font-weight: 600; color: var(--green-900); font-size: 0.95rem; }
 .label-scan-sub { font-size: 0.8rem; color: var(--grey-600); }
