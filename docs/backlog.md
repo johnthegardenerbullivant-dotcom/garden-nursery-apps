@@ -95,7 +95,7 @@ those files.
 
 ## 4. Linkify URLs in notes at render time
 
-**Status:** open, enhancement · noted 2026-08-12
+**Status:** open, enhancement · noted 2026-08-13
 
 The AI plant lookup writes a `SOURCES` block into a plant's `notes`, and some entries carry a real
 URL. `notes` renders through `escHtml()` into `.field-value`, which is plain text with

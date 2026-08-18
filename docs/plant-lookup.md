@@ -76,30 +76,54 @@ note), the `scope` value, and that redirect host.
 
 ## The timeout, and the model choice
 
-Netlify kills a synchronous function at **10 seconds** (26 on request), and the kill arrives as an
-empty 504 that looks identical to a crash. A single grounded call writing several paragraphs never
-came close. Splitting into phases was not enough — searching alone overran. What fixed it was
+Netlify kills a synchronous function at **10 seconds** by default, and the kill arrives as an empty
+504 that looks identical to a crash. A single grounded call writing several paragraphs never came
+close. Splitting into phases was not enough — searching alone overran. The stopgap was
 `GEMINI_MODEL_RESEARCH=gemini-3.5-flash-lite`, which brought research to about 4 seconds.
 
-`LOOKUP_BUDGET_MS` (default 8500) is our own deadline, set just inside the platform's, so a timeout
-returns a diagnostic naming the elapsed time instead of a blank 504.
+`LOOKUP_BUDGET_MS` is our own deadline, set just inside the platform's, so a timeout returns a
+diagnostic naming the elapsed time instead of a blank 504. **The code default stays at 8500** — that
+is the value that is safe on a site whose timeout has not been raised, and a too-generous default
+fails as a blank 504 with no clue in it. Sites with more headroom set the variable explicitly.
 
-### When Netlify grants the 26-second increase
+### Timeout increase — granted 2026-08-13
 
-Requested via the support forum; both sites, env-var changes only, no code:
+Netlify raised the account's function timeout to **30 seconds** on request via their support forum.
+Their reply notes that **existing sites must be redeployed** before the new limit applies, which an
+environment-variable change forces anyway.
 
-1. Set `LOOKUP_BUDGET_MS=24000` — removes the intermittent failures that currently need a re-run.
-2. **Delete `GEMINI_MODEL_RESEARCH`**, putting research back on full Flash. Flash-Lite was a latency
-   compromise, not a preference: it is the model that rambled into a form field and mislabelled fact
-   categories, both of which needed defending against in code.
+Settings on both sites from that date:
+
+1. `LOOKUP_BUDGET_MS=27000` — just inside the platform's 30s, leaving room for cold start and our
+   own overhead. This removed the intermittent failures that previously needed a re-run.
+2. `GEMINI_MODEL_RESEARCH` **deleted**, putting research back on full Flash. Flash-Lite was a
+   latency compromise, not a preference: it is the model that rambled into a form field and
+   mislabelled fact categories, both of which needed defending against in code. Those defences stay
+   — they are cheap, and they guard against any model having a bad day.
+
+Each phase is a separate function invocation, so the 30 seconds applies to research and to write
+independently, not to the pair.
+
+**Confirmed working 2026-08-13** after both sites were redeployed: full Flash completes inside the
+budget on both tracks. Noticeably slower than Flash-Lite, as expected, but no timeouts.
+
+Two things were tuned for the old 8.5s budget and are now worth revisiting, one at a time so a
+regression has one possible cause:
+
+- `GEMINI_THINKING_BUDGET` defaults to 0. Thinking was disabled purely to save latency, and its
+  absence is what made Flash-Lite deliberate inside a form field. With room to spare, letting the
+  model think should improve fact quality. The request ladder drops `thinkingConfig` automatically
+  if a model rejects the value, so a bad setting degrades rather than breaks.
+- The per-track fact cap (`t.categories.length * 6`) and the terse-prose instructions. The origins
+  track in particular could afford more thorough research.
 
 ## Env vars (per site — Netlify env is not shared between them)
 
 | Variable | Purpose |
 |---|---|
 | `GEMINI_API_KEY` | Required. Shared with the label scan. |
-| `GEMINI_MODEL_RESEARCH` | `gemini-3.5-flash-lite`. Without it, research times out. |
-| `LOOKUP_BUDGET_MS` | Optional, default 8500. |
+| `LOOKUP_BUDGET_MS` | `27000` on both sites since the 30s timeout increase. Code default is 8500, which is what is safe without the increase. |
+| `GEMINI_MODEL_RESEARCH` | **Deleted** since the increase — research runs on full Flash. Set it to `gemini-3.5-flash-lite` only if the timeout is ever lost. |
 | `GEMINI_MODEL_WRITE`, `GEMINI_THINKING_BUDGET` | Optional overrides; both default sensibly. |
 
 ## Design decisions worth not re-opening
@@ -118,5 +142,6 @@ Requested via the support forum; both sites, env-var changes only, no code:
 
 - Grounded search is nondeterministic: the same plant can return different sources run to run, and a
   slow tail still occasionally overruns the budget. Re-running usually works.
-- Flash-Lite's fact quality is adequate, not excellent. See the 26-second note above.
+- Fact quality depends on full Flash, restored and confirmed working 2026-08-13. If lookups are ever
+  moved back to Flash-Lite, expect weaker categorisation and watch the discard warnings.
 - `scope` is derived from the request rather than the model, which kept returning nothing for it.
