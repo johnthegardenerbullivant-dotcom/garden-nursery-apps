@@ -97,7 +97,7 @@ the scan was trialled there first and then ported here. Spec:
 offers the result for Notes; nothing reaches the form until the button is pressed. Two tracks, two
 phases, and a set of anti-fabrication rules that are the point of the feature. Read
 [`docs/plant-lookup.md`](../../docs/plant-lookup.md) before changing the prompts, and note the
-settings recorded there for the 30-second function timeout granted 2026-08-13.
+settings recorded there for the 30-second function timeout granted 2026-08-18.
 
 **Transfer to Nursery.** `transferToNursery()` in `db.js` sends a Garden plant to Nursery as a new
 batch, and `getNurseryLocations()` reads Nursery's `nursery_locations` so the form can offer a

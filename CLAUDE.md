@@ -14,7 +14,7 @@ Two Progressive Web Apps, one Firebase project, one private repo, two Netlify si
 |---|---|---|
 | What it does | Plant collection, areas, tasks, irrigation, blog/journal, compost bin | Propagation batches from sowing to planted-out, given-away or lost |
 | Folder | `apps/garden/` | `apps/nursery/` |
-| JS modules | 14 | 19 |
+| JS modules | 15 | 20 |
 | Live URL | https://johnandkath.garden/ | https://nursery.johnandkath.garden/ |
 
 - **Owner:** John Bullivant
@@ -51,10 +51,11 @@ garden-apps/
 │   │   ├── index.html  styles.css  manifest.json  sw.js  robots.txt  _headers
 │   │   ├── compress-photos.html  ← standalone one-off photo-compression utility
 │   │   ├── icons/            ← 3 PNGs
-│   │   ├── functions/scan-label.js  ← Netlify function, Gemini label scan
-│   │   └── js/               ← 14 ES modules
+│   │   ├── functions/         ← 2 Netlify functions, both calling Gemini:
+│   │   │                        scan-label.js · lookup-plant.js
+│   │   └── js/               ← 15 ES modules
 │   │
-│   └── nursery/              ← Netlify site #2. Same shape, 19 JS modules.
+│   └── nursery/              ← Netlify site #2. Same shape, 20 JS modules.
 │
 ├── firebase/                 ← deployed by the Firebase CLI, NOT served by Netlify
 │   ├── firebase.json  .firebaserc
