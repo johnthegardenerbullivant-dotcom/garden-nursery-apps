@@ -5,16 +5,31 @@ rules_version = '2';
 //  Garden Management + Nursery Management
 //  Firebase project: bbg-garden-inventory
 //  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//  Mirrors the Firestore role model using a simpler pattern:
-//    - Any authenticated user can READ (view photos)
-//    - Editors and admins can WRITE (upload photos)
-//    - Admins can DELETE photos
+//  Mirrors the Firestore role model as closely as Storage allows:
+//    - Any signed-in user can READ (view photos), guests included,
+//      matching isViewer() in firestore.rules
+//    - Any signed-in NON-ANONYMOUS user can WRITE (create/update/delete)
 //
-//  NOTE: Storage rules cannot directly read Firestore documents,
-//  so we use a simplified token-based check. Role enforcement
-//  for storage is best handled server-side by checking Firestore
-//  before calling uploadPhoto() — which the app already does via
-//  the isAtLeast() check in the UI.
+//  ⚠️  Storage rules CANNOT read Firestore documents, so the three-role
+//  model is not available here — there is no way to tell a viewer from
+//  an editor. What IS available is the sign-in provider carried in the
+//  auth token, which is enough to exclude anonymous guests.
+//
+//  FIXED 2026-08-20. Previously every rule read `request.auth != null`,
+//  which is TRUE for anonymous guests — so anyone who pressed "Continue
+//  as Guest" could upload to and delete from every photo path by calling
+//  the Storage SDK directly. The old comments claimed enforcement
+//  happened "at app level by isAtLeast()", but that is UI-only and does
+//  not constrain a direct SDK call. This is why firestore.rules bothers
+//  to define isAnonymous() and exclude it from isEditor()/isAdmin().
+//
+//  KNOWN REMAINING GAP: a signed-in user with the `viewer` role can
+//  still write, because that distinction lives in Firestore and Storage
+//  cannot see it. Closing it properly means putting the role into a
+//  custom auth claim at sign-in (a Cloud Function or admin-SDK step),
+//  after which these rules can test request.auth.token.role. That is a
+//  larger piece of work; this change closes the guest hole, which is
+//  the one reachable by anybody with the URL.
 //
 //  THIS IS THE ONLY COPY OF THIS FILE. It used to exist twice,
 //  once inside each app's deploy folder. As of the monorepo
@@ -27,32 +42,48 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
+    // ---- Helpers ----
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // The sign-in provider is carried in the auth token. Values include
+    // 'anonymous', 'password', 'google.com'. Guests sign in via
+    // signInAnonymously() in js/auth.js, so this is what identifies them.
+    function isAnonymous() {
+      return isSignedIn() &&
+             request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    // Guests are read-only. `write` covers create, update AND delete in
+    // Storage rules, so one condition governs all three.
+    function canWrite() {
+      return isSignedIn() && !isAnonymous();
+    }
+
     // Plant photos: plant-photos/{plantId}/{filename}
     match /plant-photos/{plantId}/{allPaths=**} {
-      allow read:   if request.auth != null;
-      allow write:  if request.auth != null;   // Enforced at app level by isAtLeast('editor')
-      allow delete: if request.auth != null;   // Enforced at app level by isAtLeast('admin')
+      allow read:  if isSignedIn();
+      allow write: if canWrite();
     }
 
     // Area photos: area-photos/{areaId}/{filename}
     match /area-photos/{areaId}/{allPaths=**} {
-      allow read:   if request.auth != null;
-      allow write:  if request.auth != null;
-      allow delete: if request.auth != null;
+      allow read:  if isSignedIn();
+      allow write: if canWrite();
     }
 
     // Nursery photos: nursery-photos/{batchId}/{filename}
     match /nursery-photos/{batchId}/{allPaths=**} {
-      allow read:   if request.auth != null;
-      allow write:  if request.auth != null;   // Enforced at app level by isAtLeast('editor')
-      allow delete: if request.auth != null;   // Enforced at app level by isAtLeast('editor')
+      allow read:  if isSignedIn();
+      allow write: if canWrite();
     }
 
     // Blog post photos: blog-photos/{postId}/{filename}
     match /blog-photos/{postId}/{allPaths=**} {
-      allow read:   if true;            // Public — matching Firestore blogPosts read rule
-      allow write:  if request.auth != null;   // Enforced at app level by isAtLeast('admin')
-      allow delete: if request.auth != null;
+      allow read:  if true;        // Public — matching the Firestore blogPosts read rule
+      allow write: if canWrite();
     }
 
     // Default: deny everything else
