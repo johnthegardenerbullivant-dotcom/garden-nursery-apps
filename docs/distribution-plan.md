@@ -144,9 +144,16 @@ Last week's advice was to keep it private. That advice was correct **under the c
 where the repo contains live credentials and your local folder paths. Changes 1–3 remove the
 credentials. What's left to clean is small and bounded:
 
-- **`docs/backlog.md` must move or be fixed first.** It is a written list of known weaknesses in a
-  running system ("Storage rules don't exclude anonymous guests"). Publishing that is the one
-  genuinely bad idea in going public. Either fix those items or move that file to `Garden Data\`.
+- ~~**`docs/backlog.md` must move or be fixed first.**~~ **Done 2026-08-20** — moved to
+  `Garden Data\backlog.md`. It was a written list of known weaknesses in a running system, which is
+  the one genuinely bad thing to publish alongside the code.
+
+  **But moving it did not fix anything.** Backlog item 1 — the Storage rules gate on
+  `request.auth != null`, which is true for anonymous guests, so a guest can upload to and delete
+  from every photo path by calling the Storage SDK directly — is **inherited by every copy of this
+  repo**, and handing the app to more people multiplies the exposed buckets rather than diluting
+  them. The cheap fix is one line (`request.auth.token.firebase.sign_in_provider != 'anonymous'`);
+  the thorough one is custom auth claims. **Fix it before any copy goes out.**
 - **Scrub `C:\Users\johnb\...` paths, "Owner: John Bullivant", and the `Garden Data\` references**
   from `CLAUDE.md` and `README.md`. Keep everything architectural — that content is what makes a
   copy maintainable, and it is what a copy owner's Claude will read.

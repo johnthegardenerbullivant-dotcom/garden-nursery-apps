@@ -289,10 +289,21 @@ composite indexes or fight Netlify.
 
 ## Known issues
 
-**→ [`docs/backlog.md`](docs/backlog.md)** — agreed future changes, deferred deliberately. Currently:
-the Storage rules don't exclude anonymous guests; `nursery_wishlist` needs to match Garden's
-`suggestions` behaviour; and each app's `CLAUDE.md` is served publicly. Read it before assuming
-something is a new bug.
+**The backlog lives outside the repo**, at `C:\Users\johnb\Documents\Claude\Garden Data\backlog.md`,
+alongside the other private material. It is the record of agreed future changes, deferred
+deliberately rather than forgotten — read it before assuming something is a new bug.
+
+It was moved out on 2026-08-20, when this repo stopped being for one person. A backlog is a list of
+the things you already know are wrong with a running system, which is exactly the document you do
+not hand to strangers along with the code. Two of its four entries are ordinary future work and
+would be harmless to publish; one is a real if low-urgency security weakness, and separating them
+per-entry would be a standing tax on every future edit. Keeping the whole file outside the repo
+costs nothing and needs no judgement call each time something is added.
+
+**This does not make those items less real.** Anything still open in that file is inherited by every
+copy of this repo, so a security entry should be *fixed* before copies go out — moving the
+description out of sight does not move the hole. See
+[`docs/distribution-plan.md`](docs/distribution-plan.md).
 
 ## Build skipping
 

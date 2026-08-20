@@ -92,11 +92,12 @@ Work from a copy of the repo, not the repo itself.
 
    Both contain `https://johnandkath.garden`. Either replace them with a placeholder in the
    template, or leave them and flag it in the friend's guide — Part B step B9 assumes the latter.
-5. **Strip the internal docs.** `docs/restructure-plan.md`, `docs/backlog.md`,
-   `docs/ui-consistency-review.md`, `docs/ux-review.md`, `docs/claude-code-handoff.md` and this file
-   are your working notes and mean nothing to anyone else. Keep `data-model.md`, `plant-lookup.md`,
-   `nursery-design.md` and `label-scan-spec.md` — those are genuinely useful to a copy owner and to
-   their Claude.
+5. **Strip the internal docs.** `docs/restructure-plan.md`, `docs/ui-consistency-review.md`,
+   `docs/ux-review.md`, `docs/claude-code-handoff.md` and this file are your working notes and mean
+   nothing to anyone else. Keep `data-model.md`, `plant-lookup.md`, `nursery-design.md` and
+   `label-scan-spec.md` — those are genuinely useful to a copy owner and to their Claude.
+   (`docs/backlog.md` is already gone — it moved to `Garden Data\` on 2026-08-20, precisely so this
+   step has one less judgement call in it.)
 6. **Edit `CLAUDE.md` and `README.md`.** Remove `C:\Users\johnb\...` paths, your live URLs, the
    `bbg-garden-inventory` project ID and the "Owner: John Bullivant" line. Keep the architecture,
    the role system, the standing rules and the deploy instructions — that content is exactly what
