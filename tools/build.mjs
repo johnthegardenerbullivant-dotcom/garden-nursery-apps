@@ -173,16 +173,67 @@ function copyShared() {
 //  2. firebase-config.js
 // ---------------------------------------------------------------
 
+/**
+ * A value that is present but corrupt is a different failure from one that is
+ * simply absent, and it deserves a different outcome. Absent means "not set up
+ * yet" — the app's own "Setup required" overlay says that better than a build
+ * log can. Corrupt means "set up wrong", and it will sail past that overlay and
+ * produce an app that looks completely healthy until someone tries to sign in.
+ *
+ * That is not hypothetical: on 2026-08-20 FIREBASE_API_KEY was pasted into both
+ * Netlify sites from a MASKED rendering of the key, so the stored value was
+ * `AIzaSyCJ` followed by 31 bullet characters. Both builds passed, both previews
+ * loaded, every stylesheet arrived, and the only symptom was
+ * auth/api-key-not-valid at the moment of sign-in. Hence: fail the build.
+ *
+ * Returns an error string, or null if the value looks sane.
+ */
+function validate(name, value) {
+  if (/^\s|\s$/.test(value)) {
+    return 'has leading or trailing whitespace';
+  }
+  // eslint-disable-next-line no-control-regex
+  const bad = [...value].find(ch => ch < ' ' || ch > '~');
+  if (bad !== undefined) {
+    const code = bad.codePointAt(0).toString(16).padStart(4, '0');
+    return `contains a non-ASCII character (U+${code.toUpperCase()}) — `
+         + 'this usually means it was copied from a masked or "•••" display '
+         + 'rather than from the real value';
+  }
+  if (name === 'FIREBASE_API_KEY' && !/^AIza[0-9A-Za-z_-]{35}$/.test(value)) {
+    return `does not look like a Google API key (expected AIza… and 39 characters, got ${value.length})`;
+  }
+  return null;
+}
+
 function writeFirebaseConfig() {
   const missing = [];
+  const invalid = [];
   const values  = {};
 
   for (const [key, name] of Object.entries(FIREBASE_KEYS)) {
     const value = env(name);
-    if (value === null) missing.push(name);
+    if (value === null) {
+      missing.push(name);
+    } else {
+      const problem = validate(name, value);
+      if (problem) invalid.push({ name, problem });
+    }
     // The placeholder MUST start with REPLACE_WITH — db.js checks for exactly
     // that prefix to decide whether to show the "Setup required" overlay.
     values[key] = value ?? `REPLACE_WITH_YOUR_${name}`;
+  }
+
+  if (invalid.length) {
+    console.error('');
+    console.error('build.mjs: FAILED — one or more environment variables are corrupt.');
+    for (const { name, problem } of invalid) console.error(`  ${name} ${problem}`);
+    console.error('');
+    console.error('  Re-enter the value from an unmasked source: the Firebase console at');
+    console.error('  Project settings → Your apps, or your local .env file. Do not copy it');
+    console.error('  from anywhere that displays it as dots.');
+    console.error('');
+    process.exit(1);
   }
 
   const width = Math.max(...Object.keys(values).map(k => k.length));
