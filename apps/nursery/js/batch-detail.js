@@ -11,6 +11,7 @@ import {
 } from './db.js';
 import { goBack, navigate, showToast } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
+import { GARDEN_URL } from '../app-config.js';
 import { openNurseryPhotoLightbox, loadAndRenderBatchPhotos } from './batch-photos.js';
 import { showLogForm } from './batch-log-form.js';
 import { showEditLogForm } from './batch-log-edit.js';
@@ -116,7 +117,7 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
                     <span class="method-badge">${escHtml(METHOD_LABELS[batch.method] || batch.method || '—')}</span>
                     <span class="stage-badge stage-${escHtml(batch.stage || 'propagating')} detail-stage-badge">${STAGE_LABELS[batch.stage] || batch.stage || '—'}</span>
                 </div>
-                ${batch.plantId ? `<a class="view-in-garden-link" href="https://johnandkath.garden/#plant-detail/${escHtml(batch.plantId)}" target="_blank" rel="noopener">🌿 View in garden →</a>` : ''}
+                ${batch.plantId && GARDEN_URL ? `<a class="view-in-garden-link" href="${escHtml(GARDEN_URL)}/#plant-detail/${escHtml(batch.plantId)}" target="_blank" rel="noopener">🌿 View in garden →</a>` : ''}
             </div>
 
             <!-- Stage progress (hidden for stock plants) -->
