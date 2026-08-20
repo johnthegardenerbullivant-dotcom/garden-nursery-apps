@@ -20,13 +20,22 @@ apps/garden/     Netlify site #1 — base and publish directory
 apps/nursery/    Netlify site #2 — same
 firebase/        firestore.rules, storage.rules, cors.json — one copy, deployed by CLI
 docs/            design notes, the label-scan spec, the restructure plan
-tools/           check-drift.mjs
+tools/           build.mjs, check-drift.mjs, find-dead-css.mjs
 ```
 
 ## Deploying
 
-Both Netlify sites build from this repo. There is **no build step** — plain HTML, CSS and native ES
-modules, with Firebase and Quill loaded from CDNs. Netlify just serves the app folder.
+Both Netlify sites build from this repo. The app itself is plain HTML, CSS and native ES modules
+with Firebase and Quill loaded from CDNs — no bundler, no npm, no `node_modules`. The only build is
+`tools/build.mjs`, which copies the shared design layer into the app folder and generates
+`firebase-config.js` and `app-config.js` from environment variables:
+
+```bash
+node tools/build.mjs garden
+```
+
+Run that once after a fresh clone, or the app opens unstyled and unconfigured. It reads a gitignored
+`.env` at the repo root locally, and the site's environment variables on Netlify.
 
 ```bash
 git switch -c feature/thing && git commit -am "feat: thing" && git push -u origin feature/thing
@@ -45,7 +54,7 @@ firebase deploy --only firestore:rules,storage
 ## Before you push
 
 ```bash
-node --check apps/garden/js/*.js apps/nursery/js/*.js apps/*/functions/scan-label.js
+node --check apps/garden/js/*.js apps/nursery/js/*.js apps/*/functions/*.js tools/*.mjs
 node tools/check-drift.mjs
 ```
 
@@ -54,9 +63,11 @@ node tools/check-drift.mjs
 
 ## Notes
 
-This repo is **private** and contains real Firebase credentials in `apps/*/firebase-config.js`. That
-config is already public in the sense that anyone can read it from the live site's source — Firestore
-security rules are what protect the data. Keep the repo private anyway.
+This repo is **private**, and as of 2026-08-20 it contains **no** Firebase credentials — they are
+generated at build time from environment variables. That config was never really a secret (anyone
+can read it from the live site's source, and Firestore rules are what protect the data); it is out
+of git so that a copy of this repo has no file its owner must edit, and can therefore take updates
+as a clean fast-forward. See [`docs/distribution-plan.md`](docs/distribution-plan.md).
 
 Backups, `plant-import.json` and archived material live **outside** the repo, in
 `C:\Users\johnb\Documents\Claude\Garden Data\`. Never commit them.

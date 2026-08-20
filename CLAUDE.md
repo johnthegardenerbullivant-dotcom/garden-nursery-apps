@@ -19,9 +19,12 @@ Two Progressive Web Apps, one Firebase project, one private repo, two Netlify si
 
 - **Owner:** John Bullivant
 - **Firebase project:** `bbg-garden-inventory` — Firestore + Storage + Auth, shared by both apps
-- **They are companions.** Planting out a Nursery batch writes a `plants` record (if needed) and an
-  `instances` record straight into Garden's collections — see `plantOutToGarden()` in
-  `apps/nursery/js/db.js`. Either app runs standalone; together they share one database.
+- **They are companions, and they write into each other in both directions.** Planting out a Nursery
+  batch writes a `plants` record (if needed) and an `instances` record straight into Garden's
+  collections (`plantOutToGarden()`, `apps/nursery/js/db.js`); transferring a garden plant to the
+  nursery writes a `nursery_batches` document (`transferToNursery()`, `apps/garden/js/db.js`).
+  Both are plain Firestore writes inside the shared project, not network calls between the sites.
+  Either app runs standalone; together they share one database.
 
 ---
 
@@ -45,9 +48,10 @@ garden-apps/
 ├── apps/
 │   ├── garden/               ← Netlify site #1. Base AND publish directory.
 │   │   ├── CLAUDE.md         ← Garden module map
-│   │   ├── netlify.toml      ← functions/ + the `cp ../../shared` build command
+│   │   ├── netlify.toml      ← functions/, the build.mjs command, secret-scan settings
 │   │   ├── shared/           ← GENERATED at build time. Gitignored. Never edit.
-│   │   ├── firebase-config.js ← REAL credentials (this repo is private)
+│   │   ├── firebase-config.js ← GENERATED at build time from FIREBASE_*. Gitignored.
+│   │   ├── app-config.js     ← GENERATED at build time from GARDEN_URL. Gitignored.
 │   │   ├── index.html  styles.css  manifest.json  sw.js  robots.txt  _headers
 │   │   ├── compress-photos.html  ← standalone one-off photo-compression utility
 │   │   ├── icons/            ← 3 PNGs
@@ -58,13 +62,15 @@ garden-apps/
 │   └── nursery/              ← Netlify site #2. Same shape, 20 JS modules.
 │
 ├── firebase/                 ← deployed by the Firebase CLI, NOT served by Netlify
-│   ├── firebase.json  .firebaserc
+│   ├── firebase.json         ← .firebaserc sits here too, but is gitignored:
+│   │                            `firebase use --add` writes it per checkout
 │   ├── firestore.rules       ← the ONLY copy
 │   ├── storage.rules         ← the ONLY copy
 │   └── cors.json
 │
 ├── docs/                     ← design notes, specs, the restructure plan
 └── tools/
+    ├── build.mjs             ← THE build: copies /shared, generates the two config files
     ├── check-drift.mjs       ← guards the deliberately-duplicated files
     └── find-dead-css.mjs     ← reports unused class selectors; understands
                                  runtime-built names like `stage-${…}`
@@ -82,22 +88,42 @@ obvious names but the rule is the habit, not the file.
 npm, no `node_modules`, no `package.json`. For everything in `apps/garden` and `apps/nursery`, an
 edited file is the deployed file.
 
-The one exception, added 2026-08-10: each site's build command is
+The exception is `tools/build.mjs`, which is each site's entire build command:
 
 ```
-rm -rf shared && cp -r ../../shared shared
+node ../../tools/build.mjs garden      # `nursery` on the other site
 ```
 
-A folder outside the publish directory is not served to the browser, so the shared design layer at
-`/shared` has to be copied inside each app before deploy. Consequences worth knowing:
+It began (2026-08-10) as a one-line `cp` of the shared design layer, and grew (2026-08-20) to
+generate the config files too. It does three things, and **all three outputs are gitignored build
+artefacts**:
 
-- **`apps/*/shared/` is generated build output and is gitignored.** Edit `/shared`, never a copy.
-  A copy you edit will be silently overwritten by the next build.
-- **A fresh checkout has no `apps/*/shared/`**, so opening `apps/garden/index.html` straight off
-  disk gives an unstyled page. Run the `cp` line above from the app folder first.
-- **Both `netlify.toml` ignore commands watch `../../shared`** as well as `.`, so a change to the
-  shared layer rebuilds both sites. Without that a site would skip its build and keep serving the
-  previous copy.
+| Output | From | Why it is generated |
+|---|---|---|
+| `apps/*/shared/` | `/shared` | A folder outside the publish directory is not served to the browser |
+| `apps/*/firebase-config.js` | six `FIREBASE_*` env vars | Keeps credentials out of git |
+| `apps/*/app-config.js` | `GARDEN_URL` | Keeps the cross-app link out of git |
+
+Consequences worth knowing:
+
+- **Never edit any of those three.** Edit `/shared` or the environment variable; a hand-edit is
+  silently overwritten by the next build.
+- **A fresh checkout has none of them**, so opening `apps/garden/index.html` straight off disk gives
+  an unstyled, unconfigured page. Run `node tools/build.mjs garden` first. Locally the script reads
+  a gitignored `.env` at the repo root; on Netlify it reads the site's environment variables.
+- **Both `netlify.toml` ignore commands watch `../../shared` and `../../tools/build.mjs`** as well
+  as `.`, so a change to either rebuilds both sites. Without that a site would skip its build and
+  keep serving output from the previous version.
+- **A missing variable is not a build failure** — the placeholder written instead starts with
+  `REPLACE_WITH`, which is what `db.js` tests for before calling `initializeApp()`, so the app shows
+  its "Setup required" overlay. **A corrupt one is** a build failure: leading/trailing whitespace,
+  any non-ASCII character, or an `apiKey` not shaped like `AIza` + 35 characters stops the build.
+  That guard exists because a masked paste of the API key once sailed through a green build and
+  only surfaced as `auth/api-key-not-valid` at sign-in.
+
+**Why generate rather than commit?** So that a copy of this repo contains no file its owner has to
+edit, and can therefore take updates as a clean fast-forward instead of a merge conflict in the same
+three files every time. See [`docs/distribution-plan.md`](docs/distribution-plan.md).
 
 Everything third-party comes from a CDN:
 
@@ -153,7 +179,12 @@ writes Garden's `plants`, `instances` and `areas` when planting out.
 ### App code — push to `main`, Netlify builds
 
 Both Netlify sites are linked to this repo with a **base directory** (`apps/garden` /
-`apps/nursery`) and an empty build command. A push only rebuilds the site whose folder changed.
+`apps/nursery`) and the `tools/build.mjs` command from their `netlify.toml`. A push only rebuilds
+the site whose folder changed.
+
+Each site needs the six `FIREBASE_*` variables set on it — the same six values on both, since the
+two apps share one Firebase project — plus `GARDEN_URL` on Nursery. Netlify environment variables
+are **per site**, not shared between them, and only take effect on the next build.
 
 ```
 git switch -c feature/thing     # main is always deployable
@@ -191,9 +222,13 @@ per PR (one per site) and they accumulate. Prefer the email account.
 
 **Rollback:** Netlify → Deploys → pick the last good deploy → *Publish deploy*. Instant.
 
-Netlify's secret scanner trips on the `AIza…` Firebase key format, so both sites set
-`SECRETS_SCAN_OMIT_PATHS = firebase-config.js`. That key is already readable by anyone who views
-source on the live site — Firestore rules are what protect the data, not the key's obscurity.
+Netlify's secret scanner stops a build when it finds the **value of an environment variable** in the
+build output — which, since the config is generated from `FIREBASE_*`, is exactly what
+`firebase-config.js` is. Both `netlify.toml` therefore set `SECRETS_SCAN_OMIT_PATHS` and
+`SECRETS_SCAN_OMIT_KEYS` under `[build.environment]`. They live in the repo rather than the Netlify
+UI so that a fresh copy builds first time without anyone having to be told about the setting. That
+key is already readable by anyone who views source on the live site — Firestore rules are what
+protect the data, not the key's obscurity.
 
 ### Security rules — one file, one CLI command
 
@@ -205,16 +240,24 @@ cd firebase
 firebase deploy --only firestore:rules,storage
 ```
 
-`.firebaserc` already pins the project, so `firebase use` isn't needed. `firebase.json` deliberately
-omits `indexes` and `hosting`, so deploying rules can't clobber composite indexes or fight Netlify.
+`.firebaserc` pins the project so `firebase use` isn't needed — but it is **gitignored** as of
+2026-08-20, because it names one specific Firebase project and a copy of this repo needs its own.
+It is still present in this checkout; a fresh clone creates it with `firebase use --add`.
+`firebase.json` deliberately omits `indexes` and `hosting`, so deploying rules can't clobber
+composite indexes or fight Netlify.
 
 ---
 
 ## Standing rules
 
-1. **`node --check` every JS file after generating or moving any of them.** All 39: 15 Garden
-   modules, 20 Nursery modules, 2 `functions/scan-label.js`, 2 `functions/lookup-plant.js`. If it
-   reports an error, treat it as real — never dismiss it as a false alarm.
+1. **`node --check` every JS file after generating or moving any of them.** All 42: 15 Garden
+   modules, 20 Nursery modules, 2 `functions/scan-label.js`, 2 `functions/lookup-plant.js`, and the
+   3 scripts in `tools/`. If it reports an error, treat it as real — never dismiss it as a false
+   alarm. One command covers the lot:
+
+   ```
+   node --check apps/garden/js/*.js apps/nursery/js/*.js apps/*/functions/*.js tools/*.mjs
+   ```
 2. **No AI-authored production deploys without John's review.** Push to a branch, look at the
    Netlify deploy preview, then merge. Never straight to `main`.
 3. **A new Firestore collection in a `db.js` needs its rule block in `firebase/firestore.rules` in
