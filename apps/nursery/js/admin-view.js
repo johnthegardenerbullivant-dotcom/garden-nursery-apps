@@ -27,13 +27,44 @@ export async function renderAdminView(container, headerActionEl, backBtn) {
     document.querySelector('.fab')?.remove();
     container.innerHTML = `<div class="loading-state"><div class="leaf-spinner">🌱</div><p>Loading…</p></div>`;
 
+    // Editors see the Wishlist only; admins see the full panel. Mirrors
+    // Garden's admin-view.js, where an editor who can add plants can also
+    // record an idea about the app. Everything else here — locations, users,
+    // backup — stays admin-only.
+    if (!isAtLeast('editor')) {
+        container.innerHTML = `<div class="empty-state"><p>Access denied.</p></div>`;
+        return;
+    }
+
     if (!isAtLeast('admin')) {
-        container.innerHTML = `<div class="empty-state"><p>Admin access required.</p></div>`;
+        await renderWishlistOnly(container);
         return;
     }
 
     await renderAdmin(container);
     renderUsersSection(container); // async — fills #um-content when ready
+}
+
+// =============================================
+//  EDITOR-ONLY VIEW (Wishlist & Ideas)
+// =============================================
+
+async function renderWishlistOnly(container) {
+    let wishlist = [];
+    try {
+        wishlist = await getNurseryWishlist();
+    } catch (e) {
+        container.innerHTML = `<div class="empty-state"><p>Could not load the wishlist.</p></div>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="view-content">
+            ${wishlistSectionHTML(wishlist)}
+        </div>
+    `;
+
+    bindWishlistEvents(container, wishlist, () => renderWishlistOnly(container));
 }
 
 // =============================================
@@ -285,23 +316,7 @@ async function renderAdmin(container) {
             </section>
 
             <!-- Wishlist / Ideas -->
-            <section class="admin-section">
-                <div class="section-header-row">
-                    <h2 class="section-heading">💡 App Wishlist & Ideas</h2>
-                    <button class="btn btn-sm btn-primary" id="add-wish-btn">+ Add</button>
-                </div>
-                <p class="section-hint">Record feature ideas, improvements, or things you'd like to change about this app.</p>
-                <div id="wishlist-list">
-                    ${wishlist.length === 0
-                        ? `<div class="empty-state" style="margin-top:12px;">
-                               <p style="color:var(--grey-600);font-size:0.9rem;">No ideas yet — add your first one!</p>
-                           </div>`
-                        : `<div class="card-list">
-                               ${wishlist.map(item => wishCard(item)).join('')}
-                           </div>`
-                    }
-                </div>
-            </section>
+            ${wishlistSectionHTML(wishlist)}
 
             <!-- Backup -->
             <section class="admin-section">
@@ -357,54 +372,7 @@ async function renderAdmin(container) {
         });
     });
 
-    container.querySelector('#add-wish-btn')?.addEventListener('click', () => {
-        showWishForm(null, () => renderAdmin(container));
-    });
-
-    container.querySelectorAll('.wish-edit-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
-            e.stopPropagation();
-            const id = btn.closest('[data-id]')?.dataset.id;
-            const item = wishlist.find(w => w.id === id);
-            if (item) showWishForm(item, () => renderAdmin(container));
-        });
-    });
-
-    container.querySelectorAll('.wish-delete-btn').forEach(btn => {
-        btn.addEventListener('click', async e => {
-            e.stopPropagation();
-            const id = btn.closest('[data-id]')?.dataset.id;
-            const item = wishlist.find(w => w.id === id);
-            if (!item) return;
-            if (!confirm(`Delete "${item.title}"?`)) return;
-            try {
-                await deleteNurseryWishlistItem(id);
-                showToast('Idea deleted', 'success');
-                await renderAdmin(container);
-            } catch (err) {
-                console.error(err);
-                showToast('Could not delete', 'error');
-            }
-        });
-    });
-
-    container.querySelectorAll('.wish-status-btn').forEach(btn => {
-        btn.addEventListener('click', async e => {
-            e.stopPropagation();
-            const id = btn.closest('[data-id]')?.dataset.id;
-            const item = wishlist.find(w => w.id === id);
-            if (!item) return;
-            const cycle = { idea: 'planned', planned: 'done', done: 'idea' };
-            const newStatus = cycle[item.status] || 'idea';
-            try {
-                await updateNurseryWishlistItem(id, { status: newStatus });
-                await renderAdmin(container);
-            } catch (err) {
-                console.error(err);
-                showToast('Could not update status', 'error');
-            }
-        });
-    });
+    bindWishlistEvents(container, wishlist, () => renderAdmin(container));
 
     container.querySelector('#backup-btn')?.addEventListener('click', async () => {
         try {
@@ -544,6 +512,90 @@ const WISH_PRIORITY_CONFIG = {
     medium: { label: '🟡 Medium', colour: '#f4a261' },
     low:    { label: '🟢 Low',    colour: 'var(--green-500)' }
 };
+
+/**
+ * Wire up the Wishlist section's buttons.
+ *
+ * `refresh` is supplied by the caller because the two views redraw
+ * differently: the admin panel re-renders everything, the editor view only
+ * itself. Everything else about the section behaves identically for both.
+ */
+function bindWishlistEvents(container, wishlist, refresh) {
+    container.querySelector('#add-wish-btn')?.addEventListener('click', () => {
+        showWishForm(null, refresh);
+    });
+
+    container.querySelectorAll('.wish-edit-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const id = btn.closest('[data-id]')?.dataset.id;
+            const item = wishlist.find(w => w.id === id);
+            if (item) showWishForm(item, refresh);
+        });
+    });
+
+    container.querySelectorAll('.wish-delete-btn').forEach(btn => {
+        btn.addEventListener('click', async e => {
+            e.stopPropagation();
+            const id = btn.closest('[data-id]')?.dataset.id;
+            const item = wishlist.find(w => w.id === id);
+            if (!item) return;
+            if (!confirm(`Delete "${item.title}"?`)) return;
+            try {
+                await deleteNurseryWishlistItem(id);
+                showToast('Idea deleted', 'success');
+                await refresh();
+            } catch (err) {
+                console.error(err);
+                showToast('Could not delete', 'error');
+            }
+        });
+    });
+
+    container.querySelectorAll('.wish-status-btn').forEach(btn => {
+        btn.addEventListener('click', async e => {
+            e.stopPropagation();
+            const id = btn.closest('[data-id]')?.dataset.id;
+            const item = wishlist.find(w => w.id === id);
+            if (!item) return;
+            const cycle = { idea: 'planned', planned: 'done', done: 'idea' };
+            const newStatus = cycle[item.status] || 'idea';
+            try {
+                await updateNurseryWishlistItem(id, { status: newStatus });
+                await refresh();
+            } catch (err) {
+                console.error(err);
+                showToast('Could not update status', 'error');
+            }
+        });
+    });
+}
+
+/**
+ * The Wishlist section. Rendered inside the full admin panel for admins, and
+ * on its own for editors — one copy so the two cannot drift.
+ */
+function wishlistSectionHTML(wishlist) {
+    return `
+        <section class="admin-section">
+            <div class="section-header-row">
+                <h2 class="section-heading">💡 App Wishlist & Ideas</h2>
+                <button class="btn btn-sm btn-primary" id="add-wish-btn">+ Add</button>
+            </div>
+            <p class="section-hint">Record feature ideas, improvements, or things you'd like to change about this app.</p>
+            <div id="wishlist-list">
+                ${wishlist.length === 0
+                    ? `<div class="empty-state" style="margin-top:12px;">
+                           <p style="color:var(--grey-600);font-size:0.9rem;">No ideas yet — add your first one!</p>
+                       </div>`
+                    : `<div class="card-list">
+                           ${wishlist.map(item => wishCard(item)).join('')}
+                       </div>`
+                }
+            </div>
+        </section>
+    `;
+}
 
 function wishCard(item) {
     const sc = WISH_STATUS_CONFIG[item.status] || WISH_STATUS_CONFIG.idea;

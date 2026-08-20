@@ -190,9 +190,14 @@ service cloud.firestore {
     }
 
     // ---- nursery_wishlist ----
+    // Matches Garden's `suggestions` (2026-08-20). Both apps now let an
+    // editor record ideas about the app; Nursery previously required admin,
+    // for no reason anyone could reconstruct. Nursery's wishlist keeps its
+    // richer shape — title, description, priority, cycling status — this
+    // change is about WHO may use it, not what it stores.
     match /nursery_wishlist/{itemId} {
-      allow read:                    if isAdmin();
-      allow create, update, delete:  if isAdmin();
+      allow read:                    if isViewer();
+      allow create, update, delete:  if isEditor();
     }
 
     // ---- nursery_plans ----
