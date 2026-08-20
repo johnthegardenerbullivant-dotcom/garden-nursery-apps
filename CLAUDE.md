@@ -270,6 +270,20 @@ composite indexes or fight Netlify.
 5. **Never commit a backup JSON or `plant-import.json`.** They belong in `Garden Data\`.
 6. **Commit style:** conventional prefixes — `feat:`, `fix:`, `chore:`, `docs:`. Branches:
    `feature/…`, `fix/…`.
+7. **Verify by running it, not by reading it.** "The diff looks right" and "the thing works" are
+   different claims, and this repo has a habit of punishing the gap between them. Before saying
+   something works: run the command, load the page over HTTP, fetch the deployed file. Two examples
+   from 2026-08-20, both invisible to review and both obvious within seconds of execution:
+   - A masked paste put bullet characters into `FIREBASE_API_KEY`. Both builds went green, both
+     previews loaded, every stylesheet arrived — and sign-in returned `auth/api-key-not-valid`.
+     Checking a truncated prefix of the value was what hid it; printing the length would not have.
+   - A docs branch built on the wrong parent was missing `tools/build.mjs` altogether. The diff
+     showed nothing wrong. `node tools/build.mjs garden` failed instantly.
+
+   Corollaries worth remembering: a green Netlify check means *the build succeeded*, not that the
+   app works; a preview URL keeps serving the last **successful** build, so a failed deploy still
+   loads happily; and for anything visual, serve over HTTP — `file://` blocks cross-directory CSS
+   and reports a false "everything is broken".
 
 ---
 
