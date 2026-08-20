@@ -10,6 +10,7 @@ import {
 } from './db.js';
 import { showModal, hideModal, showToast } from './ui-utils.js';
 import { isAtLeast, getCurrentUser } from './auth.js';
+import { GARDEN_URL } from '../app-config.js';
 
 const LOCATION_TYPES = [
     { value: 'heated-greenhouse',   label: '🌡️ Heated Greenhouse' },
@@ -309,14 +310,18 @@ async function renderAdmin(container) {
                 <button class="btn btn-secondary" id="backup-btn">Download backup</button>
             </section>
 
-            <!-- Link to Garden Management -->
+            <!-- Link to Garden Management. Hidden entirely when GARDEN_URL is
+                 unset, i.e. on a Nursery-only installation with no companion
+                 Garden site to link to. -->
+            ${GARDEN_URL ? `
             <section class="admin-section">
                 <h2 class="section-heading">🔗 Garden Management</h2>
                 <p class="section-hint">This app shares the same Firebase project as your Garden Management app.</p>
-                <a class="btn btn-secondary" href="https://johnandkath.garden" target="_blank" rel="noopener">
+                <a class="btn btn-secondary" href="${escHtml(GARDEN_URL)}" target="_blank" rel="noopener">
                     Open Garden Management ↗
                 </a>
             </section>
+            ` : ''}
 
         </div>
     `;

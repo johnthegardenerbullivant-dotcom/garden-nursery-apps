@@ -4,16 +4,20 @@
 # so the paths below are relative to it.
 
 [build]
-  # The one and only build step: copy the shared design layer into this folder
-  # so it is inside the publish directory and therefore served. A folder outside
-  # the publish directory is not deployed, which is why this command exists at
-  # all — see the root CLAUDE.md.
+  # The build. See tools/build.mjs — it copies the shared design layer into
+  # this folder (a folder outside the publish directory is not served), and
+  # generates firebase-config.js and app-config.js from environment variables.
   #
-  # rm -rf first because Netlify may restore a cached working directory, and
-  # `cp -r src dest` nests rather than replaces when dest already exists.
+  # All three outputs are gitignored. Keeping the Firebase credentials out of
+  # git is what lets a copy of this repo track updates without ever editing a
+  # tracked file, and so without a merge conflict on every update.
+  # See docs/distribution-plan.md.
   #
-  # apps/garden/shared/ is gitignored: it is build output, never committed.
-  command = "rm -rf shared && cp -r ../../shared shared"
+  # Required env vars on this site: FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN,
+  # FIREBASE_PROJECT_ID, FIREBASE_STORAGE_BUCKET, FIREBASE_MESSAGING_SENDER_ID,
+  # FIREBASE_APP_ID. Missing ones are not a build failure — the app shows its
+  # "Setup required" overlay instead.
+  command = "node ../../tools/build.mjs garden"
 
   # Monorepo build skipping. Without this, a push that only touches apps/nursery
   # still rebuilds this site — setting a base directory does NOT scope builds by
@@ -25,10 +29,27 @@
   # serving the previous copy. Netlify's own "mimic default behavior" example
   # omits the pathspec entirely, which diffs the WHOLE repo and so never skips.
   #
+  # tools/build.mjs is listed for the same reason as ../../shared: it generates
+  # this site's output, so a change to it must rebuild both sites rather than
+  # letting them skip and keep serving files built by the previous version.
+  #
   # Exit 0 = nothing changed here = SKIP the build. Exit 1 = build.
   # If CACHED_COMMIT_REF is unset (first build after this was added) git errors,
   # which is non-zero, so it builds. Failing towards building is the safe default.
-  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ../../shared"
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ../../shared ../../tools/build.mjs"
+
+  # Netlify's secret scanner stops a build when it finds the VALUE of an
+  # environment variable in the build output — which, now that build.mjs writes
+  # firebase-config.js from FIREBASE_*, is exactly what that file is. These
+  # values are public by design: the config identifies the Firebase project, it
+  # does not unlock it, and it is readable by anyone who views source on the
+  # live site. Firestore rules are what protect the data.
+  #
+  # Set here rather than in the Netlify UI so that a fresh copy of this repo
+  # builds first time, without anyone having to be told about this setting.
+  [build.environment]
+    SECRETS_SCAN_OMIT_PATHS = "firebase-config.js"
+    SECRETS_SCAN_OMIT_KEYS  = "FIREBASE_API_KEY,FIREBASE_AUTH_DOMAIN,FIREBASE_PROJECT_ID,FIREBASE_STORAGE_BUCKET,FIREBASE_MESSAGING_SENDER_ID,FIREBASE_APP_ID"
 
 [functions]
   directory = "functions"
