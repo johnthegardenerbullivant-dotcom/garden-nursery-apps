@@ -19,9 +19,17 @@ address. **Nothing is shared with your garden** — not data, not logins, not bi
 your plants and you cannot see theirs.
 
 - Garden Management, Nursery Management, or both. Either runs standalone.
-- **If they take both, both must point at one Firebase project.** Planting out a Nursery batch
-  writes straight into Garden's `plants` and `instances` collections (`plantOutToGarden()` in
-  `apps/nursery/js/db.js`). Two projects would break that link silently.
+- **If they take both, both must point at one Firebase project.** The two apps write into each
+  other's collections in **both** directions, and neither goes over the network to do it — they are
+  plain Firestore writes inside the shared project:
+  - Planting out a Nursery batch writes into Garden's `plants` and `instances`
+    (`plantOutToGarden()` in `apps/nursery/js/db.js`).
+  - Transferring a garden plant to the nursery writes a `nursery_batches` document
+    (`transferToNursery()` in `apps/garden/js/db.js`).
+
+  Split the two apps across two Firebase projects and both paths fail **silently** — no error, the
+  record simply lands in a database the other app never reads. This is the single most important
+  thing to get right at setup, and the hardest to notice later.
 - Installable on a phone, works offline, three roles (viewer / editor / admin), label scanning and
   AI plant lookup — all of it, as long as they set up the Gemini key.
 - An **empty** database. No plants, no areas, no nursery locations. There is a bulk import in the
