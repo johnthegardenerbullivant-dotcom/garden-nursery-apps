@@ -1,6 +1,10 @@
 # Making a copy for someone else
 
 Written 2026-08-19, after a couple of friends asked for their own Garden/Nursery apps.
+**Substantially revised 2026-08-20**, once the Firebase config moved out of git into environment
+variables. That change removed most of the fiddly parts of this guide: there is no longer a single
+file in the repo that a copy owner has to edit, which is what makes one-click updates possible.
+Anything below describing hand-edited credentials or a template repo is gone for that reason.
 
 This is two documents in one. **Part A** is John's decisions and one-off work. **Part B** is the
 step-by-step a friend follows. Part B is the bit you send them.
@@ -55,63 +59,86 @@ at step five.
 
 ## A1. Decide how they get the code (do this first)
 
+**Decided 2026-08-20.** An earlier draft of this document recommended a *template* repo. That was
+superseded once the config moved out of git — see [`distribution-plan.md`](distribution-plan.md).
+
 | Option | Verdict |
 |---|---|
 | Add them as a collaborator on `garden-apps` | **No.** They'd get push access to your repo, and your commits would deploy to their sites. Wrong shape entirely. |
 | Send a zip | **No.** They can never receive a fix, and you can never tell what version they're on. |
-| **A separate public template repo** | **Yes.** They click one button, get their own repo, and your private repo stays private and untouched. |
+| A public **template** repo | **No.** A template produces a copy with no upstream link, so updates mean `git fetch upstream` from a terminal — exactly what a non-technical friend cannot do. |
+| **A public release repo they fork** | **Yes.** GitHub's one-click **Sync fork** button, forever. |
 
-The recommendation is a second GitHub repo — call it `garden-apps-template` — created from a
-sanitised copy of `garden-apps` and marked as a template. Friends press **Use this template** and
-get their own independent repo. You never touch their copy again unless you want to.
+The mechanism: keep `garden-apps` private for day-to-day work, and add a **second remote** — a
+public `garden-apps` repo — that you push to deliberately when you want to cut a release:
 
-### Why not just make `garden-apps` public?
+```bash
+git remote add public https://github.com/YOURNAME/garden-apps.git
+```
 
-The Firebase web config is public-by-design — anyone can read it from your live site's source, and
-Firestore rules are what protect the data. So the keys are not the problem. The problem is
-everything else: `CLAUDE.md` and the docs describe your exact deploy setup, your Firebase project
-ID, your Netlify configuration and your local folder paths. None of that is dangerous on its own,
-and all of it is free reconnaissance. Keep the private repo private.
+```bash
+git push public main
+```
 
-## A2. Build the template repo (one evening)
+Nothing is visible to anyone until you run that push, so you can make several changes, live with
+them on your own sites for a week, and publish when you're satisfied. What you control is **when**
+it becomes visible, not the granularity — the push publishes your individual commits with their real
+dates, not one squashed blob. That is usually what you want anyway: the commit messages are the
+release notes.
 
-Work from a copy of the repo, not the repo itself.
+Friends then press **Fork** on the public repo. Their fork tracks yours, so GitHub shows them "this
+branch is 3 commits behind" with a **Sync fork** button next to it.
 
-1. Copy the whole `garden-apps` folder somewhere outside `Projects\`, delete its `.git` folder, and
-   start fresh with `git init`.
-2. **Blank the credentials.** In *both* `apps/garden/firebase-config.js` and
-   `apps/nursery/firebase-config.js`, replace all six values with `REPLACE_WITH_YOUR_...`
-   placeholders. The comment block at the top of those files already tells the reader to do exactly
-   this — it is left over from the old Friend Package and is currently a lie in your repo, because
-   your real values sit directly underneath it. In the template it becomes true again.
-3. **Blank the project ID** in `firebase/.firebaserc` — change `bbg-garden-inventory` to
-   `REPLACE_WITH_YOUR_PROJECT_ID`.
-4. **Note the two hard-coded links to your site.** Nursery links out to Garden in two places:
-   - `apps/nursery/js/admin-view.js:316`
-   - `apps/nursery/js/batch-detail.js:119`
+### Why the fork can be public, and why that's fine
 
-   Both contain `https://johnandkath.garden`. Either replace them with a placeholder in the
-   template, or leave them and flag it in the friend's guide — Part B step B9 assumes the latter.
-5. **Strip the internal docs.** `docs/restructure-plan.md`, `docs/backlog.md`,
-   `docs/ui-consistency-review.md`, `docs/ux-review.md`, `docs/claude-code-handoff.md` and this file
-   are your working notes and mean nothing to anyone else. Keep `data-model.md`, `plant-lookup.md`,
-   `nursery-design.md` and `label-scan-spec.md` — those are genuinely useful to a copy owner and to
-   their Claude.
-6. **Edit `CLAUDE.md` and `README.md`.** Remove `C:\Users\johnb\...` paths, your live URLs, the
+Forks of a public repo are themselves public — you cannot make one private. That would have been a
+problem under the old design, where a copy owner had to paste their Firebase credentials into a
+tracked file. It isn't one now: **their repo contains no configuration at all.** Everything
+installation-specific lives in Netlify environment variables. A fork is a plain copy of the code,
+identical to yours, with nothing personal in it.
+
+That property is also what makes Sync fork work. A fork that never edits a tracked file never
+diverges, so every sync is a fast-forward and no conflict is possible.
+
+## A2. Prepare the repo for publication (one evening)
+
+This is now done **in `garden-apps` itself**, not in a copy — the public repo is the same repo,
+pushed to a second remote. There is no separate template to keep in sync.
+
+**Steps 2–4 of an earlier draft are gone.** They said to blank the credentials in both
+`firebase-config.js` files, blank the project ID in `.firebaserc`, and deal with two hard-coded
+links to your garden. None of that exists any more: those three files are generated at build time
+from environment variables and are gitignored, so **there is nothing to sanitise in the code**. That
+is the whole point of the config work — see [`distribution-plan.md`](distribution-plan.md).
+
+What's left is documentation hygiene:
+
+1. **Strip the internal docs.** `docs/restructure-plan.md`, `docs/ui-consistency-review.md`,
+   `docs/ux-review.md`, `docs/claude-code-handoff.md` and this file are your working notes and mean
+   nothing to anyone else. Keep `data-model.md`, `plant-lookup.md`, `nursery-design.md` and
+   `label-scan-spec.md` — those are genuinely useful to a copy owner and to their Claude.
+   (`docs/backlog.md` is already gone — it moved to `Garden Data\` on 2026-08-20, precisely so this
+   step has one less judgement call in it.)
+2. **Edit `CLAUDE.md` and `README.md`.** Remove `C:\Users\johnb\...` paths, your live URLs, the
    `bbg-garden-inventory` project ID and the "Owner: John Bullivant" line. Keep the architecture,
    the role system, the standing rules and the deploy instructions — that content is exactly what
    makes their copy maintainable, and it is what their Claude will read.
-7. **Add a `LICENSE` and a short "no warranty, no support promise" line in the README.** MIT is the
+3. **Add a `LICENSE` and a short "no warranty, no support promise" line in the README.** MIT is the
    usual choice. This matters more than it sounds: it is the difference between a gift and an
    open-ended obligation.
-8. **Add Part B of this file** as `SETUP.md` at the repo root, so the instructions travel with the
+4. **Add Part B of this file** as `SETUP.md` at the repo root, so the instructions travel with the
    code instead of living in an email.
-9. Push to a **new public repo**, then GitHub → repo **Settings** → tick **Template repository**.
+5. **Fix anything still open in the backlog that a copy would inherit** — `Garden Data\backlog.md`.
+   A weakness in your rules becomes a weakness in every copy, belonging to someone who has no idea
+   it is there. (Item 1, guests writing to Storage, was fixed on 2026-08-20 for exactly this
+   reason.)
+6. Create the **public repo** on GitHub, add it as a second remote, and `git push public main`.
+   Do **not** tick *Template repository* — friends should fork, so they get the Sync fork button.
 
-Before pushing, run the repo's own checks against the copy:
+Before pushing, run the repo's own checks:
 
 ```bash
-node --check apps/garden/js/*.js apps/nursery/js/*.js apps/*/functions/*.js
+node --check apps/garden/js/*.js apps/nursery/js/*.js apps/*/functions/*.js tools/*.mjs
 ```
 
 ```bash
@@ -125,32 +152,30 @@ places they will realistically get stuck are the **first-admin bootstrap** (B7) 
 sign-in failing on a domain that isn't authorised** (B4 step 7). Both are one-liners once you know
 them. Point people at those sections rather than remote-controlling their console.
 
-## A4. Keeping the template current — decide what "current" means
+## A4. How an update reaches them
 
-A copy made from a template does **not** track your repo. There is no automatic update path, by
-design. Your realistic options:
+Once you `git push public main`:
 
-- **Do nothing.** Refresh the template when something worth sharing lands, tell friends there's a
-  new version, and let them decide. This is the right answer to start with.
-- **Let them merge from you.** They add your template as a second remote and merge when they want:
+1. GitHub shows their fork as "N commits behind".
+2. They click **Sync fork → Update branch**.
+3. Netlify rebuilds both their sites automatically.
 
-  ```bash
-  git remote add upstream https://github.com/YOURNAME/garden-apps-template.git
-  ```
+No command line, no conflicts — because they have never edited a tracked file, every sync is a
+fast-forward. That is the property the whole config-from-env change exists to protect. **If you ever
+commit something a copy owner must edit, you break it**, and every future update for every copy
+becomes a merge conflict.
 
-  ```bash
-  git fetch upstream && git merge upstream/main
-  ```
+**Two things a sync cannot carry**, and both fail quietly:
 
-  This works, with one predictable annoyance: their `firebase-config.js` (×2), `.firebaserc` and the
-  two Nursery links conflict on every merge, because those are exactly the files they had to edit.
-  Always the same handful of files, always resolved by keeping their version.
+- **Security rules.** `firestore.rules` and `storage.rules` deploy by CLI, never by Netlify. A rules
+  change reaches their *files* and not their *database*, and a mismatch shows up as empty lists
+  rather than errors.
+- **New environment variables.** A feature that adds one is broken on their site until they add it
+  and redeploy.
 
-- **Optional refinement, only if this becomes a habit:** there is already a build step
-  (`rm -rf shared && cp -r ../../shared shared`). It could also write `firebase-config.js` from a
-  Netlify environment variable at build time, which would take the config out of git entirely and
-  make upstream merges conflict-free. That is a real change to your own repo and its deploy path, so
-  it is only worth doing if you end up with several copies out there. Don't do it for one friend.
+So every release that touches either needs an **Action required** line in `CHANGELOG.md` — `none`,
+`redeploy rules`, `add env var X`, or `data migration`. Without it, "just click Sync fork" is advice
+that quietly breaks people's apps.
 
 ## A5. Things not to do
 
@@ -205,17 +230,21 @@ Do the steps in order. **Step 7 is the one everyone gets stuck on** — read it 
 ## B3. Get your own copy of the code
 
 1. Create a free account at **https://github.com** if you don't have one.
-2. Open the template repo link John sends you and click the green **Use this template** button →
-   **Create a new repository**.
-3. Name it `garden-apps`, choose **Private**, click **Create repository**.
-4. You now have your own copy. You can edit files directly on the GitHub website — nothing to
-   install. To edit a file: click it, click the ✏️ pencil icon, make the change, scroll down, click
-   **Commit changes**.
-5. Edit **`apps/garden/firebase-config.js`**: replace each `REPLACE_WITH_YOUR_...` with the matching
-   value from the Firebase tab you left open. Keep the quote marks. Commit.
-6. Edit **`apps/nursery/firebase-config.js`** the same way, with the **same six values**. Both apps
-   deliberately share one database. Commit.
-7. Edit **`firebase/.firebaserc`** and replace the placeholder with your `projectId`. Commit.
+2. Open the repo link John sends you and click **Fork** (top right) → **Create fork**.
+3. You now have your own copy, and it stays linked to John's. When he releases an update, GitHub
+   shows "this branch is N commits behind" with a **Sync fork** button — one click, and your sites
+   rebuild. That link is why you fork rather than download.
+
+**There is nothing to edit in the code.** Not one file. Your Firebase details go into Netlify as
+settings in the next step, and the app reads them from there when it builds. Keep the Firebase tab
+from B2 open — you'll paste those six values in B4.
+
+> **When you do paste them, never copy a value off a screen that shows it as dots.** Some sites and
+> apps mask keys when displaying them, and copying the mask gives you 30-odd `•` characters that
+> look plausible and are not the key. Copy from the Firebase console's own config block, where the
+> value is shown in full. (This is not hypothetical — it cost John an afternoon. The build now
+> refuses a masked value rather than shipping it, so if you see a build fail complaining about a
+> "non-ASCII character", this is what happened.)
 
 ## B4. Put it on the internet (Netlify)
 
@@ -229,20 +258,43 @@ only Garden is fine; skip the Nursery half of every step below.)
    - **Base directory:** `apps/garden`
    - **Publish directory:** `apps/garden`
    - Leave the build command alone — it comes from the repo.
-4. Before clicking Deploy, open **Add environment variables** and add:
+4. Before clicking Deploy, open **Add environment variables**. This is where your Firebase details
+   go — the app is built from them, so **without these the site loads a green "Setup required"
+   screen**. From the Firebase tab you left open in B2:
 
-   | Key | Value |
+   | Key | Value (from the Firebase config block) |
    |---|---|
-   | `SECRETS_SCAN_OMIT_PATHS` | `firebase-config.js` |
+   | `FIREBASE_API_KEY` | `apiKey` |
+   | `FIREBASE_AUTH_DOMAIN` | `authDomain` |
+   | `FIREBASE_PROJECT_ID` | `projectId` |
+   | `FIREBASE_STORAGE_BUCKET` | `storageBucket` |
+   | `FIREBASE_MESSAGING_SENDER_ID` | `messagingSenderId` |
+   | `FIREBASE_APP_ID` | `appId` |
 
-   **This one is not optional.** Netlify scans for things that look like leaked keys, your Firebase
-   key looks like one, and without this the build fails with a "secrets detected" error. (The key is
-   safe to publish — it identifies your project, it doesn't unlock it. The security rules you deploy
-   in B6 are what protect your data.)
+   Netlify's **Import from a .env file** option lets you paste all six at once as `KEY=value` lines,
+   which is much faster than six separate boxes.
+
+   Two things worth knowing:
+   - **These are per site.** Netlify does not share them between sites, so you will add the *same
+     six values* again on the Nursery site in step 6. That is correct — both apps deliberately use
+     one Firebase project.
+   - **Leave the scope at "All scopes"** so preview builds get them too.
+
+   You do *not* need any secret-scanning settings; those live in the repo already.
 5. Click **Deploy**. Wait a minute. You'll get an address like
    `https://cheerful-marzipan-1a2b3c.netlify.app`. Rename it to something memorable under **Site
    configuration → Change site name** if you like.
-6. **Repeat steps 2–5 for Nursery**, with base and publish directory `apps/nursery`.
+6. **Repeat steps 2–5 for Nursery**, with base and publish directory `apps/nursery`, the **same six
+   `FIREBASE_*` values**, and one extra:
+
+   | Key | Value |
+   |---|---|
+   | `GARDEN_URL` | your Garden site's address, e.g. `https://garden-yourname.netlify.app` |
+
+   Nursery uses it for two links back to Garden — a button in the Admin panel and "View in garden"
+   on a batch you've planted out. Leave it unset and those links simply don't appear, which is what
+   you want if you're only running Nursery. You can add it later once you know the Garden address;
+   remember to redeploy afterwards.
 7. Go back to Firebase: **Authentication → Settings → Authorized domains → Add domain**, and add
    **both** Netlify addresses (just the `something.netlify.app` part, no `https://`). **Google
    sign-in fails with a popup that opens and instantly closes until you do this.**
@@ -293,11 +345,24 @@ npm install -g firebase-tools
 firebase login
 ```
 
-then, from inside the `firebase` folder of your copy:
+then, from inside the `firebase` folder of your copy, tell the CLI which project it is working on:
+
+```bash
+firebase use --add
+```
+
+That lists your Firebase projects, lets you pick one, and writes the `.firebaserc` file it needs.
+**Don't skip it** — without it the next command stops with *"No currently active project"*. (The
+file is deliberately not in the repo, because it names one specific Firebase project and yours is
+not John's.)
+
+Then deploy:
 
 ```bash
 firebase deploy --only firestore:rules,storage
 ```
+
+Add `--dry-run` first if you want to check the files compile without publishing anything.
 
 ## B7. Make yourself the administrator ← the step everyone gets stuck on
 
@@ -330,10 +395,9 @@ who found the URL could. So the first admin is created by hand, once.
 
 ## B9. The last bits
 
-- **Two links point back at John's garden.** Nursery has two hard-coded links to
-  `https://johnandkath.garden`: one in `apps/nursery/js/admin-view.js` (around line 316) and one in
-  `apps/nursery/js/batch-detail.js` (around line 119). Edit both to your own Garden site address, or
-  delete them. Everything else in both apps is generic.
+- **Nothing in the code needs editing** — if you set `GARDEN_URL` in B4 step 6, Nursery's two links
+  to Garden already point at your own site. If you skipped it, they aren't shown at all. Add the
+  variable and redeploy whenever you want them.
 - **Set up your garden first.** Create your **Areas** in Garden and your **Locations** in Nursery
   before adding plants — most forms ask you to pick one. If you have a spreadsheet of plants, the
   Admin panel's **Import from Spreadsheet** section loads them in bulk from a prepared `.json` file;
@@ -350,7 +414,11 @@ who found the URL could. So the first admin is created by hand, once.
 | Everything loads but every list is empty | Security rules not deployed (B6). Rules failures are silent — they look like no data, not like an error. |
 | Google sign-in popup flashes and closes | Your Netlify address isn't in Firebase Authorized domains (B4 step 7). |
 | "Access denied" after signing in | Normal until B7 is done. |
-| Netlify build fails, "secrets detected" | `SECRETS_SCAN_OMIT_PATHS` missing (B4 step 4). |
+| Green "Setup required" screen | The six `FIREBASE_*` variables aren't set on that site, or were added but the site hasn't rebuilt since (B4 step 4). |
+| Build fails: "contains a non-ASCII character" | A value was pasted from a masked display and is full of `•` characters. Re-copy it from the Firebase console config block. The build is stopping this from reaching your live site. |
+| Build fails: "does not look like a Google API key" | `FIREBASE_API_KEY` is truncated or is some other value. It should be 39 characters starting `AIza`. |
+| `firebase deploy` says "No currently active project" | `firebase use --add` hasn't been run in that folder (B6). |
+| Nursery has no links to Garden | `GARDEN_URL` isn't set on the Nursery site, or it hasn't rebuilt since (B4 step 6). Working as designed if you only run Nursery. |
 | Page loads with no styling at all | The build didn't run. Check the site's base directory is `apps/garden` or `apps/nursery`, not the repo root. |
 | Scan label / Look up plant error out | `GEMINI_API_KEY` missing on that site, or added but not redeployed since (B5). |
 | Photos won't upload | The Storage bucket was never created — the Blaze upgrade in B1 step 5 didn't complete. |
