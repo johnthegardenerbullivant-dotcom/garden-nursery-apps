@@ -30,7 +30,7 @@ Three things, four files:
 | 2 | `firebase/.firebaserc` | Their Firebase project ID | Gitignore it; `firebase use --add` creates it locally |
 | 3 | `apps/nursery/js/admin-view.js:316`<br>`apps/nursery/js/batch-detail.js:119` | Hard-coded link to the author's Garden site | Read from a generated `app-config.js`; hide the links when it isn't set |
 
-Nothing else in either app is installation-specific. The manifests, icons, titles, colours, rules
+Nothing else in either app is installation-specific. The manifests, icons, titles, colors, rules
 and role model are all generic already — that was checked, not assumed.
 
 ---

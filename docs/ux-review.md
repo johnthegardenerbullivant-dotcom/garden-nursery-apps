@@ -56,7 +56,7 @@ This makes Dashboard genuinely different from the other pages: it's the "what's 
 
 **The problem.** The Areas list shows each area as a card, but the only information on the card is the area name. You have to tap in to find out whether an area has any active tasks.
 
-**The suggestion.** Add a small badge or subtitle to each area card showing its active task count, e.g. "3 active tasks" or a subtle chip. This lets you spot at a glance which areas need attention without drilling into each one. If an area has overdue tasks, the badge could use the overdue colour. This is especially useful in the multi-user scenario, since a contributor might have added tasks to an area you haven't looked at recently.
+**The suggestion.** Add a small badge or subtitle to each area card showing its active task count, e.g. "3 active tasks" or a subtle chip. This lets you spot at a glance which areas need attention without drilling into each one. If an area has overdue tasks, the badge could use the overdue color. This is especially useful in the multi-user scenario, since a contributor might have added tasks to an area you haven't looked at recently.
 
 ---
 

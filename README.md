@@ -94,7 +94,7 @@ cannot deploy security rules or add environment variables, and both fail *quietl
 carries an **Action required** line for exactly that reason.
 
 **No warranty and no promise of support.** This is a personal project shared in the hope it's
-useful, not a product. It is offered under the [MIT licence](LICENSE), which means you can do
+useful, not a product. It is offered under the [MIT license](LICENSE), which means you can do
 essentially what you like with it and it comes with no guarantees. Your copy is yours: your Firebase
 project, your data, your bill. Bug reports and questions are welcome and may go unanswered.
 

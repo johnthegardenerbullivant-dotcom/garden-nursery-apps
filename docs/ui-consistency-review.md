@@ -72,9 +72,9 @@ There are also two different upload progress bars for the same job — Garden's
 
 ---
 
-## 2. Cultivar capitalisation
+## 2. Cultivar capitalization
 
-**Confirmed, and it's a one-attribute difference.** Neither app normalises text on save — this is
+**Confirmed, and it's a one-attribute difference.** Neither app normalizes text on save — this is
 purely the mobile keyboard's `autocapitalize` hint.
 
 Garden's plant form sets it deliberately per field ([`plants-view.js:1006–1050`](../apps/garden/js/plants-view.js:1006)):
@@ -93,7 +93,7 @@ Garden's plant form sets it deliberately per field ([`plants-view.js:1006–1050
 So typing *new dawn* gives you **New Dawn** in Garden and **New dawn** in Nursery. On a desktop
 keyboard there's no difference at all, which is why it only shows up on the phone.
 
-Nursery's placeholders have drifted to match its own behaviour too — `e.g. Dog rose` where Garden
+Nursery's placeholders have drifted to match its own behavior too — `e.g. Dog rose` where Garden
 says `e.g. Dog Rose`, and `e.g. New Dawn` for a field that won't produce that.
 
 **The rule I'd adopt** — one table, applied identically in both apps:
@@ -104,9 +104,9 @@ species, subspecies, variety, epithets, tags, email                             
 task titles, notes, descriptions, observations, blog titles, wishlist items          → autocapitalize="sentences"
 ```
 
-A second option was to *also* normalise on save (`toTitleCase` on cultivar and common name), which
+A second option was to *also* normalize on save (`toTitleCase` on cultivar and common name), which
 would fix records already stored in lower case. **Decided against** — see Decisions #2. The
-`autocapitalize` hint is overridable by the typist; normalising on save is not, and would silently
+`autocapitalize` hint is overridable by the typist; normalizing on save is not, and would silently
 rewrite deliberate lower-case entries.
 
 ---
@@ -218,9 +218,9 @@ Both stylesheets use CSS variables that are **never defined anywhere**:
 steps were used but never added.
 
 An undefined variable makes the declaration *invalid at computed-value time*. For `color` that
-means the element **inherits** its parent's colour instead; for `border-color` it falls back to
+means the element **inherits** its parent's color instead; for `border-color` it falls back to
 `currentColor`. So every `color: var(--grey-500)` — the muted-text colour, used 79 times across
-both apps — is silently rendering as whatever the parent's text colour happens to be. That's why
+both apps — is silently rendering as whatever the parent's text color happens to be. That's why
 secondary text looks subtly different from card to card: it *is* different, and it's an accident.
 
 This is the single highest-value fix in this document. It's eight lines of CSS per app and it will
@@ -243,7 +243,7 @@ visibly change the look of both — for the better, but worth seeing on a deploy
 | Upload progress | `.upload-progress` / `-bar` | `.photo-upload-bar` / `-fill` / `-label` | |
 | Empty state | `.empty-state` + `.empty-state-icon` (emoji) | `.empty-state` only, no icon, plus one-off `.empty-hint` | |
 
-`.plant-card` means different things in each app: in Garden it's a full-width tile with a coloured
+`.plant-card` means different things in each app: in Garden it's a full-width tile with a colored
 banner; in Nursery it's a dense row. Same name, different component.
 
 ## 2.3 Page width and padding differ between the apps
@@ -294,7 +294,7 @@ An editor in Garden can add plants and tasks but not areas or area photos. The
 [`ux-review.md`](ux-review.md) §6 note about the Admin tab being visible to editors is still open,
 and Nursery has since resolved the same question the other way.
 
-## 2.6 Behavioural differences
+## 2.6 Behavioral differences
 
 - **Filter persistence.** Nursery's Batches list persists status, stage, search, sort and origin to
   `sessionStorage` and restores them after you visit a detail page. Garden keeps only the Plants
@@ -312,7 +312,7 @@ and Nursery has since resolved the same question the other way.
 - Primary buttons in modal footers read *Save*, *Save area*, *Save changes*, *Save entry*,
   *Add plant*, *Assign task*, *🍂 Move to Compost Bin*, *🪴 Send to nursery*. The footer *layout* is
   consistent everywhere (Cancel left, primary right) — it's only the wording that wanders.
-- **Heading capitalisation is mixed in both apps, differently.** Garden uses Title Case —
+- **Heading capitalization is mixed in both apps, differently.** Garden uses Title Case —
   *Database Summary*, *Data Quality*, *Import from Spreadsheet*, *Botanical Identity*,
   *Common Information*, *Garden Locations* — but *Plants in this area* in sentence case, in the same
   view as *Danger Zone*. Nursery uses sentence case in content views (*Active batches*,
@@ -356,7 +356,7 @@ Drift has become a nuisance. The shape:
 ```
 garden-apps/
 ├── shared/
-│   ├── tokens.css        ← the complete colour ramp, spacing, radii, shadows, type scale
+│   ├── tokens.css        ← the complete color ramp, spacing, radii, shadows, type scale
 │   ├── base.css          ← reset, header, nav, modal, toast, forms, page container
 │   ├── components.css    ← one canonical name per component
 │   ├── ui-utils.js       ← today's duplicated copy, now single-source
@@ -413,7 +413,7 @@ or neither.
 
 React/Svelte + a component library. **I'd advise against it.** These are working apps with real
 data and a genuinely nice no-build-step property that makes them easy for you to maintain
-single-handed. The problems above are all *organisational*, not architectural — a framework would
+single-handed. The problems above are all *organizational*, not architectural — a framework would
 solve them incidentally while costing a full rewrite, a build toolchain, an npm dependency tree,
 and every one of your Firestore integration points re-tested. The cost isn't proportionate to the
 benefit.
@@ -447,7 +447,7 @@ Phases 1–3 are worth doing whichever option you pick. Phase 4 is the decision 
 | 1a | Nursery's second (📷 scan) FAB | **Remove it.** It opens the same batch form as ➕, which already offers the scan card. The FAB is redundant, not a shortcut worth a second floating circle. |
 | 1b | Garden's Tasks view-toggle (By Area / By Status) | **Move it out of the header** into the content area, alongside the filter chips — matching Nursery's Batches layout. |
 | 1c | Where delete lives on a detail page | **Nursery's way** — a header icon button beside edit. Cleaner than burying it in the edit form. Garden's Plant, Area and Blog detail views change to match. |
-| 2 | Title-casing cultivar and common name | **Keyboard hint only** — `autocapitalize="words"`, which the user can always override by backspacing. **Do not** normalise on save: that would silently rewrite deliberate lower-case entries such as `× heucherella`. Note this only affects touch keyboards; desktop typing is unchanged. |
+| 2 | Title-casing cultivar and common name | **Keyboard hint only** — `autocapitalize="words"`, which the user can always override by backspacing. **Do not** normalize on save: that would silently rewrite deliberate lower-case entries such as `× heucherella`. Note this only affects touch keyboards; desktop typing is unchanged. |
 | 3 | Can an editor add areas and area photos in Garden? | **Yes.** Change `isAtLeast('admin')` → `isAtLeast('editor')` on the Areas FAB, the area-photo upload strip and the area edit button. Deletion stays `admin`. |
 | 4 | Nursery's 680px column | **Not deliberate** — an accident of the fork. Reconcile to Garden's single container: one 16px gutter, 1100px desktop cap. Keep a bottom-padding reserve so the FAB stops covering the last row (which fixes Garden too). |
 | 5 | Emoji and heading case | **Sentence case everywhere.** Keep emoji for Admin-panel section headings in both apps; remove the stray *⚠️* from Nursery's Dashboard heading. |
@@ -522,7 +522,7 @@ Two loose ends left by the Option A work, worth tidying whichever way this goes:
 | 14 | Filter/sort state persists in Nursery Batches only | Low | Medium |
 | 15 | Section-heading visual language differs (green card label vs grey page heading) | Low | Medium |
 | 16 | Primary button labels wander across 8 variants | Low | Trivial |
-| 17 | Heading capitalisation mixes Title Case and sentence case in both apps, differently | Low | Trivial |
+| 17 | Heading capitalization mixes Title Case and sentence case in both apps, differently | Low | Trivial |
 | 18 | Nav says "Overview"; code, CSS and docs say "Dashboard" | Low | Trivial |
 | 19 | Empty states have icons in Garden, not in Nursery | Low | Trivial |
 | 20 | `--amber` defined in both, used in neither | Cosmetic | Trivial |

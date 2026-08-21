@@ -54,7 +54,7 @@ garden-apps/
 ├── .gitignore  .gitattributes
 │
 ├── shared/                   ← ONE copy of the design layer, used by both apps
-│   ├── tokens.css            ← :root — colour ramps, spacing, radii, shadows, type
+│   ├── tokens.css            ← :root — color ramps, spacing, radii, shadows, type
 │   ├── base.css              ← reset, header, account menu, main, loading, bottom nav
 │   └── components.css        ← buttons, cards, forms, modal, toast, photos, search,
 │                                filter chips, empty states, user-management rows

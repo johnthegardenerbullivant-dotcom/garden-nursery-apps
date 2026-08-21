@@ -18,10 +18,10 @@ requires a card on file before it will store photos.
 
 | Thing | Cost | Notes |
 |---|---|---|
-| Firebase, Blaze plan | **Card required**, ~£0/month in practice | Since 3 Feb 2026 a new project must be on Blaze to create a photo bucket at all. Free allowances still apply — 5 GB storage, 100 GB/month transfer. A household garden won't approach that. |
+| Firebase, Blaze plan | **Card required**, ~$0/month in practice | Since 3 Feb 2026 a new project must be on Blaze to create a photo bucket at all. Free allowances still apply — 5 GB storage, 100 GB/month transfer. A household garden won't approach that. |
 | Netlify | Free | Two sites, 100 GB bandwidth, 125k function calls/month. |
 | Gemini API key | Free tier, or pennies | Only for label scanning and AI plant lookup. Everything else works without it. |
-| Domain name | £0 or ~£12/year | A free `something.netlify.app` address is fine. |
+| Domain name | $0 or ~$15/year | A free `something.netlify.app` address is fine. |
 
 **The card is the thing worth knowing up front**: photos will not work at all without it.
 
@@ -44,7 +44,7 @@ Do the steps in order. **Step 7 is the one everyone gets stuck on** — read it 
      Storage is where plant photos live, and since February 2026 a new project cannot create a photo
      bucket without it. The free allowance on Blaze (5 GB) still applies, and a home garden will not
      get close to it.
-   - Set a budget alert at £1 while you're there — Firebase offers this during the upgrade.
+   - Set a budget alert at $1 while you're there — Firebase offers this during the upgrade.
 6. In the left menu click **Build → Authentication → Get started**, then enable these three
    sign-in methods:
    - **Google**
@@ -84,7 +84,7 @@ You'll create **two** websites from the one repository — one for Garden, one f
 only Garden is fine; skip the Nursery half of every step below.)
 
 1. Sign up at **https://app.netlify.com** — choose **Sign up with GitHub**.
-2. Click **Add new site → Import an existing project → GitHub**, authorise Netlify when asked, and
+2. Click **Add new site → Import an existing project → GitHub**, authorize Netlify when asked, and
    pick your `garden-apps` repository.
 3. On the configuration screen, set:
    - **Base directory:** `apps/garden`

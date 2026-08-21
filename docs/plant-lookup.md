@@ -146,5 +146,5 @@ regression has one possible cause:
 - Grounded search is nondeterministic: the same plant can return different sources run to run, and a
   slow tail still occasionally overruns the budget. Re-running usually works.
 - Fact quality depends on full Flash, restored and confirmed working 2026-08-18. If lookups are ever
-  moved back to Flash-Lite, expect weaker categorisation and watch the discard warnings.
+  moved back to Flash-Lite, expect weaker categorization and watch the discard warnings.
 - `scope` is derived from the request rather than the model, which kept returning nothing for it.
