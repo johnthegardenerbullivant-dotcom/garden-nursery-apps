@@ -1,6 +1,6 @@
 # garden-apps 🌿
 
-Private monorepo for two Progressive Web Apps that share one Firebase project:
+A monorepo for two Progressive Web Apps that share one Firebase project:
 
 - **Garden Management** (`apps/garden`) — plant collection by area, tasks, irrigation, a garden
   journal/blog, and a compost-bin log of plants that didn't make it.
@@ -66,11 +66,11 @@ node tools/check-drift.mjs
 
 ## Notes
 
-This repo is **private**, and as of 2026-08-20 it contains **no** Firebase credentials — they are
-generated at build time from environment variables. That config was never really a secret (anyone
-can read it from the live site's source, and Firestore rules are what protect the data); it is out
-of git so that a copy of this repo has no file its owner must edit, and can therefore take updates
-as a clean fast-forward. See [`docs/distribution-plan.md`](docs/distribution-plan.md).
+As of 2026-08-20 this repository contains **no** Firebase credentials — they are generated at build
+time from environment variables. That config was never really a secret (anyone can read it from a
+live site's source, and Firestore rules are what protect the data); it is out of git so that a copy
+has **no file its owner must edit**, and can therefore take updates as a clean fast-forward. See
+[`docs/distribution-plan.md`](docs/distribution-plan.md).
 
 Backups, `plant-import.json`, the backlog and archived material live **outside** the repo. In a
 working checkout, a gitignored `LOCAL.md` records where — along with the project ID and live URLs,

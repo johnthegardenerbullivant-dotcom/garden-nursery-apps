@@ -8,7 +8,7 @@ data model, and the deploy workflow. Each app has its own `CLAUDE.md` with its m
 
 ## Snapshot
 
-Two Progressive Web Apps, one Firebase project, one private repo, two Netlify sites.
+Two Progressive Web Apps, one Firebase project, one repo, two Netlify sites.
 
 | | Garden Management | Nursery Management |
 |---|---|---|
@@ -269,7 +269,7 @@ composite indexes or fight Netlify.
    ```
    node --check apps/garden/js/*.js apps/nursery/js/*.js apps/*/functions/*.js tools/*.mjs
    ```
-2. **No AI-authored production deploys without John's review.** Push to a branch, look at the
+2. **No AI-authored production deploys without the repo owner's review.** Push to a branch, look at the
    Netlify deploy preview, then merge. Never straight to `main`.
 3. **A new Firestore collection in a `db.js` needs its rule block in `firebase/firestore.rules` in
    the same commit.** Firestore denies anything not explicitly matched, and it fails *silently* in
