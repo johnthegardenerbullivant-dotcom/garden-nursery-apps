@@ -12,7 +12,7 @@ system and the deploy workflow are in the [root `CLAUDE.md`](../../CLAUDE.md) �
 - **What it is:** a PWA for tracking propagation batches — seeds, cuttings, division, grafting and
   more — from first sowing through to planted-out, given-away, retired or lost, so you learn what
   actually works
-- **Live URL:** https://nursery.johnandkath.garden/
+- **Live URL:** set per installation — see `LOCAL.md` if this checkout has one
 - **This folder is both the Netlify base directory and the publish directory.**
 - **No Quill.** Nursery has no rich-text editor, so it doesn't load Quill (Garden does).
 

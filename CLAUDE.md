@@ -15,10 +15,14 @@ Two Progressive Web Apps, one Firebase project, one private repo, two Netlify si
 | What it does | Plant collection, areas, tasks, irrigation, blog/journal, compost bin | Propagation batches from sowing to planted-out, given-away or lost |
 | Folder | `apps/garden/` | `apps/nursery/` |
 | JS modules | 15 | 20 |
-| Live URL | https://johnandkath.garden/ | https://nursery.johnandkath.garden/ |
+| Netlify site | #1 | #2 |
 
-- **Owner:** John Bullivant
-- **Firebase project:** `bbg-garden-inventory` — Firestore + Storage + Auth, shared by both apps
+- **Firebase project:** one project — Firestore + Storage + Auth — **shared by both apps**. Which
+  project is set per installation, via the `FIREBASE_*` environment variables on each Netlify site;
+  nothing in this repo names it.
+- **Installation-specific details** — project ID, live URLs, where the private data folder is on
+  this machine — live in **`LOCAL.md`** at the repo root, which is gitignored. If this checkout has
+  one, read it. A fresh clone won't, and nothing breaks without it.
 - **They are companions, and they write into each other in both directions.** Planting out a Nursery
   batch writes a `plants` record (if needed) and an `instances` record straight into Garden's
   collections (`plantOutToGarden()`, `apps/nursery/js/db.js`); transferring a garden plant to the
@@ -83,9 +87,9 @@ garden-apps/
                                  runtime-built names like `stage-${…}`
 ```
 
-**Private data lives outside the repo** at `C:\Users\johnb\Documents\Claude\Garden Data\` —
-`Backups/`, `plant-import.json`, and `Archive/`. Never commit any of it; `.gitignore` covers the
-obvious names but the rule is the habit, not the file.
+**Private data lives outside the repo entirely** — backups, the bulk plant import, the backlog and
+archived material. `LOCAL.md` says where, on this machine. Never commit any of it; `.gitignore`
+covers the obvious names but the rule is the habit, not the file.
 
 ---
 
@@ -274,7 +278,8 @@ composite indexes or fight Netlify.
 4. **Run `node tools/check-drift.mjs` before pushing changes to `auth.js`, `ui-utils.js`,
    `scan-label.js`, `functions/lookup-plant.js` or `js/plant-lookup.js`.** Exit 0 is clean;
    warnings are known deltas.
-5. **Never commit a backup JSON or `plant-import.json`.** They belong in `Garden Data\`.
+5. **Never commit a backup JSON or `plant-import.json`.** They belong in the private data folder
+   outside the repo — `LOCAL.md` says where.
 6. **Commit style:** conventional prefixes — `feat:`, `fix:`, `chore:`, `docs:`. Branches:
    `feature/…`, `fix/…`.
 7. **Verify by running it, not by reading it.** "The diff looks right" and "the thing works" are
@@ -296,8 +301,8 @@ composite indexes or fight Netlify.
 
 ## Known issues
 
-**The backlog lives outside the repo**, at `C:\Users\johnb\Documents\Claude\Garden Data\backlog.md`,
-alongside the other private material. It is the record of agreed future changes, deferred
+**The backlog lives outside the repo**, in the private data folder alongside the other private
+material (`LOCAL.md` says where, on this machine). It is the record of agreed future changes, deferred
 deliberately rather than forgotten — read it before assuming something is a new bug.
 
 It was moved out on 2026-08-20, when this repo stopped being for one person. A backlog is a list of
@@ -323,11 +328,13 @@ file and confirm Nursery skips, then the reverse.
 
 ## History
 
-Both sites serve from the custom domain `johnandkath.garden`, so Netlify's own
-`*.netlify.app` site names aren't recorded here — identify each site in the Netlify dashboard by its
-domain.
+Where an installation serves from a custom domain, Netlify's own `*.netlify.app` site names are easy
+to lose track of — identify each site in the Netlify dashboard by its domain.
 
-Repo history before 2026-08 is in `Garden Data\Archive\CHANGELOG.md`, outside git — it was archived
-during the restructure on the grounds that git history supersedes it. From 2026-08 onward, per-change
-detail lives in commit messages. The restructure itself is documented in
-[`docs/restructure-plan.md`](docs/restructure-plan.md).
+Repo history before 2026-08 was archived outside git during the monorepo restructure, on the grounds
+that git history supersedes it. From 2026-08 onward, per-change detail lives in commit messages and
+in [`CHANGELOG.md`](CHANGELOG.md).
+
+The restructure plan and the original Claude Code handoff moved out to that same archive on
+2026-08-21: they are finished project records, thick with one machine's folder paths, rather than
+live documentation.

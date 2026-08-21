@@ -113,16 +113,26 @@ is the whole point of the config work — see [`distribution-plan.md`](distribut
 
 What's left is documentation hygiene:
 
-1. **Strip the internal docs.** `docs/restructure-plan.md`, `docs/ui-consistency-review.md`,
-   `docs/ux-review.md`, `docs/claude-code-handoff.md` and this file are your working notes and mean
-   nothing to anyone else. Keep `data-model.md`, `plant-lookup.md`, `nursery-design.md` and
-   `label-scan-spec.md` — those are genuinely useful to a copy owner and to their Claude.
-   (`docs/backlog.md` is already gone — it moved to `Garden Data\` on 2026-08-20, precisely so this
-   step has one less judgement call in it.)
-2. **Edit `CLAUDE.md` and `README.md`.** Remove `C:\Users\johnb\...` paths, your live URLs, the
-   `bbg-garden-inventory` project ID and the "Owner: John Bullivant" line. Keep the architecture,
-   the role system, the standing rules and the deploy instructions — that content is exactly what
-   makes their copy maintainable, and it is what their Claude will read.
+1. ~~**Strip the internal docs.**~~ **Done 2026-08-21, partly.** `restructure-plan.md` and
+   `claude-code-handoff.md` moved to the archive — finished project records, thick with one
+   machine's folder paths. `backlog.md` went to the private data folder on 2026-08-20.
+   `ui-consistency-review.md` and `ux-review.md` **stay**: they carry the reasoning behind decisions
+   that shouldn't be re-opened, and nothing personal. So do `data-model.md`, `plant-lookup.md`,
+   `nursery-design.md` and `label-scan-spec.md` — genuinely useful to a copy owner and to their
+   Claude.
+2. ~~**Edit `CLAUDE.md` and `README.md`.**~~ **Done 2026-08-21.** The scrub was not really about
+   secrecy — the project ID and the live URLs are readable by anyone who views source on the live
+   site. It was about **correctness in a fork**: a copy whose docs name someone else's Firebase
+   project and web addresses is simply wrong for its owner.
+
+   The details moved to **`LOCAL.md`** at the repo root, which is gitignored, and the tracked docs
+   point at it conditionally — "if this checkout has one". A fresh clone has no `LOCAL.md` and
+   nothing breaks.
+
+   **Note the constraint that forces this.** Both remotes push the same content, so
+   "private-but-not-public" does not exist: anything left in a tracked file *is* published. The
+   choice is to scrub it or to publish it, and there is no third option short of maintaining a
+   separate publish branch, which is a permanent tax.
 3. ~~**Add a `LICENSE`** and a "no warranty, no support promise" line in the README.~~
    **Done 2026-08-20** — MIT, plus a *Copies and support* section in the README. It matters more
    than it sounds: it is the difference between a gift and an open-ended obligation.
@@ -130,7 +140,8 @@ What's left is documentation hygiene:
    [`SETUP.md`](../SETUP.md) rather than being copied there, so there is only ever one guide to keep
    correct. A `CHANGELOG.md` was added at the same time, with the **Action required** line per
    release that a fork owner depends on.
-5. **Fix anything still open in the backlog that a copy would inherit** — `Garden Data\backlog.md`.
+5. **Fix anything still open in the backlog that a copy would inherit** — it lives in the private
+   data folder, outside the repo.
    A weakness in your rules becomes a weakness in every copy, belonging to someone who has no idea
    it is there. (Item 1, guests writing to Storage, was fixed on 2026-08-20 for exactly this
    reason.)
@@ -181,7 +192,7 @@ that quietly breaks people's apps.
 
 ## A5. Things not to do
 
-- **Do not give them your Firebase project details.** Sharing `bbg-garden-inventory` would put their
+- **Do not give them your Firebase project details.** Sharing your Firebase project would put their
   plants in your database and hand them your data. Every copy needs its own project.
 - **Do not let them connect a Netlify site to your repo.** Their site would then rebuild from your
   commits, which is the tail wagging the dog.

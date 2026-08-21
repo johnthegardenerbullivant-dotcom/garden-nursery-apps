@@ -28,7 +28,7 @@ Three things, four files:
 |---|---|---|---|
 | 1 | `apps/garden/firebase-config.js`<br>`apps/nursery/firebase-config.js` | Their Firebase credentials | Generate at build time from environment variables; gitignore the file |
 | 2 | `firebase/.firebaserc` | Their Firebase project ID | Gitignore it; `firebase use --add` creates it locally |
-| 3 | `apps/nursery/js/admin-view.js:316`<br>`apps/nursery/js/batch-detail.js:119` | Hard-coded `https://johnandkath.garden` | Read from a generated `app-config.js`; hide the links when it isn't set |
+| 3 | `apps/nursery/js/admin-view.js:316`<br>`apps/nursery/js/batch-detail.js:119` | Hard-coded link to the author's Garden site | Read from a generated `app-config.js`; hide the links when it isn't set |
 
 Nothing else in either app is installation-specific. The manifests, icons, titles, colours, rules
 and role model are all generic already — that was checked, not assumed.
@@ -145,8 +145,8 @@ where the repo contains live credentials and your local folder paths. Changes 1�
 credentials. What's left to clean is small and bounded:
 
 - ~~**`docs/backlog.md` must move or be fixed first.**~~ **Done 2026-08-20** — moved to
-  `Garden Data\backlog.md`. It was a written list of known weaknesses in a running system, which is
-  the one genuinely bad thing to publish alongside the code.
+  the private data folder, outside the repo. It was a written list of known weaknesses in a running
+  system, which is the one genuinely bad thing to publish alongside the code.
 
   **But moving it did not fix anything.** Backlog item 1 — the Storage rules gate on
   `request.auth != null`, which is true for anonymous guests, so a guest can upload to and delete
@@ -154,15 +154,23 @@ credentials. What's left to clean is small and bounded:
   repo**, and handing the app to more people multiplies the exposed buckets rather than diluting
   them. The cheap fix is one line (`request.auth.token.firebase.sign_in_provider != 'anonymous'`);
   the thorough one is custom auth claims. **Fix it before any copy goes out.**
-- **Scrub `C:\Users\johnb\...` paths, "Owner: John Bullivant", and the `Garden Data\` references**
-  from `CLAUDE.md` and `README.md`. Keep everything architectural — that content is what makes a
-  copy maintainable, and it is what a copy owner's Claude will read.
-- **`docs/restructure-plan.md`, `ui-consistency-review.md`, `ux-review.md`, `claude-code-handoff.md`
-  and `making-a-copy.md` Part A** are your working notes. Move them out or accept that they're
-  public; nothing in them is dangerous, they're just noise for a stranger.
-- **Your live URLs and Firebase project ID are already public** — anyone can read both from your
-  site's source today. Removing them from the repo changes nothing either way, so don't agonise
-  over it.
+- ~~**Scrub the local paths, owner line and private-data-folder references**~~ **Done 2026-08-21.** They
+  moved to a gitignored **`LOCAL.md`** at the repo root, which the tracked docs reference
+  conditionally. Everything architectural stayed — that content is what makes a copy maintainable
+  and is what a copy owner's Claude reads.
+
+  The reason turned out not to be secrecy. The live URLs and the Firebase project ID are readable by
+  anyone who views source on the live site, so removing them protects nothing. The reason is
+  **correctness in a fork**: a copy whose docs name someone else's project and web addresses is
+  wrong for its owner, and quietly misleading to their Claude.
+
+  **The constraint that forces the choice:** both remotes push the same content, so
+  "private-but-not-public" does not exist. Anything left in a tracked file *is* published. Scrub it
+  or publish it — the only third option is a separate publish branch, which is a permanent tax.
+- ~~**The working-note docs.**~~ **Partly done 2026-08-21.** `restructure-plan.md` and
+  `claude-code-handoff.md` moved to the archive: finished project records, thick with one machine's
+  folder paths. `ui-consistency-review.md`, `ux-review.md` and this file **stay** — nothing in them
+  is dangerous, and the reasoning they carry is worth keeping next to the code.
 - **The API key stays in git history** even after the file is removed. Not a leak — it is
   public-by-design and readable from your live site — but if it ever bothers you, restrict the key
   by HTTP referrer in the Google Cloud console rather than trying to rewrite history.

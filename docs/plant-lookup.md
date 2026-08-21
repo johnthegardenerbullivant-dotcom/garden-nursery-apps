@@ -129,8 +129,10 @@ regression has one possible cause:
 ## Design decisions worth not re-opening
 
 - **Notes stays plain text.** Rich text would mean migrating every record and adding an editor to
-  both apps. See item 4 of the backlog (`Garden Data\backlog.md`, outside this repo) for the cheap
-  alternative: linkify at render time.
+  both apps. The cheap alternative is to linkify at render time — escape first, then wrap bare
+  `https?://…` runs in an anchor, or the anchor itself gets escaped. No data change, no migration,
+  and it applies retroactively to every note already written. (Tracked as item 4 of the backlog,
+  which lives outside this repo.)
 - **Nothing touches the form until the button is pressed.** Unlike the label scan's `applyFields()`,
   which fills silently — fine for a genus, wrong for four paragraphs of researched prose.
 - **Notes are appended, never replaced.** Enriching a plant that already has notes is the common

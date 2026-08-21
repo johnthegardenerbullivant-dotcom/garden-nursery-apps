@@ -10,8 +10,9 @@ Private monorepo for two Progressive Web Apps that share one Firebase project:
 They're companions: plant out a batch in Nursery and it appears as a specimen in Garden
 automatically. Either runs on its own.
 
-**Live sites:** [johnandkath.garden](https://johnandkath.garden/) ·
-[nursery.johnandkath.garden](https://nursery.johnandkath.garden/)
+Each installation runs its own copy — its own Firebase project, its own data, its own web address.
+Nothing in this repository is specific to any one of them; see [`SETUP.md`](SETUP.md) to stand one
+up.
 
 ## Layout
 
@@ -71,8 +72,10 @@ can read it from the live site's source, and Firestore rules are what protect th
 of git so that a copy of this repo has no file its owner must edit, and can therefore take updates
 as a clean fast-forward. See [`docs/distribution-plan.md`](docs/distribution-plan.md).
 
-Backups, `plant-import.json` and archived material live **outside** the repo, in
-`C:\Users\johnb\Documents\Claude\Garden Data\`. Never commit them.
+Backups, `plant-import.json`, the backlog and archived material live **outside** the repo. In a
+working checkout, a gitignored `LOCAL.md` records where — along with the project ID and live URLs,
+which are deliberately not tracked so a fork doesn't inherit another installation's details.
+Never commit any of it.
 
 Architecture and working conventions are in **[`CLAUDE.md`](CLAUDE.md)**, the Firestore data model in
 [`docs/data-model.md`](docs/data-model.md), and per-app module maps in
