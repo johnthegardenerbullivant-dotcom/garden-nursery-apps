@@ -88,6 +88,8 @@ garden-apps/
 ├── docs/                     ← design notes, specs, the restructure plan
 └── tools/
     ├── build.mjs             ← THE build: copies /shared, generates the two config files
+    ├── check-public.mjs      ← "have I released what I merged?" Merging publishes
+    │                            NOTHING; a separate push to the public remote does.
     ├── check-drift.mjs       ← guards the deliberately-duplicated files
     └── find-dead-css.mjs     ← reports unused class selectors; understands
                                  runtime-built names like `stage-${…}`

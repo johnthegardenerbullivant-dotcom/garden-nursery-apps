@@ -23,6 +23,21 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 
 ---
 
+## 2026-08-21
+
+**Action required: none.** Documentation only — sync and you're done.
+
+- **`SUPPORT.md` added**, along with issue templates. It leads with the fix rather than the contact
+  details, because one problem dominates: the app loads, every list is empty, and there is no error
+  message. That's security rules that haven't been deployed.
+- **Questions and ideas now belong in Discussions**, bugs in Issues. The bug form asks which app,
+  what role your account has, and whether you've done the **Action required** steps for your
+  version — that last one resolves most reports on its own.
+- **Installation-specific details moved out of the tracked files.** Nothing in this repository now
+  names any particular Firebase project, web address or folder path, so a fork doesn't inherit
+  another installation's details as though they were its own.
+- **Prices are in US dollars**, and the documentation no longer describes itself as a private repo.
+
 ## 2026-08-20
 
 **Action required: redeploy rules.**

@@ -21,7 +21,7 @@ apps/garden/     Netlify site #1 — base and publish directory
 apps/nursery/    Netlify site #2 — same
 firebase/        firestore.rules, storage.rules, cors.json — one copy, deployed by CLI
 docs/            design notes, the label-scan spec, the restructure plan
-tools/           build.mjs, check-drift.mjs, find-dead-css.mjs
+tools/           build.mjs, check-drift.mjs, check-public.mjs, find-dead-css.mjs
 SETUP.md         how to stand up your own copy, from nothing
 CHANGELOG.md     what each release asks of you if you run a copy
 ```
