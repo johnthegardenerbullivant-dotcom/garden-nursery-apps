@@ -1,7 +1,7 @@
 # Support
 
 This is a personal project, shared in the hope it's useful. There's **no warranty and no promise of
-support** — see the [licence](LICENSE). Questions and bug reports are welcome and may go unanswered.
+support** — see the [license](LICENSE). Questions and bug reports are welcome and may go unanswered.
 
 That said, most problems people hit are one of about five things, and you can usually fix them
 faster than anyone can answer you.

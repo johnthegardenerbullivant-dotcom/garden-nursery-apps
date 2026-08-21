@@ -101,7 +101,7 @@ The form adapts based on method and source type:
 - Current quantity tracker with loss running total
 - "+ Log Entry" button (opens log form)
 - Log entries listed newest-first, each showing: date, observation, stage change (if any), losses, photo thumbnail
-- "Finalise / Complete Batch" button when stage = ready (or earlier if all lost)
+- "Finalize / Complete Batch" button when stage = ready (or earlier if all lost)
 
 ### Log Entry Form
 - Date (defaults to today)
@@ -110,7 +110,7 @@ The form adapts based on method and source type:
 - Observation (free text)
 - Photos (optional, same compression as Garden Mgmt)
 
-### Finalise Batch Form
+### Finalize Batch Form
 - Choose outcome for N plants:
   - 🏡 **Planted out** → select area from Garden Management (auto-creates an Instance in Garden Mgmt)
   - 🎁 **Given away** → enter recipient name + optional note
@@ -145,8 +145,8 @@ The form adapts based on method and source type:
 ```
 {
   plantId:        string | null,   // ref to Garden Mgmt `plants` collection (optional)
-  plantName:      string,          // denormalised common name
-  botanicalName:  string,          // denormalised
+  plantName:      string,          // denormalized common name
+  botanicalName:  string,          // denormalized
   method:         'seed' | 'stem-cutting' | 'hardwood-cutting' | 'root-cutting' | 'leaf-cutting' | 'division' | 'layering-offset' | 'grafting',
 
   source: {
@@ -199,7 +199,7 @@ The form adapts based on method and source type:
   type:           'planted-out' | 'given-away' | 'lost',
   quantity:       number,
   areaId:         string | null,   // Garden Mgmt area (if planted-out)
-  areaName:       string | null,   // denormalised
+  areaName:       string | null,   // denormalized
   recipientName:  string | null,   // if given-away
   notes:          string,
   createdAt:      Timestamp
@@ -258,7 +258,7 @@ Nursery Management/
         ├── ui-utils.js              ← reused from Garden Mgmt (copy + extend)
         ├── auth-view.js             ← reused from Garden Mgmt (copy)
         ├── dashboard-view.js        ← Dashboard tab
-        ├── batches-view.js          ← Batches list + Batch detail + Log form + Finalise form
+        ├── batches-view.js          ← Batches list + Batch detail + Log form + Finalize form
         ├── plants-view.js           ← Plants propagation history view
         ├── stats-view.js            ← Stats / analytics view
         └── admin-view.js            ← Admin panel
@@ -278,7 +278,7 @@ New Batch form (with plant picker cross-referencing Garden Mgmt), Batch list wit
 Add Log Entry form on each batch (observation, loss count + reason, stage change, photo upload). Photo compression + carousel. Chronological log on batch detail.
 
 ### Phase 4 — Outcomes + Auto-sync
-"Finalise batch" flow: planted out (auto-creates Instance in Garden Mgmt area), given away (recipient), partial outcomes. Batch marked completed. Dashboard and Plants view populated from real data.
+"Finalize batch" flow: planted out (auto-creates Instance in Garden Mgmt area), given away (recipient), partial outcomes. Batch marked completed. Dashboard and Plants view populated from real data.
 
 ### Phase 5 — Stats + Intelligence
 Success rate by plant, by method, by season. Loss reason breakdown. Simple SVG charts. "What's working" and "watch out for" callouts.
@@ -299,7 +299,7 @@ Reuses the Garden Management role system (same Firebase Auth, same `users` colle
 
 ## Design Notes
 
-- **Colour palette:** Same green CSS variables as Garden Management — users will feel at home instantly.
+- **Color palette:** Same green CSS variables as Garden Management — users will feel at home instantly.
 - **No build step:** Edit files in `Netlify Deploy/`, push to Netlify. Identical workflow to Garden Mgmt.
 - **Mobile-first:** Same fixed header + bottom nav + content area pattern.
 - **Learning orientation:** Every screen should feel like it's helping John understand what's working, not just storing data.

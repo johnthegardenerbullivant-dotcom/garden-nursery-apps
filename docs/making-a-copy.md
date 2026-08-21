@@ -44,10 +44,10 @@ your plants and you cannot see theirs.
 
 | Thing | Cost | Notes |
 |---|---|---|
-| Firebase, Blaze plan | **Card required**, ~£0/month in practice | Since 3 Feb 2026 a new project must be on Blaze to provision a Storage bucket at all. Free allowances still apply on Blaze — 5 GB storage, 100 GB/month transfer. A household garden will not approach that. |
+| Firebase, Blaze plan | **Card required**, ~$0/month in practice | Since 3 Feb 2026 a new project must be on Blaze to provision a Storage bucket at all. Free allowances still apply on Blaze — 5 GB storage, 100 GB/month transfer. A household garden will not approach that. |
 | Netlify | Free | Two sites, 100 GB bandwidth, 125k function calls/month. |
 | Gemini API key | Free tier, or pennies | Only needed for label scan and plant lookup. The apps work without it — those two features just fail. |
-| Domain name | £0 or ~£12/year | A free `something.netlify.app` address is fine. A custom domain is optional. |
+| Domain name | $0 or ~$15/year | A free `something.netlify.app` address is fine. A custom domain is optional. |
 
 Worth saying out loud to them: **a card is required before photos will work at all.** That is the
 one thing most likely to make someone back out, so lead with it rather than letting them discover it
@@ -108,7 +108,7 @@ pushed to a second remote. There is no separate template to keep in sync.
 **Steps 2–4 of an earlier draft are gone.** They said to blank the credentials in both
 `firebase-config.js` files, blank the project ID in `.firebaserc`, and deal with two hard-coded
 links to your garden. None of that exists any more: those three files are generated at build time
-from environment variables and are gitignored, so **there is nothing to sanitise in the code**. That
+from environment variables and are gitignored, so **there is nothing to sanitize in the code**. That
 is the whole point of the config work — see [`distribution-plan.md`](distribution-plan.md).
 
 What's left is documentation hygiene:
@@ -162,7 +162,7 @@ node tools/check-drift.mjs
 
 Say it in the README and say it to them: you'll help get it running, you're not on call. The two
 places they will realistically get stuck are the **first-admin bootstrap** (B7) and **Google
-sign-in failing on a domain that isn't authorised** (B4 step 7). Both are one-liners once you know
+sign-in failing on a domain that isn't authorized** (B4 step 7). Both are one-liners once you know
 them. Point people at those sections rather than remote-controlling their console.
 
 ## A4. How an update reaches them
