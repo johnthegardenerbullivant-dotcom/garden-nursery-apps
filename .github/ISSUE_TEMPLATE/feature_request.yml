@@ -1,0 +1,48 @@
+name: Feature idea
+description: Suggest something the apps could do
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If you're not sure yet, or want to talk it through first, [Discussions](../discussions) is a better place — it's built for exactly that, and ideas there don't sit in a list waiting to be closed.
+
+        Worth knowing: this is a personal garden project, not a product. Ideas that fit how it's already used are much more likely to happen than ones that would take it somewhere new.
+
+  - type: dropdown
+    id: app
+    attributes:
+      label: Which app?
+      options:
+        - Garden Management
+        - Nursery Management
+        - Both
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do that's awkward today?
+      description: Describe the situation rather than the solution — the underlying problem is usually more useful than a specific feature.
+      placeholder: |
+        When I pot up half a batch I have to remember the split myself, because the batch only shows one number.
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What did you have in mind?
+      placeholder: Optional — a rough shape is fine.
+    validations:
+      required: false
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: How do you handle it now?
+      description: Whether there's a workaround, and how annoying it is, says a lot about how much a change is worth.
+    validations:
+      required: false

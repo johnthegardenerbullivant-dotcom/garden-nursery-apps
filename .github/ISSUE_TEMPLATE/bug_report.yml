@@ -1,0 +1,98 @@
+name: Bug report
+description: Something isn't working the way it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing, please check [SUPPORT.md](../blob/main/SUPPORT.md) — most reports turn out to be one of about five things.
+
+        **If the app loads but every list is empty**, your security rules almost certainly aren't deployed. That produces no error message at all. Run `firebase deploy --only firestore:rules,storage` from the `firebase/` folder and see if it clears.
+
+        **Never paste your Firebase API key or a backup file here.** This is a public issue tracker.
+
+  - type: dropdown
+    id: app
+    attributes:
+      label: Which app?
+      options:
+        - Garden Management
+        - Nursery Management
+        - Both
+    validations:
+      required: true
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: What role is the account you're using?
+      description: A lot of "it doesn't work" turns out to be permissions behaving as designed.
+      options:
+        - admin
+        - editor
+        - viewer
+        - signed in but no role yet ("Access pending")
+        - guest / not signed in
+        - not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: changelog
+    attributes:
+      label: Have you completed the "Action required" steps in CHANGELOG.md for your version?
+      description: Syncing a fork updates your files. It does not deploy security rules or add environment variables, and both fail silently.
+      options:
+        - "Yes"
+        - "No"
+        - Not sure
+        - I haven't synced since setting up
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what did you expect instead?
+      placeholder: |
+        I opened the Plants list and it was empty. I expected to see the 40 plants I added yesterday.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Sign in as an editor
+        2. Go to Areas
+        3. Tap the first area
+    validations:
+      required: false
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Anything in the browser console?
+      description: "Press F12 and choose Console, reproduce the problem, then copy anything that appears in red. This is the single most useful thing you can include."
+      render: text
+    validations:
+      required: false
+
+  - type: input
+    id: environment
+    attributes:
+      label: Browser and device
+      placeholder: Chrome on Android, installed to the home screen
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checked
+    attributes:
+      label: Before submitting
+      options:
+        - label: I've read the "Try this first" section of SUPPORT.md
+          required: true
+        - label: I have not pasted any API key or backup data into this issue
+          required: true
