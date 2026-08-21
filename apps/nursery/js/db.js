@@ -1,6 +1,6 @@
 // =============================================================
 //  db.js — All Firestore & Storage database operations
-//  Nursery Management — shares bbg-garden-inventory Firebase project
+//  Nursery Management — shares ONE Firebase project with Garden Management
 // =============================================================
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';

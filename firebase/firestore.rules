@@ -3,7 +3,7 @@ rules_version = '2';
 // =============================================================
 //  COMBINED Firestore Security Rules
 //  Garden Management + Nursery Management
-//  Firebase project: bbg-garden-inventory
+//  One Firebase project, shared by both apps.
 //  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //  Both apps share this single rule set.
 //  Three roles stored in users/{uid}.role:

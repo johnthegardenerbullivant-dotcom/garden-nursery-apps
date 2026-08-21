@@ -1,6 +1,6 @@
 # Firestore data model
 
-One Firebase project — `bbg-garden-inventory` — shared by both apps. **18 collections.** Garden owns
+One Firebase project, shared by both apps. **18 collections.** Garden owns
 the first twelve; Nursery owns the six `nursery_*` ones and also reads and writes Garden's `plants`,
 `instances` and `areas` when planting out.
 

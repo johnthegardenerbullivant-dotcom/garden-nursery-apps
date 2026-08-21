@@ -11,7 +11,7 @@ system and the deploy workflow are in the [root `CLAUDE.md`](../../CLAUDE.md) �
   a public blog/journal, and a "compost bin" log of plants that didn't make it
 - **Version:** v2.0 (blog/journal), plus the July–August 2026 label-scan, hybrid-nomenclature and
   date/quantity work
-- **Live URL:** https://johnandkath.garden/
+- **Live URL:** set per installation — see `LOCAL.md` if this checkout has one
 - **This folder is both the Netlify base directory and the publish directory.**
 
 ### Netlify settings

@@ -12,7 +12,7 @@ This document captures the agreed design and architecture for the Nursery Manage
 
 **Deployment:**
 - Separate Netlify site (own URL), separate from the Garden Management app
-- Same Firebase project: `bbg-garden-inventory`
+- Same Firebase project as Garden Management
 - Same Firebase Auth (users already have accounts)
 - New Firestore collections prefixed with `nursery_`
 - New Netlify deploy folder: `Netlify Deploy/` within this project folder

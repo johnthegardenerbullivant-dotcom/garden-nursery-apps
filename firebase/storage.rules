@@ -3,7 +3,7 @@ rules_version = '2';
 // =============================================================
 //  COMBINED Firebase Storage Security Rules
 //  Garden Management + Nursery Management
-//  Firebase project: bbg-garden-inventory
+//  One Firebase project, shared by both apps.
 //  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //  Mirrors the Firestore role model as closely as Storage allows:
 //    - Any signed-in user can READ (view photos), guests included,

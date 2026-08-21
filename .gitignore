@@ -24,8 +24,13 @@ apps/*/app-config.js
 # project this checkout belongs to.
 firebase/.firebaserc
 
-# Personal data — never commit. Backups and the bulk plant import
-# live outside the repo, in C:\Users\johnb\Documents\Claude\Garden Data\
+# Installation-specific notes: project ID, live URLs, where the private data
+# folder is on this machine. Kept out of the tracked docs so that a fork does
+# not carry another installation's details around as if they were its own.
+LOCAL.md
+
+# Personal data — never commit. Backups and the bulk plant import live
+# outside the repo entirely; see LOCAL.md for where, on this machine.
 Backups/
 *backup*.json
 plant-import.json
