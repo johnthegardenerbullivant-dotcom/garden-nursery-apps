@@ -34,6 +34,13 @@ Two Progressive Web Apps, one Firebase project, one private repo, two Netlify si
 garden-apps/
 ├── CLAUDE.md                 ← this file: shared conventions + data model
 ├── README.md
+├── SETUP.md                  ← friend-facing: stand up a copy from nothing.
+│                                The ONLY copy of that guide — docs/making-a-copy.md
+│                                points here rather than repeating it.
+├── CHANGELOG.md              ← one entry per release, each with an "Action required"
+│                                line. A fork owner's sync updates files but cannot
+│                                deploy rules or add env vars; both fail silently.
+├── LICENSE                   ← MIT
 ├── .gitignore  .gitattributes
 │
 ├── shared/                   ← ONE copy of the design layer, used by both apps
