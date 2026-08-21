@@ -97,3 +97,8 @@ carries an **Action required** line for exactly that reason.
 useful, not a product. It is offered under the [MIT licence](LICENSE), which means you can do
 essentially what you like with it and it comes with no guarantees. Your copy is yours: your Firebase
 project, your data, your bill. Bug reports and questions are welcome and may go unanswered.
+
+**If something's wrong, start with [`SUPPORT.md`](SUPPORT.md)** — most problems are one of about
+five things, and the commonest of them (every list empty, no error) is security rules that haven't
+been deployed. Bugs go in [Issues](../../issues/new/choose); questions and ideas belong in
+[Discussions](../../discussions).

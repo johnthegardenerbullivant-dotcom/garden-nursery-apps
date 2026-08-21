@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Question, or "how do I…?"
+    url: https://github.com/johnthegardenerbullivant-dotcom/garden-nursery-apps/discussions
+    about: Discussions is the place for questions and ideas. Answers stay findable for the next person, and the issue list stays meaningful.
+  - name: Setting up your own copy
+    url: https://github.com/johnthegardenerbullivant-dotcom/garden-nursery-apps/blob/main/SETUP.md
+    about: The full setup guide, from nothing to a working installation.
+  - name: Something broken right after an update?
+    url: https://github.com/johnthegardenerbullivant-dotcom/garden-nursery-apps/blob/main/SUPPORT.md
+    about: Syncing your fork does not deploy security rules or add environment variables, and both fail silently. Check the Action required line in CHANGELOG.md first.

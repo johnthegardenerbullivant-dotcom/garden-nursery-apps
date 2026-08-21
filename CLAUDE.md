@@ -44,7 +44,13 @@ garden-apps/
 ├── CHANGELOG.md              ← one entry per release, each with an "Action required"
 │                                line. A fork owner's sync updates files but cannot
 │                                deploy rules or add env vars; both fail silently.
+├── SUPPORT.md                ← what to try first, and where to report. The
+│                                "every list is empty" entry is the one that
+│                                matters: rules not deployed, and it is silent.
 ├── LICENSE                   ← MIT
+├── .github/ISSUE_TEMPLATE/   ← bug + feature forms, and links to Discussions.
+│                                The bug form REQUIRES answering whether the
+│                                CHANGELOG "Action required" steps were done.
 ├── .gitignore  .gitattributes
 │
 ├── shared/                   ← ONE copy of the design layer, used by both apps
