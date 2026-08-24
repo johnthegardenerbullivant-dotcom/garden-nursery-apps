@@ -28,7 +28,7 @@ requires a card on file before it will store photos.
 You'll start with an empty database — no plants, no areas, no nursery locations. There's a bulk
 import in the Admin panel if you have a spreadsheet of plants to load.
 
-Do the steps in order. **Step 7 is the one everyone gets stuck on** — read it twice.
+Do the steps in order. **B7 is the one everyone gets stuck on** — read it twice.
 
 ## B1. Create your Firebase project (the database)
 
@@ -124,14 +124,40 @@ from B2 open — you'll paste those six values in B4.
 You'll create **two** websites from the one repository — one for Garden, one for Nursery. (Taking
 only Garden is fine; skip the Nursery half of every step below.)
 
-1. Sign up at **https://app.netlify.com** — choose **Sign up with GitHub**.
-2. Click **Add new site → Import an existing project → GitHub**, authorize Netlify when asked, and
-   pick your `garden-nursery-apps` repository.
-3. On the configuration screen, set:
-   - **Base directory:** `apps/garden`
-   - **Publish directory:** `apps/garden`
-   - Leave the build command alone — it comes from the repo.
-4. Before clicking Deploy, open **Add environment variables**. This is where your Firebase details
+1. Sign up at **https://app.netlify.com**. **Sign up with GitHub** saves a step later; Google or
+   email work just as well, they only mean you authorize GitHub separately in step 3.
+2. Netlify asks a page of getting-to-know-you questions — name, how you'll use it, experience level,
+   project type, role, how you heard about it. Answer however you like; none of it changes anything.
+   The last one, **"What is the name of your team?"**, does stick: it becomes the heading your sites
+   live under. Something like `My Garden` is fine. Then **Continue to deploy**.
+3. The **"Deploy your first project"** screen leads with an AI agent box offering to build you a
+   site, and bonus credits for using it. **Ignore all of that** — you already have the code. Scroll
+   past it to *"Bringing your own code?"* and under **Import a Git repository** click **GitHub**.
+   Two GitHub windows follow, and they are not the same thing:
+   - **Authorize Netlify** — the OAuth consent. Click **Authorize**.
+   - **Install Netlify** — this is GitHub asking which of *your* repositories Netlify may touch.
+     Choose **Only select repositories**, click **Select repositories**, pick
+     **`garden-nursery-apps`**, then **Install**. (*All repositories* also works. Only-select is
+     tidier and costs nothing, since this one repository is the source of both sites — you will not
+     have to come back here for the Nursery site.)
+4. Pick **garden-nursery-apps** from the list. You'll get a card saying *"Deploy as … from `main`
+   branch"* with a big deploy button. **Do not press it yet** — the settings you need are collapsed.
+   Click **Edit build settings ↓** underneath *"Need to be more specific?"* to unfold them, and fill
+   in exactly one field:
+
+   | Field | What to put |
+   |---|---|
+   | Branch to deploy | `main` — already correct |
+   | **Base directory** | **`apps/garden`** ← the only one you type |
+   | Build command | **leave empty** — it comes from the repo |
+   | Publish directory | **leave empty** — it comes from the repo |
+   | Functions directory | **leave empty** — the grey `netlify/functions` is a placeholder, not a value |
+
+   Grey text in a box is a *placeholder* — an example of what could go there, not something already
+   filled in. Empty means empty, and empty is right for all three: the repo's `netlify.toml` supplies
+   them, and it overrides anything typed here.
+
+5. Still on that screen, open **Add environment variables**. This is where your Firebase details
    go — the app is built from them, so **without these the site loads a green "Setup required"
    screen**. From the Firebase tab you left open in B2:
 
@@ -149,16 +175,21 @@ only Garden is fine; skip the Nursery half of every step below.)
 
    Two things worth knowing:
    - **These are per site.** Netlify does not share them between sites, so you will add the *same
-     six values* again on the Nursery site in step 6. That is correct — both apps deliberately use
+     six values* again on the Nursery site in step 7. That is correct — both apps deliberately use
      one Firebase project.
    - **Leave the scope at "All scopes"** so preview builds get them too.
 
    You do *not* need any secret-scanning settings; those live in the repo already.
-5. Click **Deploy**. Wait a minute. You'll get an address like
+6. Click **Deploy**. Wait a minute. You'll get an address like
    `https://cheerful-marzipan-1a2b3c.netlify.app`. Rename it to something memorable under **Site
    configuration → Change site name** if you like.
-6. **Repeat steps 2–5 for Nursery**, with base and publish directory `apps/nursery`, the **same six
-   `FIREBASE_*` values**, and one extra:
+7. **Now the Nursery site.** That signup wizard only ever makes one site, so this time start from
+   the Netlify dashboard: **Add new project → Import an existing project → GitHub**. It will offer
+   `garden-nursery-apps` straight away — you already granted access in step 3, and there is no
+   second authorization. Same repository, and then as before except:
+   - **Base directory:** `apps/nursery`
+   - the **same six `FIREBASE_*` values** — yes, again; see the note above
+   - and one extra variable:
 
    | Key | Value |
    |---|---|
@@ -168,7 +199,8 @@ only Garden is fine; skip the Nursery half of every step below.)
    on a batch you've planted out. Leave it unset and those links simply don't appear, which is what
    you want if you're only running Nursery. You can add it later once you know the Garden address;
    remember to redeploy afterwards.
-7. Go back to Firebase: **Authentication → Settings → Authorized domains → Add domain**, and add
+8. Go back to Firebase: **Security → Authentication → Settings → Authorized domains → Add
+   domain**, and add
    **both** Netlify addresses (just the `something.netlify.app` part, no `https://`). **Google
    sign-in fails with a popup that opens and instantly closes until you do this.**
 
@@ -271,7 +303,7 @@ who found the URL could. So the first admin is created by hand, once.
 
 ## B9. The last bits
 
-- **Nothing in the code needs editing** — if you set `GARDEN_URL` in B4 step 6, Nursery's two links
+- **Nothing in the code needs editing** — if you set `GARDEN_URL` in B4 step 7, Nursery's two links
   to Garden already point at your own site. If you skipped it, they aren't shown at all. Add the
   variable and redeploy whenever you want them.
 - **Set up your garden first.** Create your **Areas** in Garden and your **Locations** in Nursery
@@ -288,13 +320,13 @@ who found the URL could. So the first admin is created by hand, once.
 | Symptom | Almost certainly |
 |---|---|
 | Everything loads but every list is empty | Security rules not deployed (B6). Rules failures are silent — they look like no data, not like an error. |
-| Google sign-in popup flashes and closes | Your Netlify address isn't in Firebase Authorized domains (B4 step 7). |
+| Google sign-in popup flashes and closes | Your Netlify address isn't in Firebase Authorized domains (B4 step 8). |
 | "Access denied" after signing in | Normal until B7 is done. |
-| Green "Setup required" screen | The six `FIREBASE_*` variables aren't set on that site, or were added but the site hasn't rebuilt since (B4 step 4). |
+| Green "Setup required" screen | The six `FIREBASE_*` variables aren't set on that site, or were added but the site hasn't rebuilt since (B4 step 5). |
 | Build fails: "contains a non-ASCII character" | A value was pasted from a masked display and is full of `•` characters. Re-copy it from the Firebase console config block. The build is stopping this from reaching your live site. |
 | Build fails: "does not look like a Google API key" | `FIREBASE_API_KEY` is truncated or is some other value. It should be 39 characters starting `AIza`. |
 | `firebase deploy` says "No currently active project" | `firebase use --add` hasn't been run in that folder (B6). |
-| Nursery has no links to Garden | `GARDEN_URL` isn't set on the Nursery site, or it hasn't rebuilt since (B4 step 6). Working as designed if you only run Nursery. |
+| Nursery has no links to Garden | `GARDEN_URL` isn't set on the Nursery site, or it hasn't rebuilt since (B4 step 7). Working as designed if you only run Nursery. |
 | Page loads with no styling at all | The build didn't run. Check the site's base directory is `apps/garden` or `apps/nursery`, not the repo root. |
 | Scan label / Look up plant error out | `GEMINI_API_KEY` missing on that site, or added but not redeployed since (B5). |
 | Photos won't upload | The Storage bucket was never created — the Blaze upgrade in B1 step 5 didn't complete. |

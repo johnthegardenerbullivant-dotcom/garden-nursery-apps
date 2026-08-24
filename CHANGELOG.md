@@ -45,6 +45,19 @@ Every entry below therefore carries an **Action required** line. `none` means sy
   *Settings → General*, not an item in the Settings menu.
 - **Anonymous sign-in: turn on Auto clean-up.** It deletes guest accounts older than 30 days.
   Guests are read-only viewers with no Firestore document, so there is nothing to lose.
+- **Each `netlify.toml` now declares `publish = "."`.** The Netlify UI resolves its publish-directory
+  field *relative to the base directory*, so the old advice — put `apps/garden` in both boxes —
+  resolved to `apps/garden/apps/garden`. `netlify.toml` overrides the UI and its paths are
+  unambiguous, so a new site now needs exactly **one** build field filled in: the base directory.
+  Existing sites are unaffected; the repo value simply takes over from whatever the UI held.
+- **B4 rewritten for Netlify's first-run flow.** Creating your first site doesn't go through *Add
+  new site* at all — signup runs a questionnaire (the team name at the end is the one answer that
+  sticks), then offers an AI site-builder you should ignore, then two *separate* GitHub windows:
+  **Authorize Netlify** (consent) and **Install Netlify** (which repositories it may touch — pick
+  *Only select repositories*). The build settings are collapsed behind **Edit build settings ↓**,
+  and the grey text in the empty fields is placeholder, not content: build command, publish
+  directory and functions directory all stay empty. The second site *is* made from the dashboard,
+  and needs no second authorization.
 
 ## 2026-08-21
 
