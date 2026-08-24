@@ -71,10 +71,17 @@ Every entry below therefore carries an **Action required** line. `none` means sy
   confirmed fix. The page opens with the Rules Playground beside the editor and the editor holding
   no keyboard focus, so select-all and paste silently do nothing. Also points at GitHub's *copy raw
   file* button, which beats select-all on the Raw page.
-- **Authorized domains (B4 step 8) promoted from a one-liner to a warning, and B7 now checks it
-  first.** Skipping it makes B7 not merely harder but impossible: Google sign-in opens a popup that
-  shuts itself with no message on either site, so no account is ever created to promote. The
-  underlying `auth/unauthorized-domain` is visible only in the browser console.
+- **Authorized domains is now its own section, B5** — the sections after it shift up by one, so the
+  admin step is **B8** and the last bits are **B10**. It was the closing bullet of the Netlify
+  section, and there it got skipped, which makes B8 not merely harder but impossible: Google sign-in
+  opens a popup that shuts itself with no message on either site, so no account is ever created to
+  promote. The underlying `auth/unauthorized-domain` shows only in the browser console.
+- **Setting `role: admin` may not take effect on a reload — sign out and sign in.** The app re-reads
+  the role at every start, so a reload ought to be enough; in testing it wasn't, and the
+  access-denied screen persisted until a full sign-out. B8 and B9 both say so now, because the same
+  thing will happen to anyone you grant a role to.
+- **B8 now says what the other fields in the user document are for**, so nobody edits
+  `status: "pending"` trying to help. Nothing reads it for access; `role` is the whole mechanism.
 - **"It signed me in" is not the same as "it signed me in as me."** Firebase keeps a session between
   visits, so an earlier *Continue as Guest* is still live and the app opens as that guest — who is
   read-only and has no `users` record to grant a role to. B7 now says to check who you are, and sign

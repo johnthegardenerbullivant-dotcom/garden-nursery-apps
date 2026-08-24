@@ -28,7 +28,8 @@ requires a card on file before it will store photos.
 You'll start with an empty database — no plants, no areas, no nursery locations. There's a bulk
 import in the Admin panel if you have a spreadsheet of plants to load.
 
-Do the steps in order. **B7 is the one everyone gets stuck on** — read it twice.
+Do the steps in order. **B5 is the easiest one to skip, and B8 the one everyone gets stuck on** —
+read both twice.
 
 ## B1. Create your Firebase project (the database)
 
@@ -48,7 +49,7 @@ Do the steps in order. **B7 is the one everyone gets stuck on** — read it twic
    - **Location:** somewhere near you — `europe-west2` for the UK, `us-west1` for the US west coast.
      **You cannot change this later.**
    - **Rules:** **Production mode**, not test mode. The app brings its own security rules and you
-     install them in B6.
+     install them in B7.
 5. Left menu → **Databases & Storage → Storage**. The page says *"To use Storage, upgrade your
    project's pricing plan"* — click **Upgrade project**.
    - This is the card step, and you have to do it. Storage is where plant photos live, and since
@@ -62,7 +63,7 @@ Do the steps in order. **B7 is the one everyone gets stuck on** — read it twic
    - Then a **Set up default bucket** dialog appears. Step 1 offers **No cost location** or **All
      locations**: take **No cost location** and change the drop-down (it defaults to `US-EAST1`) to
      whichever offered region is nearest you — ideally the same one you gave Firestore. Step 2 asks
-     about security rules; take the locked-down/production option, because B6 replaces them anyway.
+     about security rules; take the locked-down/production option, because B7 replaces them anyway.
 6. Left menu → **Security → Authentication**, then **Get started**. Open the **Sign-in method** tab
    and use **Add new provider** to enable these three:
    - **Google** — before it will let you save, the console makes you fill in a **public-facing name
@@ -206,7 +207,7 @@ only Garden is fine; skip the Nursery half of every step below.)
    - **Open the address.** You should get the app's green sign-in screen — *Continue as Guest*,
      *Sign in with Google*, and an email/password form. That means the build read your six
      variables and the app is configured. A green **"Setup required"** screen instead means the
-     variables didn't take; check them and redeploy. Don't sign in yet — until B6 deploys the
+     variables didn't take; check them and redeploy. Don't sign in yet — until B7 deploys the
      security rules, everything is blocked and lists come back empty with no error.
 7. **Now the Nursery site.** That signup wizard only ever makes one site, so this time start from
    the Netlify dashboard: **Add new project → Import an existing project → GitHub**. It will offer
@@ -235,17 +236,34 @@ only Garden is fine; skip the Nursery half of every step below.)
    Netlify does not redeploy when you change a variable. **Project configuration → Environment
    variables → Add a variable**, then **Deploys → Trigger deploy → Deploy site**. Until you do that
    second half, the links stay missing and nothing tells you why.
-8. **Do not skip this one — B7 is impossible without it.** Go back to Firebase: **Security →
-   Authentication → Settings** tab → **Authorized domains → Add domain**, and add **both** Netlify
-   addresses, one at a time. Hostname only — `precious-zuccutto-800b80.netlify.app`, with no
-   `https://` and no trailing slash.
+Both sites are now live. **Write down the two addresses** — the next section needs them, and so
+does B8.
 
-   Firebase only allows OAuth popups from hosts on that list. Until both are on it, **Sign in with
-   Google opens a popup that closes itself immediately and tells you nothing.** No error, no
-   message, on either site. It reads as a broken app, and it is one missing list entry. The failure
-   underneath is `auth/unauthorized-domain`, visible only in the browser console.
+## B5. Tell Firebase about your two addresses ← two minutes, and everything depends on it
 
-## B5. Turn on the AI features (optional, 5 minutes)
+This is one small entry in one list, it takes about two minutes, and **B8 cannot be done at all
+until it is.** It gets its own section because it used to be the last bullet of the Netlify
+section, where it was skipped — the guide's author skipped it himself while testing this guide.
+
+1. Firebase Console → **Security → Authentication** → the **Settings** tab → **Authorized domains**.
+2. **Add domain**, and enter your Garden address. **Hostname only** — no `https://`, no trailing
+   slash, no path:
+
+   ```
+   precious-zuccutto-800b80.netlify.app
+   ```
+
+3. **Add domain** again for the Nursery address. Both, separately. One is not enough.
+
+**Why it matters, and why the failure is so unhelpful:** Firebase only permits Google sign-in
+popups from hosts on that list. Until an address is on it, clicking **Sign in with Google** opens a
+popup that closes itself instantly and shows you nothing at all — no error, no message, on either
+site. It looks exactly like a broken app. The real error, `auth/unauthorized-domain`, appears only
+in the browser's developer console, which nobody has open.
+
+You will need to come back here if you ever add a custom domain.
+
+## B6. Turn on the AI features (optional, 5 minutes)
 
 Skip this and everything still works except **Scan label** and **Look up plant**, which will error.
 
@@ -268,7 +286,7 @@ your function timeout (they are usually quick about it — one such request was 
 the same day it was asked) or add `GEMINI_MODEL_RESEARCH` = `gemini-3.5-flash-lite`, which is faster
 and slightly less thorough.
 
-## B6. Deploy the security rules
+## B7. Deploy the security rules
 
 Right now your database is in production mode, which means **everything is blocked**, including you.
 The repo contains the rules that open it up correctly. Two ways to install them — pick one.
@@ -320,12 +338,12 @@ firebase deploy --only firestore:rules,storage
 
 Add `--dry-run` first if you want to check the files compile without publishing anything.
 
-## B7. Make yourself the administrator ← the step everyone gets stuck on
+## B8. Make yourself the administrator ← the step everyone gets stuck on
 
 There is deliberately no way to sign yourself up as an admin from inside the app — otherwise anyone
 who found the URL could. So the first admin is created by hand, once.
 
-> **Before you start, confirm you did B4 step 8.** Both `.netlify.app` addresses have to be in
+> **Before you start, confirm you have done B5.** Both `.netlify.app` addresses have to be in
 > Firebase's **Authorized domains** list. If they aren't, *Sign in with Google* opens a popup that
 > shuts itself instantly, showing you nothing, and this whole step is impossible — there is no way
 > to make an admin out of a sign-in that never happened. It looks like a broken app and it is one
@@ -347,23 +365,38 @@ who found the URL could. So the first admin is created by hand, once.
    - Field name: `role`
    - Type: **string**
    - Value: `admin`
-   - Click **Save**. Spelling and lower case both matter.
-5. Go back to the app and **reload the page**. You now have full access.
-6. You do **not** need to repeat this on the Nursery site — both apps read the same `users`
-   collection, so one admin record covers both.
+   - Click **Add**. Spelling and lower case both matter.
 
-## B8. Add the rest of the household
+   The document will already hold `createdAt`, `displayName`, `email`, `lastLoginAt`, `photoURL`,
+   `provider` and `status` — the app wrote those when you signed in. Leave them alone. In
+   particular **don't touch `status: "pending"`**: it is only there so the Admin panel can list new
+   arrivals, nothing reads it for access, and `role` is what grants you entry.
+5. Go back to the app, **sign out, and sign in again**. You now have full access.
+
+   A plain reload is *supposed* to be enough — the app re-reads your role from Firestore every time
+   it starts. In testing it wasn't, and the access-denied screen stayed put until a full sign-out
+   and sign-in. If reloading works for you, fine; if you still see "access denied" after setting the
+   role, this is the fix, and it is not a sign you got the field wrong.
+6. You do **not** need to repeat this on the Nursery site — both apps read the same `users`
+   collection, so one admin record covers both. Nursery may still be showing you the old session,
+   though; sign out and in there too if it looks stuck.
+
+## B9. Add the rest of the household
 
 1. They open the site and sign in with Google once. They'll get the same pending screen.
 2. You go to the app's **Admin** panel → **User Management**, find them in the pending list, and
    grant **viewer** (look only), **editor** (add and change plants) or **admin** (everything,
    including delete and backups). A role granted in one app applies to both.
+
+   **Tell them to sign out and sign in again** once you've done it. Same caveat as B8 step 5: a
+   reload ought to be enough and may not be, and "I still can't get in" is otherwise the next thing
+   you'll hear.
 3. For someone without a Google account, create an email/password login in Firebase Console →
    **Security → Authentication → Users → Add user**. There is no sign-up form in the app, on
    purpose. They then
    sign in with the **Email** form and you grant them a role as above.
 
-## B9. The last bits
+## B10. The last bits
 
 - **Nothing in the code needs editing** — if you set `GARDEN_URL` in B4 step 7, Nursery's two links
   to Garden already point at your own site. If you skipped it, they aren't shown at all. Add the
@@ -381,14 +414,14 @@ who found the URL could. So the first admin is created by hand, once.
 
 | Symptom | Almost certainly |
 |---|---|
-| Everything loads but every list is empty | Security rules not deployed (B6). Rules failures are silent — they look like no data, not like an error. |
-| Google sign-in popup flashes and closes | Your Netlify address isn't in Firebase Authorized domains (B4 step 8). |
-| "Access denied" after signing in | Normal until B7 is done. |
+| Everything loads but every list is empty | Security rules not deployed (B7). Rules failures are silent — they look like no data, not like an error. |
+| Google sign-in popup flashes and closes | That address isn't in Firebase Authorized domains (B5). It must be **both** addresses, hostname only. |
+| "Access denied" after signing in | Normal until B8 is done. If it persists *after* you set the role, sign out and sign back in. |
 | Green "Setup required" screen | The six `FIREBASE_*` variables aren't set on that site, or were added but the site hasn't rebuilt since (B4 step 5). |
 | Build fails: "contains a non-ASCII character" | A value was pasted from a masked display and is full of `•` characters. Re-copy it from the Firebase console config block. The build is stopping this from reaching your live site. |
 | Build fails: "does not look like a Google API key" | `FIREBASE_API_KEY` is truncated or is some other value. It should be 39 characters starting `AIza`. |
-| `firebase deploy` says "No currently active project" | `firebase use --add` hasn't been run in that folder (B6). |
+| `firebase deploy` says "No currently active project" | `firebase use --add` hasn't been run in that folder (B7). |
 | Nursery has no links to Garden | `GARDEN_URL` isn't set on the Nursery site, or it hasn't rebuilt since (B4 step 7). Working as designed if you only run Nursery. |
 | Page loads with no styling at all | The build didn't run. Check the site's base directory is `apps/garden` or `apps/nursery`, not the repo root. |
-| Scan label / Look up plant error out | `GEMINI_API_KEY` missing on that site, or added but not redeployed since (B5). |
+| Scan label / Look up plant error out | `GEMINI_API_KEY` missing on that site, or added but not redeployed since (B6). |
 | Photos won't upload | The Storage bucket was never created — the Blaze upgrade in B1 step 5 didn't complete. |
