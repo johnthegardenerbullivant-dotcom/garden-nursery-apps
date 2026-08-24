@@ -19,14 +19,6 @@
   # "Setup required" overlay instead.
   command = "node ../../tools/build.mjs garden"
 
-  # The site is served straight out of this folder — there is no dist/ step.
-  # Declared here rather than left to the Netlify UI because the UI's publish
-  # field is resolved RELATIVE TO the base directory, which is this same folder,
-  # so the obvious-looking "apps/garden" in both boxes resolves to
-  # apps/garden/apps/garden. netlify.toml overrides the UI, so setting it here
-  # means a copy only ever fills in one build field: the base directory.
-  publish = "."
-
   # Monorepo build skipping. Without this, a push that only touches apps/nursery
   # still rebuilds this site — setting a base directory does NOT scope builds by
   # itself (Netlify docs, "Monorepos").

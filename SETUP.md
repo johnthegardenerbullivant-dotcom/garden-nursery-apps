@@ -142,20 +142,27 @@ only Garden is fine; skip the Nursery half of every step below.)
      have to come back here for the Nursery site.)
 4. Pick **garden-nursery-apps** from the list. You'll get a card saying *"Deploy as … from `main`
    branch"* with a big deploy button. **Do not press it yet** — the settings you need are collapsed.
-   Click **Edit build settings ↓** underneath *"Need to be more specific?"* to unfold them, and fill
-   in exactly one field:
+   Click **Edit build settings ↓** underneath *"Need to be more specific?"* to unfold them.
+
+   **You type one thing:**
 
    | Field | What to put |
    |---|---|
    | Branch to deploy | `main` — already correct |
-   | **Base directory** | **`apps/garden`** ← the only one you type |
-   | Build command | **leave empty** — it comes from the repo |
-   | Publish directory | **leave empty** — it comes from the repo |
-   | Functions directory | **leave empty** — the grey `netlify/functions` is a placeholder, not a value |
+   | **Base directory** | **`apps/garden`** |
 
-   Grey text in a box is a *placeholder* — an example of what could go there, not something already
-   filled in. Empty means empty, and empty is right for all three: the repo's `netlify.toml` supplies
-   them, and it overrides anything typed here.
+   The moment you do, Netlify reads the repo's `netlify.toml` and **fills in the other three by
+   itself**:
+
+   | Field | Fills in as |
+   |---|---|
+   | Build command | `node ../../tools/build.mjs garden` |
+   | Publish directory | `apps/garden/` |
+   | Functions directory | `apps/garden/functions` |
+
+   **Leave whatever it puts there.** Those values come from the repo, they are correct, and this is
+   the guide's one-file-to-edit promise working: you supply the base directory, the repository
+   supplies the build. (For Nursery, the same three appear with `nursery` in place of `garden`.)
 
 5. Still on that screen, open **Add environment variables**. This is where your Firebase details
    go — the app is built from them, so **without these the site loads a green "Setup required"
@@ -180,9 +187,20 @@ only Garden is fine; skip the Nursery half of every step below.)
    - **Leave the scope at "All scopes"** so preview builds get them too.
 
    You do *not* need any secret-scanning settings; those live in the repo already.
-6. Click **Deploy**. Wait a minute. You'll get an address like
-   `https://cheerful-marzipan-1a2b3c.netlify.app`. Rename it to something memorable under **Site
-   configuration → Change site name** if you like.
+6. Click **Deploy**. Wait a minute, and watch the deploy log: Initializing, Building, Deploying,
+   Cleanup, Post-processing.
+   - **Post-processing often sits on "In progress" after the log has already said `Site is live ✨`.**
+     That's a stale panel, not a stuck build. Reload the page and it says Published.
+   - You'll get an auto-generated address like `https://precious-zuccutto-800b80.netlify.app`.
+     Netlify does **not** offer to name it during setup, so a name like that is expected, not a
+     mistake. Rename it whenever you like under **Project configuration → Change project name** —
+     Netlify now calls sites "projects", so anywhere you're looking for *Site settings*, read
+     *Project configuration*.
+   - **Open the address.** You should get the app's green sign-in screen — *Continue as Guest*,
+     *Sign in with Google*, and an email/password form. That means the build read your six
+     variables and the app is configured. A green **"Setup required"** screen instead means the
+     variables didn't take; check them and redeploy. Don't sign in yet — until B6 deploys the
+     security rules, everything is blocked and lists come back empty with no error.
 7. **Now the Nursery site.** That signup wizard only ever makes one site, so this time start from
    the Netlify dashboard: **Add new project → Import an existing project → GitHub**. It will offer
    `garden-nursery-apps` straight away — you already granted access in step 3, and there is no
@@ -209,7 +227,8 @@ only Garden is fine; skip the Nursery half of every step below.)
 Skip this and everything still works except **Scan label** and **Look up plant**, which will error.
 
 1. Go to **https://aistudio.google.com/apikey**, sign in, click **Create API key**.
-2. In Netlify, for **each of your two sites**: **Site configuration → Environment variables → Add**:
+2. In Netlify, for **each of your two sites**: **Project configuration → Environment variables →
+   Add**:
 
    | Key | Value |
    |---|---|
