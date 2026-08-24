@@ -307,16 +307,25 @@ words that the key is missing. You can come back and do this months later.
    **Logs & metrics → Functions → `lookup-plant`**, run a lookup, and read the `HTTP <code>` line.
 
    `HTTP 429` with `RESOURCE_EXHAUSTED` and *"You exceeded your current quota"*, arriving in a
-   fraction of a second on a key that has never been used, means there is **no free-tier allowance
-   for the model being asked for** — not that you have used anything up. Check what your key is
-   actually allowed at **Google AI Studio → Usage & Billing → Rate Limit**, with your project
-   selected. Two ways forward from there:
-   - **Point the apps at a model your key does have quota for**, with no code change: add
-     `GEMINI_MODEL` to both sites, redeploy, and try again. Unset, the code asks for
-     `gemini-3.5-flash`.
-   - **Or move the project to the Gemini API's paid tier**, via *Activate billing* on the AI Studio
-     key list. This is separate from the Firebase Blaze upgrade in B1 — putting a card on Firebase
-     does not put the Gemini API on a paid tier.
+   fraction of a second on a key that has never been used, does **not** mean you have used anything
+   up. Something in the request has no allowance on your tier at all.
+
+   Check what your key is actually permitted at **Google AI Studio → Usage & Billing → Rate
+   Limit**, with your project selected, and read it carefully — **there are two separate limits in
+   play and only one of them is obvious**:
+   - **Rate limits by model** (RPM / TPM / RPD), the big table. On the free tier
+     `Gemini 3.5 Flash` shows 5 RPM, 250K TPM, 20 RPD, which is ample for a household. If this
+     table shows healthy numbers and zero usage, **the model is not your problem** and you should
+     not go changing `GEMINI_MODEL`.
+   - **Tools → Search grounding**, further down the same page, with its own daily limit. **Plant
+     lookup's research phase asks Google to search the web**, so it is charged against this as well
+     as the model. Scan label does not, which makes it a useful test: if scanning a label works and
+     looking up a plant doesn't, the difference between them is search grounding.
+
+   If it is search grounding, the way out is the Gemini API's **paid tier** — *Activate billing* on
+   the AI Studio key list. **That is separate from the Firebase Blaze upgrade in B1**: putting a
+   card on Firebase does not put the Gemini API on a paid tier, and it is an easy thing to assume.
+   Everything else in both apps carries on working regardless.
 
 One caveat about plant lookup: Netlify allows these background requests **10 seconds** by default,
 and a thorough plant lookup can want longer. Leave the settings alone at first — the code defaults

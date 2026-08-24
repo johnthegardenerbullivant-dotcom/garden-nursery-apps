@@ -91,13 +91,18 @@ Every entry below therefore carries an **Action required** line. `none` means sy
   and Look up plant fail with a "Failed" flag and a panel saying the key is missing. Nothing else is
   affected.
 - **A correctly-installed Gemini key can still fail on a new project, and B6 now expects it.** A
-  first-ever lookup came back `HTTP 429 RESOURCE_EXHAUSTED` in under 400 ms — no free-tier
-  allowance for the model, rather than any allowance used up. B6 explains how to read the real
-  error (Netlify → *Logs & metrics → Functions → `lookup-plant`*, which logs Google's own message
-  in full), where to see what your key is actually permitted (AI Studio → *Rate Limit*), and the
-  two ways out: set `GEMINI_MODEL` to something your key has quota for, or put the project on the
-  Gemini API's paid tier. **That tier is separate from Firebase Blaze** — a card on Firebase does
-  not pay for Gemini. The cost table is qualified accordingly.
+  first-ever plant lookup came back `HTTP 429 RESOURCE_EXHAUSTED` in under 400 ms, on a key with no
+  usage behind it. B6 explains how to read the real error — Netlify → *Logs & metrics → Functions →
+  `lookup-plant`* logs Google's own message in full, which the guide had never pointed anyone at.
+- **The rate-limit page has two limits on it and the obvious one is the wrong one.** The
+  *Rate limits by model* table showed `Gemini 3.5 Flash` healthy and entirely unused (5 RPM, 250K
+  TPM, 20 RPD), so the model is not the constraint and `GEMINI_MODEL` is not the fix. Further down
+  the same page, **Tools → Search grounding** carries its own separate allowance, and plant
+  lookup's research phase asks Google to search the web. Scan label doesn't, which makes the two a
+  usable A/B test. B6 says all of this, including not to go changing models on the strength of a
+  429.
+- **The Gemini API's paid tier is not the Firebase Blaze upgrade.** B1 already asks for a card, so
+  assuming it covers Gemini is natural and wrong. The cost table is qualified accordingly.
 - **New troubleshooting row for "Lookup service error" / "Vision service error"** with a key that is
   correctly set, pointing at the function log. The apps deliberately don't surface Google's message,
   so without that pointer there's nothing to go on.
