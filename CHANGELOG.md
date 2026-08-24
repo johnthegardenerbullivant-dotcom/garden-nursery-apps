@@ -31,6 +31,10 @@ Every entry below therefore carries an **Action required** line. `none` means sy
   Fork" without ever giving the address, which is fine if you arrived from a link and useless if you
   didn't. It's `johnthegardenerbullivant-dotcom/garden-nursery-apps`, and B4 now looks for that name
   rather than `garden-apps`.
+- **B3 also says which GitHub buttons to ignore.** A brand-new account opens on a dashboard offering
+  **Create repository** and **Import repository**. Both are wrong, and Import is the actively harmful
+  one: it copies the files but drops the upstream link, so there's no **Sync fork** button and every
+  future update becomes a hand-merge.
 - **B1 and B2 rewritten for the 2026 Firebase console.** The left menu no longer has a **Build**
   section; products sit under **Product categories** — Firestore and Storage under *Databases &
   Storage*, Authentication under *Security*. Also covered, because each stops you dead the first

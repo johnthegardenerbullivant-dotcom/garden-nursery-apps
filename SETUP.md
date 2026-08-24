@@ -86,16 +86,27 @@ Do the steps in order. **Step 7 is the one everyone gets stuck on** — read it 
 ## B3. Get your own copy of the code
 
 1. Create a free account at **https://github.com** if you don't have one.
-2. Signed in as yourself, open
+2. Signed in as yourself, put this in your browser's **address bar** — not into anything on the
+   GitHub page — and press Enter:
 
    **https://github.com/johnthegardenerbullivant-dotcom/garden-nursery-apps**
 
-   and click **Fork** (top right) → **Create fork**. Accept the defaults on that screen; the copy
-   lands in your own account, still called **`garden-nursery-apps`**. That's the name to look for in
-   B4.
-3. You now have your own copy, and it stays linked to the original. When a new release lands
-   upstream, GitHub shows "this branch is N commits behind" with a **Sync fork** button — one click,
-   and your sites rebuild. That link is why you fork rather than download the files.
+   > **Ignore the buttons a new account is offered.** A fresh GitHub account opens on a dashboard
+   > whose two prominent buttons are **Create repository** and **Import repository**, and *neither is
+   > what you want*. Create repository makes an empty one with no code in it. Import repository does
+   > copy the files, but it severs the link to the original — no "forked from" line, no **Sync fork**
+   > button, and every future update becomes a hand-merge. Forking is a different operation, and it
+   > starts from the page above rather than from the dashboard.
+
+3. On that page, look along the **top right** for the row of three buttons — **Watch**, **Fork**,
+   **Star**. Click **Fork**, then **Create fork** on the screen that follows. Leave every field as
+   it comes: owner is your account, the name stays `garden-nursery-apps`, and "Copy the `main`
+   branch only" stays ticked.
+4. A few seconds later you're looking at your own copy. Check the small grey line under the title:
+   it should read **"forked from johnthegardenerbullivant-dotcom/garden-nursery-apps"**. That line is
+   the whole point — when a new release lands upstream, GitHub shows "this branch is N commits
+   behind" with a **Sync fork** button, one click, and your sites rebuild. Without it you'd be
+   merging files by hand forever. `garden-nursery-apps` is also the name to look for in B4.
 
 **There is nothing to edit in the code.** Not one file. Your Firebase details go into Netlify as
 settings in the next step, and the app reads them from there when it builds. Keep the Firebase tab
