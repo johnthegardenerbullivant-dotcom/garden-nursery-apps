@@ -273,10 +273,18 @@ words that the key is missing. You can come back and do this months later.
    key** dialog opens, wanting two things:
    - **Name your key** — anything; `Gemini API Key` is the default and is fine.
    - **Choose an imported project** — a drop-down offering *Import project*, *Create project*, and
-     any Cloud projects you already have. **Pick the Firebase project you made in B1** (it appears
-     under the name you gave it, e.g. *A Garden Database*). It's already set up and already has
-     billing attached, so key, quota and usage all stay in one place instead of being scattered
-     across a stray "Default Gemini Project".
+     any Cloud projects you already have. **Pick `Default Gemini Project`**, the one AI Studio
+     manages for itself. If it isn't offered, take **Create project**.
+
+   > **Do not attach the key to your Firebase project**, tempting though it is to keep everything
+   > in one place. Tried, and it fails: the Blaze upgrade in B1 attaches a billing account carrying
+   > the Google Cloud free trial, and the Gemini API refuses to run against it — the project shows
+   > **"Prepay required — Your project is required to use a Prepay billing plan"** in AI Studio, and
+   > *every* call comes back `HTTP 429 RESOURCE_EXHAUSTED` in a fraction of a second. It reads as a
+   > quota problem and is nothing of the kind. `Default Gemini Project` carries no such restriction.
+   >
+   > The key is used server-side by the Netlify functions and has nothing to do with Firebase, so
+   > there is no benefit to keeping the two in the same Cloud project and, as above, a real cost.
 
    Then **Copy key** from the details panel that appears.
 
@@ -308,24 +316,21 @@ words that the key is missing. You can come back and do this months later.
 
    `HTTP 429` with `RESOURCE_EXHAUSTED` and *"You exceeded your current quota"*, arriving in a
    fraction of a second on a key that has never been used, does **not** mean you have used anything
-   up. Something in the request has no allowance on your tier at all.
+   up. **The overwhelmingly likely cause is that the key is attached to the wrong Cloud project** —
+   see the warning in step 1, and make a new key against `Default Gemini Project`.
 
-   Check what your key is actually permitted at **Google AI Studio → Usage & Billing → Rate
-   Limit**, with your project selected, and read it carefully — **there are two separate limits in
-   play and only one of them is obvious**:
-   - **Rate limits by model** (RPM / TPM / RPD), the big table. On the free tier
-     `Gemini 3.5 Flash` shows 5 RPM, 250K TPM, 20 RPD, which is ample for a household. If this
-     table shows healthy numbers and zero usage, **the model is not your problem** and you should
-     not go changing `GEMINI_MODEL`.
-   - **Tools → Search grounding**, further down the same page, with its own daily limit. **Plant
-     lookup's research phase asks Google to search the web**, so it is charged against this as well
-     as the model. Scan label does not, which makes it a useful test: if scanning a label works and
-     looking up a plant doesn't, the difference between them is search grounding.
+   To confirm that's what it is: **AI Studio → Usage & Billing → Rate Limit**, and open the
+   **Project** drop-down at the top. A project Gemini won't serve carries a **⚠ warning icon**;
+   hover it and it says *"Prepay required."* That one badge is the whole diagnosis, and it is
+   easier to find than anything on the page below it.
 
-   If it is search grounding, the way out is the Gemini API's **paid tier** — *Activate billing* on
-   the AI Studio key list. **That is separate from the Firebase Blaze upgrade in B1**: putting a
-   card on Firebase does not put the Gemini API on a paid tier, and it is an easy thing to assume.
-   Everything else in both apps carries on working regardless.
+   Two things on that page will mislead you if you go looking there first, so don't:
+   - **Rate limits by model** will look perfectly healthy — `Gemini 3.5 Flash` at 5 RPM, 250K TPM,
+     20 RPD with zero usage — because the model allowance genuinely is fine. **Do not start
+     changing `GEMINI_MODEL`.** It is not the model.
+   - **Tools → Search grounding** further down has its own separate allowance, and plant lookup's
+     research phase does search the web while Scan label doesn't. That's a real distinction and a
+     plausible-looking suspect, and it was not the answer here either.
 
 One caveat about plant lookup: Netlify allows these background requests **10 seconds** by default,
 and a thorough plant lookup can want longer. Leave the settings alone at first — the code defaults
