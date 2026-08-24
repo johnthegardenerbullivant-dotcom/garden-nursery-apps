@@ -20,7 +20,7 @@ requires a card on file before it will store photos.
 |---|---|---|
 | Firebase, Blaze plan | **Card required**, ~$0/month in practice | Since 3 Feb 2026 a new project must be on Blaze to create a photo bucket at all. Free allowances still apply — 5 GB storage, 100 GB/month transfer. A household garden won't approach that. |
 | Netlify | Free | Two sites, 100 GB bandwidth, 125k function calls/month. |
-| Gemini API key | **Scan label:** free. **Look up plant:** needs billing enabled, then ~$0 | Only these two features; everything else works without a key at all. Plant lookup searches the web, which Google does not sell on the free tier — but the paid tier includes 5,000 searches a month free, so a household pays nothing. See B6. |
+| Gemini API key | **Scan label:** free. **Look up plant:** prepaid billing required, pennies in practice | Only these two features; everything else works without a key at all. Plant lookup searches the web and Google does not sell that on the free tier. Measured on the author's own copy: **$3.34 across 24 days**, in a month that included building the feature. **Watch the auto-reload setting.** See B6. |
 | Domain name | $0 or ~$15/year | A free `something.netlify.app` address is fine. |
 
 **The card is the thing worth knowing up front**: photos will not work at all without it.
@@ -276,10 +276,26 @@ words that the key is missing. You can come back and do this months later.
 | **Scan label** — reads a printed plant label from a photo | A free key. Works as soon as you finish this section. |
 | **Look up plant** — researches a plant, with sources | **A key with billing enabled.** It searches the web, and Google does not sell web search on the free tier at any price, for any model a new key can reach. Tested 24 Aug 2026, not inferred. |
 
-Billing enabled does not mean money spent: the paid tier includes **5,000 grounded searches a
-month** free across the Gemini 3.x models, then $14 per 1,000. A household looking up a few plants a
-week will not come near that. But the card has to be on the Gemini API before the feature works at
-all, and that is a separate thing from the card you put on Firebase in B1.
+**What that actually costs, from a real installation:** the paid tier includes 5,000 grounded
+searches a month free across the Gemini 3.x models, then $14 per 1,000. On the author's own copy —
+during a month that included *building and testing* this feature, so heavier use than any normal
+gardening — the Gemini API bill for 24 days was **$3.34**. A household looking up a few plants a
+week should expect pennies.
+
+Three things to know before you turn it on, none of them alarming and all of them easier to know now
+than to discover on a statement:
+
+- **The Gemini API bills as prepaid credits**, not a monthly invoice. You buy a small balance
+  (~$25 is the usual starting amount) and calls draw it down.
+- **Auto-reload is likely to be switched on**, which tops the balance up automatically when it runs
+  low. That is convenient and it is also the thing that can quietly recur for years. Find it under
+  **Billing → Manage auto reload** and decide deliberately whether you want it.
+- **This is a separate account from the Firebase card in B1.** Same Google login, different billing.
+  Money spent here does not show up on your Firebase budget alert, so if you set one there it will
+  not warn you about this.
+
+If none of that appeals, don't enable it. Scan label still works, and everything that isn't these
+two features is unaffected.
 
 1. Go to **https://aistudio.google.com/apikey**, sign in, click **Create API key**. A **Create a new
    key** dialog opens, wanting two things:

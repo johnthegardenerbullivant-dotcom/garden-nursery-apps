@@ -97,8 +97,12 @@ Every entry below therefore carries an **Action required** line. `none` means sy
   directly against the API on 24 Aug 2026, not inferred: grounded calls fail on every reachable
   model, an ungrounded call to the same key succeeds. **There is no model or environment variable
   that works around it** — leave `GEMINI_MODEL` and `GEMINI_MODEL_RESEARCH` alone. Enable billing
-  in AI Studio and it works; the first **5,000 grounded searches a month are free**, so a household
-  should expect to pay nothing. This is separate from the Firebase Blaze card in B1.
+  in AI Studio and it works; the first **5,000 grounded searches a month are free**. Measured on the
+  author's own installation, the Gemini API bill for 24 days was **$3.34**, in a month that included
+  building and testing the feature — a household should expect pennies. Two things B6 now warns
+  about: the API bills as **prepaid credits** with **auto-reload likely switched on**, which is the
+  part that can quietly recur; and it is a **separate billing account from the Firebase card in B1**,
+  so a Firebase budget alert will not warn you about it.
   The research phase never falls back to an unsearched answer, by design — an ungrounded plant
   description is a confident invention — so it fails outright instead.
 - **The error you get says none of that.** It arrives as `HTTP 429 RESOURCE_EXHAUSTED`, *"You
