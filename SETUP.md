@@ -212,8 +212,12 @@ only Garden is fine; skip the Nursery half of every step below.)
    the Netlify dashboard: **Add new project → Import an existing project → GitHub**. It will offer
    `garden-nursery-apps` straight away — you already granted access in step 3, and there is no
    second authorization. This route walks you through three numbered steps and, unlike the signup
-   wizard, gives you a **Project name** box at the top: fill it in (`nursery-yourname`) and you get
-   that address instead of another random one. Then as before, except:
+   wizard, gives you a **Project name** box at the top. Filling it in gets you that address instead
+   of another random one — but the name has to be **unique across the whole of Netlify**, not just
+   your account, so anything obvious like `nursery` or `garden` is long gone and the box will reject
+   it. Use something nobody else would have picked: `nursery-<yoursurname>`. Leaving it blank is
+   fine too; you can rename later under **Project configuration → Project details**. Then as before,
+   except:
    - **Base directory:** `apps/nursery`
    - the **same six `FIREBASE_*` values** — yes, again; see the note above
    - and one extra variable, which is **much easier to add now than later**:
@@ -231,9 +235,15 @@ only Garden is fine; skip the Nursery half of every step below.)
    Netlify does not redeploy when you change a variable. **Project configuration → Environment
    variables → Add a variable**, then **Deploys → Trigger deploy → Deploy site**. Until you do that
    second half, the links stay missing and nothing tells you why.
-8. Go back to Firebase: **Security → Authentication → Settings → Authorized domains → Add domain**,
-   and add **both** Netlify addresses (just the `something.netlify.app` part, no `https://`).
-   **Google sign-in fails with a popup that opens and instantly closes until you do this.**
+8. **Do not skip this one — B7 is impossible without it.** Go back to Firebase: **Security →
+   Authentication → Settings** tab → **Authorized domains → Add domain**, and add **both** Netlify
+   addresses, one at a time. Hostname only — `precious-zuccutto-800b80.netlify.app`, with no
+   `https://` and no trailing slash.
+
+   Firebase only allows OAuth popups from hosts on that list. Until both are on it, **Sign in with
+   Google opens a popup that closes itself immediately and tells you nothing.** No error, no
+   message, on either site. It reads as a broken app, and it is one missing list entry. The failure
+   underneath is `auth/unauthorized-domain`, visible only in the browser console.
 
 ## B5. Turn on the AI features (optional, 5 minutes)
 
@@ -274,12 +284,11 @@ The repo contains the rules that open it up correctly. Two ways to install them 
    paste, click **Publish**.
 3. Do the same with `firebase/storage.rules` into **Storage → Rules**.
 
-   > **If the Storage editor won't take a paste**, you have almost certainly landed on it with the
-   > **Rules Playground** panel open on the left — that panel takes the keyboard, and the rules
-   > text beside it looks selected but isn't focused, so `Ctrl+V` goes nowhere. Close the playground
-   > (or click directly into the code, on a line of text, and check you have a blinking caret)
-   > before selecting all and pasting. If it still refuses, don't fight it — use the command-line
-   > route below, which is the better option for Storage anyway.
+   > **If the Storage editor won't take a paste, click directly onto a line of the code first.**
+   > That page opens with the **Rules Playground** panel beside the editor, and the rules text can
+   > look selected while the editor has no keyboard focus at all — so `Ctrl+A` and `Ctrl+V` go
+   > nowhere and nothing tells you why. One click on a line of code gives you a blinking caret, and
+   > from there select-all, paste and **Publish** behave normally.
 
 **The proper way (command line)** — better if you'll ever change the rules, because it keeps the
 repo as the single source of truth. Needs Node.js installed:
@@ -316,7 +325,20 @@ Add `--dry-run` first if you want to check the files compile without publishing 
 There is deliberately no way to sign yourself up as an admin from inside the app — otherwise anyone
 who found the URL could. So the first admin is created by hand, once.
 
+> **Before you start, confirm you did B4 step 8.** Both `.netlify.app` addresses have to be in
+> Firebase's **Authorized domains** list. If they aren't, *Sign in with Google* opens a popup that
+> shuts itself instantly, showing you nothing, and this whole step is impossible — there is no way
+> to make an admin out of a sign-in that never happened. It looks like a broken app and it is one
+> missing list entry. Go and do it now if you skipped past it.
+
 1. Open your Garden site and click **Sign in with Google**.
+
+   > **If the app lets you straight in, look at who you are before celebrating.** Firebase keeps you
+   > signed in between visits, so an earlier press of *Continue as Guest* is still live and the app
+   > opens as that guest. Guests are read-only, and — the part that matters here — they get no
+   > `users` record at all, so there will be nothing in step 3 for you to edit. **Sign out first**,
+   > then sign in with Google properly.
+
 2. You will land on an **access denied / pending** screen. **This is correct.** Signing in created
    your account record; it has no permissions yet.
 3. Go to Firebase Console → **Firestore** → the **Data** tab. You'll see a `users` collection

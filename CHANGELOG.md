@@ -67,8 +67,20 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 - **`GARDEN_URL` needs a redeploy if you add it after the fact**, and Netlify won't do that for you.
   It's the easiest of the seven variables to miss, and the symptom — two links quietly absent — is
   indistinguishable from a Nursery-only installation.
-- **If the Storage rules editor won't accept a paste,** the Rules Playground panel has the keyboard.
-  Close it, or use the CLI. Also points at GitHub's *copy raw file* button, which beats select-all.
+- **If the Storage rules editor won't accept a paste, click onto a line of the code first** —
+  confirmed fix. The page opens with the Rules Playground beside the editor and the editor holding
+  no keyboard focus, so select-all and paste silently do nothing. Also points at GitHub's *copy raw
+  file* button, which beats select-all on the Raw page.
+- **Authorized domains (B4 step 8) promoted from a one-liner to a warning, and B7 now checks it
+  first.** Skipping it makes B7 not merely harder but impossible: Google sign-in opens a popup that
+  shuts itself with no message on either site, so no account is ever created to promote. The
+  underlying `auth/unauthorized-domain` is visible only in the browser console.
+- **"It signed me in" is not the same as "it signed me in as me."** Firebase keeps a session between
+  visits, so an earlier *Continue as Guest* is still live and the app opens as that guest — who is
+  read-only and has no `users` record to grant a role to. B7 now says to check who you are, and sign
+  out first.
+- **Netlify project names are unique across all of Netlify**, not just your account, so the obvious
+  ones are taken and the box rejects them.
 
 ## 2026-08-21
 
