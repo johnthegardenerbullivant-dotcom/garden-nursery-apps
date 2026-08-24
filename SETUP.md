@@ -14,6 +14,10 @@ Setting up takes about **an hour and a half**, most of it waiting for things to 
 Google account and a debit or credit card. You will not be charged in normal use, but Google
 requires a card on file before it will store photos.
 
+> **In a hurry?** [`QUICKSTART.md`](QUICKSTART.md) is the same thing as a checklist — the steps
+> with the reasoning stripped out, about two pages. Come back here when something looks wrong, or
+> when you want to know why a step exists. Every step there links to its section here.
+
 ## Before you start — what it costs
 
 | Thing | Cost | Notes |
@@ -239,7 +243,7 @@ only Garden is fine; skip the Nursery half of every step below.)
 Both sites are now live. **Write down the two addresses** — the next section needs them, and so
 does B8.
 
-## B5. Tell Firebase about your two addresses ← two minutes, and everything depends on it
+## B5. Tell Firebase about your two addresses
 
 This is one small entry in one list, it takes about two minutes, and **B8 cannot be done at all
 until it is.** It gets its own section because it used to be the last bullet of the Netlify
@@ -375,12 +379,14 @@ two features is unaffected.
    runs on a free key. If scanning works and looking up doesn't, that pair of facts is the whole
    diagnosis.
 
-One caveat about plant lookup: Netlify allows these background requests **10 seconds** by default,
-and a thorough plant lookup can want longer. Leave the settings alone at first — the code defaults
-are tuned to fit inside 10 seconds. If lookups time out often, either ask Netlify support to raise
-your function timeout (they are usually quick about it — one such request was granted 30 seconds on
-the same day it was asked) or add `GEMINI_MODEL_RESEARCH` = `gemini-3.5-flash-lite`, which is faster
-and slightly less thorough.
+**One last caveat, and only once lookups are working at all** — that is, on a billed key. Netlify
+allows these background requests **10 seconds** by default, and a thorough plant lookup can want
+longer. Leave the settings alone at first; the code defaults are tuned to fit inside 10 seconds. If
+lookups start *timing out* (a different symptom from the 429 above), either ask Netlify support to
+raise your function timeout — they are usually quick about it, one such request was granted 30
+seconds the same day — or set `GEMINI_MODEL_RESEARCH` = `gemini-3.5-flash-lite`, which is faster and
+slightly less thorough. That is the one situation where changing this variable helps; it will not
+cure a 429.
 
 ## B7. Deploy the security rules
 
@@ -434,7 +440,7 @@ firebase deploy --only firestore:rules,storage
 
 Add `--dry-run` first if you want to check the files compile without publishing anything.
 
-## B8. Make yourself the administrator ← the step everyone gets stuck on
+## B8. Make yourself the administrator
 
 There is deliberately no way to sign yourself up as an admin from inside the app — otherwise anyone
 who found the URL could. So the first admin is created by hand, once.

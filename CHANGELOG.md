@@ -25,8 +25,12 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 
 ## 2026-08-24
 
-**Action required: none.** Documentation only — sync and you're done.
+**Action required: none**, unless you use AI plant lookup — see the Gemini entry below.
 
+- **[`QUICKSTART.md`](QUICKSTART.md) added.** The same setup as a two-page checklist, reasoning
+  stripped out, every step deep-linked to its section in `SETUP.md`. The full guide roughly doubled
+  in length over a day of testing it against the real consoles — all of it earned, none of it what
+  a newcomer wants to read before they've started. Begin with whichever suits you.
 - **`SETUP.md` now names the repository to fork.** B3 said "open the repository on GitHub and click
   Fork" without ever giving the address, which is fine if you arrived from a link and useless if you
   didn't. It's `johnthegardenerbullivant-dotcom/garden-nursery-apps`, and B4 now looks for that name
