@@ -90,14 +90,17 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 - **Skipping the AI features is now stated as tested rather than promised.** With no key, Scan label
   and Look up plant fail with a "Failed" flag and a panel saying the key is missing. Nothing else is
   affected.
-- **Plant lookup does not work on a free-tier key without one extra setting. Action required if you
-  use the AI features on a free tier:** add `GEMINI_MODEL_RESEARCH` = `gemini-2.5-flash` to **both**
-  sites and redeploy. Google prices web search separately from the model, and for **Gemini 3.5
-  Flash** — what the apps request by default — grounding with Google Search is listed as *"Not
-  available"* on the free tier. 2.5 Flash includes it free up to 500 requests a day. The research
-  phase always sends the search tool and never falls back to an unsearched answer, by design, so it
-  fails outright rather than inventing a plant description. Paid tiers need none of this.
-  **Scan label is unaffected** — it doesn't search the web.
+- **Plant lookup now requires billing enabled on the Gemini API. Scan label does not.** Google sells
+  the web-search tool separately from the model and does not include it in the free tier of *any*
+  Gemini 3.x model; the two older models that did allow it, `gemini-2.5-flash` and
+  `gemini-2.5-flash-lite`, now answer `HTTP 404 … no longer available to new users`. Tested
+  directly against the API on 24 Aug 2026, not inferred: grounded calls fail on every reachable
+  model, an ungrounded call to the same key succeeds. **There is no model or environment variable
+  that works around it** — leave `GEMINI_MODEL` and `GEMINI_MODEL_RESEARCH` alone. Enable billing
+  in AI Studio and it works; the first **5,000 grounded searches a month are free**, so a household
+  should expect to pay nothing. This is separate from the Firebase Blaze card in B1.
+  The research phase never falls back to an unsearched answer, by design — an ungrounded plant
+  description is a confident invention — so it fails outright instead.
 - **The error you get says none of that.** It arrives as `HTTP 429 RESOURCE_EXHAUSTED`, *"You
   exceeded your current quota"*, in under half a second on a key with no usage at all. B6 now names
   it and points at Netlify → *Logs & metrics → Functions → `lookup-plant`*, which logs Google's full

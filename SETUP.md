@@ -20,7 +20,7 @@ requires a card on file before it will store photos.
 |---|---|---|
 | Firebase, Blaze plan | **Card required**, ~$0/month in practice | Since 3 Feb 2026 a new project must be on Blaze to create a photo bucket at all. Free allowances still apply — 5 GB storage, 100 GB/month transfer. A household garden won't approach that. |
 | Netlify | Free | Two sites, 100 GB bandwidth, 125k function calls/month. |
-| Gemini API key | Free tier — **but read B6** | Only for label scanning and AI plant lookup. Everything else works without it. Label scanning is free as it stands. Plant lookup searches the web, and web search is only free on some models, so a free-tier key needs one extra setting or every lookup fails. |
+| Gemini API key | **Scan label:** free. **Look up plant:** needs billing enabled, then ~$0 | Only these two features; everything else works without a key at all. Plant lookup searches the web, which Google does not sell on the free tier — but the paid tier includes 5,000 searches a month free, so a household pays nothing. See B6. |
 | Domain name | $0 or ~$15/year | A free `something.netlify.app` address is fine. |
 
 **The card is the thing worth knowing up front**: photos will not work at all without it.
@@ -269,6 +269,18 @@ You will need to come back here if you ever add a custom domain.
 **Look up plant** stop, and they stop politely — a "Failed" flag and a panel that says in plain
 words that the key is missing. You can come back and do this months later.
 
+**The two features do not cost the same, and this is worth knowing before you start:**
+
+| Feature | What it needs |
+|---|---|
+| **Scan label** — reads a printed plant label from a photo | A free key. Works as soon as you finish this section. |
+| **Look up plant** — researches a plant, with sources | **A key with billing enabled.** It searches the web, and Google does not sell web search on the free tier at any price, for any model a new key can reach. Tested 24 Aug 2026, not inferred. |
+
+Billing enabled does not mean money spent: the paid tier includes **5,000 grounded searches a
+month** free across the Gemini 3.x models, then $14 per 1,000. A household looking up a few plants a
+week will not come near that. But the card has to be on the Gemini API before the feature works at
+all, and that is a separate thing from the card you put on Firebase in B1.
+
 1. Go to **https://aistudio.google.com/apikey**, sign in, click **Create API key**. A **Create a new
    key** dialog opens, wanting two things:
    - **Name your key** — anything; `Gemini API Key` is the default and is fine.
@@ -319,35 +331,33 @@ words that the key is missing. You can come back and do this months later.
    up. On the free tier there is one overwhelmingly likely cause, and it is not what the message
    says.
 
-   **Plant lookup searches the web, and web search is not free on every model.** Google prices the
-   *google_search* tool separately from the model, and for **Gemini 3.5 Flash** — which is what the
-   apps ask for unless told otherwise — grounding with Google Search is listed as **"Not
-   available"** on the free tier. **Gemini 2.5 Flash** does include it, free, up to 500 requests a
-   day. The research phase always sends the search tool and never falls back to an unsearched
-   answer, on purpose: an ungrounded plant description is a plausible-sounding invention, which is
-   worse than no answer. So it fails outright instead.
+   **On a free-tier key this is expected, and there is no setting that fixes it.** Plant lookup
+   searches the web; Google prices the *google_search* tool separately from the model and does not
+   include it in the free tier of any Gemini 3.x model. The research phase always sends the search
+   tool and never falls back to an unsearched answer, on purpose — an ungrounded plant description
+   is a confident invention, which is worse than no answer — so it fails outright rather than
+   quietly making something up.
 
-   **The fix is one variable on each site**, then a redeploy:
+   **Enable billing on the Gemini API and it works.** AI Studio → **API Keys** → *Activate billing*
+   on your key's row. The first 5,000 grounded searches each month are free, so expect to be
+   charged nothing. **This is not the Firebase Blaze upgrade from B1** — that card pays for
+   Firebase, and the Gemini API is billed separately even in the same Google account.
 
-   | Key | Value |
-   |---|---|
-   | `GEMINI_MODEL_RESEARCH` | `gemini-2.5-flash` |
+   Things that look like the fix and are not, so you can skip an afternoon:
+   - **Changing the model.** Every Gemini 3.x model refuses grounding on the free tier, and the two
+     older models that do allow it — `gemini-2.5-flash` and `gemini-2.5-flash-lite` — return
+     `HTTP 404 … no longer available to new users`. There is nothing to switch to. Leave
+     `GEMINI_MODEL` and `GEMINI_MODEL_RESEARCH` alone.
+   - **The rate-limit page.** *Rate limits by model* will look perfectly healthy — 5 RPM, 250K TPM,
+     20 RPD, zero used — because the model allowance genuinely is fine. Nothing on that table hints
+     that the tool attached to the request is sold separately.
+   - **The ⚠ "Prepay required" badge** some projects carry in the **Project** drop-down. The
+     Firebase project from B1 has it, which is the other reason step 1 says not to put the key
+     there — but it is not what causes this.
 
-   That changes only the searching half; the writing half stays on the newer model. On a **paid**
-   tier you don't need it at all — leave it unset and 3.5 Flash handles both.
-
-   **Scan label should be working already**, because it doesn't search the web — no tools, no
-   grounding, no extra charge. If scanning works and lookup doesn't, that pair of facts *is* the
-   diagnosis, and you can stop reading here.
-
-   Two things will mislead you if you go hunting through **AI Studio → Usage & Billing → Rate
-   Limit** first, so save yourself the trip:
-   - **Rate limits by model** looks perfectly healthy — `Gemini 3.5 Flash` at 5 RPM, 250K TPM, 20
-     RPD, zero used — because the *model* allowance genuinely is fine. Nothing on that table hints
-     that the tool attached to the request isn't sold at that price.
-   - A project may also carry a **⚠ "Prepay required"** badge in the **Project** drop-down — the
-     Firebase project from B1 does, which is the other reason step 1 tells you not to use it. Worth
-     avoiding, but it was not what caused this.
+   **Scan label needs none of it** and should already be working: it sends no search tool, so it
+   runs on a free key. If scanning works and looking up doesn't, that pair of facts is the whole
+   diagnosis.
 
 One caveat about plant lookup: Netlify allows these background requests **10 seconds** by default,
 and a thorough plant lookup can want longer. Leave the settings alone at first — the code defaults
