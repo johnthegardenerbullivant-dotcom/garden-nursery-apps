@@ -265,9 +265,32 @@ You will need to come back here if you ever add a custom domain.
 
 ## B6. Turn on the AI features (optional, 5 minutes)
 
-Skip this and everything still works except **Scan label** and **Look up plant**, which will error.
+**Skipping this is genuinely safe, and tested.** Everything else works; only **Scan label** and
+**Look up plant** stop, and they stop politely — a "Failed" flag and a panel that says in plain
+words that the key is missing. You can come back and do this months later.
 
-1. Go to **https://aistudio.google.com/apikey**, sign in, click **Create API key**.
+1. Go to **https://aistudio.google.com/apikey**, sign in, click **Create API key**. A **Create a new
+   key** dialog opens, wanting two things:
+   - **Name your key** — anything; `Gemini API Key` is the default and is fine.
+   - **Choose an imported project** — a drop-down offering *Import project*, *Create project*, and
+     any Cloud projects you already have. **Pick the Firebase project you made in B1** (it appears
+     under the name you gave it, e.g. *A Garden Database*). It's already set up and already has
+     billing attached, so key, quota and usage all stay in one place instead of being scattered
+     across a stray "Default Gemini Project".
+
+   Then **Copy key** from the details panel that appears.
+
+   > **The key does not look like the Firebase one, and that's correct.** A Gemini key starts
+   > **`AQ.`** and runs to about 50 characters — it is not the `AIza…`-and-39-characters shape of
+   > `FIREBASE_API_KEY`. Nothing validates it at build time, so nothing will tell you if it's wrong;
+   > the first sign of a bad key is a scan or lookup failing. The key list also shows a **Billing
+   > Tier** of *Free trial* with an *Activate billing* link — ignore it, the free tier is what this
+   > uses.
+   >
+   > To find the key again later, note that AI Studio's list only shows keys for projects that have
+   > been *imported into AI Studio* — if yours seems to have vanished, that's why, and there's an
+   > **Import projects** button at the foot of the page.
+
 2. In Netlify, for **each of your two sites**: **Project configuration → Environment variables →
    Add**:
 

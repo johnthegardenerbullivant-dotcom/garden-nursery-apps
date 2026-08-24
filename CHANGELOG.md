@@ -82,6 +82,14 @@ Every entry below therefore carries an **Action required** line. `none` means sy
   thing will happen to anyone you grant a role to.
 - **B8 now says what the other fields in the user document are for**, so nobody edits
   `status: "pending"` trying to help. Nothing reads it for access; `role` is the whole mechanism.
+- **B6 covers the Google AI Studio key dialog**, which now asks you to name the key and choose a
+  Cloud project. Pick the Firebase project from B1, so key, quota and billing stay together instead
+  of landing in a stray "Default Gemini Project". Also: a Gemini key starts **`AQ.`** and is about
+  50 characters — *not* the `AIza…`-and-39 shape of `FIREBASE_API_KEY`, so it looks wrong and isn't.
+  Nothing validates it at build time; a bad one shows up as a failed scan.
+- **Skipping the AI features is now stated as tested rather than promised.** With no key, Scan label
+  and Look up plant fail with a "Failed" flag and a panel saying the key is missing. Nothing else is
+  affected.
 - **"It signed me in" is not the same as "it signed me in as me."** Firebase keeps a session between
   visits, so an earlier *Continue as Guest* is still live and the app opens as that guest — who is
   read-only and has no `users` record to grant a role to. B7 now says to check who you are, and sign
