@@ -32,29 +32,53 @@ Do the steps in order. **Step 7 is the one everyone gets stuck on** — read it 
 
 ## B1. Create your Firebase project (the database)
 
+> **The left menu has no "Build" section.** Firebase reorganized the console in 2026. Below
+> **Project Overview** and **Settings** you'll find **Project shortcuts** (which fills up as you add
+> products) and then **Product categories**: *Databases & Storage*, *Security*, *AI services*,
+> *Hosting & Serverless*, *DevOps & Engagement*, *Analytics*. Everything this guide needs lives under
+> the first two. Each is a fly-out — click the category, then the product in the little menu that
+> appears. Where an older guide says "Build → *something*", look under those categories instead.
+
 1. Go to **https://console.firebase.google.com** and sign in with your Google account.
 2. Click **Create a project**. Name it something like `my-garden`. Turn Google Analytics **off**.
 3. When it finishes, click **Continue**.
-4. In the left menu click **Build → Firestore Database → Create database**.
-   - Choose **Production mode** (not test mode — the app brings its own security rules).
-   - Pick a location near you (`europe-west2` for the UK, `us-west1` for the US west coast). **You
-     cannot change this later.**
-5. In the left menu click **Build → Storage → Get started**.
-   - This is where Firebase asks you to upgrade to the **Blaze** plan and add a card. You have to.
-     Storage is where plant photos live, and since February 2026 a new project cannot create a photo
-     bucket without it. The free allowance on Blaze (5 GB) still applies, and a home garden will not
-     get close to it.
-   - Set a budget alert at $1 while you're there — Firebase offers this during the upgrade.
-6. In the left menu click **Build → Authentication → Get started**, then enable these three
-   sign-in methods:
-   - **Google**
+4. Left menu → **Databases & Storage → Firestore**. The **Create database** button is in the middle
+   of the page, not in the menu. Click it and answer three questions, in this order:
+   - **Edition:** **Standard**. (Enterprise is a paid tier for large workloads. You don't need it.)
+   - **Location:** somewhere near you — `europe-west2` for the UK, `us-west1` for the US west coast.
+     **You cannot change this later.**
+   - **Rules:** **Production mode**, not test mode. The app brings its own security rules and you
+     install them in B6.
+5. Left menu → **Databases & Storage → Storage**. The page says *"To use Storage, upgrade your
+   project's pricing plan"* — click **Upgrade project**.
+   - This is the card step, and you have to do it. Storage is where plant photos live, and since
+     February 2026 a new project cannot create a photo bucket at all without the **Blaze** plan. The
+     free allowance on Blaze (5 GB) still applies, and a home garden will not get close to it.
+   - You'll enter name, address and card details, set a budget, and confirm linking the billing
+     account to the project. Set the budget alert to **$1** while you're there.
+   - Google will probably also start a **Google Cloud Free Trial** — $300 of credit, 90 days —
+     and show it as a countdown card on Project Overview. Ignore it. When it expires you stay on
+     Blaze with the free allowances, which is what you actually want.
+   - Then a **Set up default bucket** dialog appears. Step 1 offers **No cost location** or **All
+     locations**: take **No cost location** and change the drop-down (it defaults to `US-EAST1`) to
+     whichever offered region is nearest you — ideally the same one you gave Firestore. Step 2 asks
+     about security rules; take the locked-down/production option, because B6 replaces them anyway.
+6. Left menu → **Security → Authentication**, then **Get started**. Open the **Sign-in method** tab
+   and use **Add new provider** to enable these three:
+   - **Google** — before it will let you save, the console makes you fill in a **public-facing name
+     for project** (it pre-fills something like `project-982217052574`; any name will do) and a
+     **support email**. Both are project-wide settings that happen to be asked for here.
    - **Email/Password**
-   - **Anonymous**
+   - **Anonymous** — tick **Enable Auto clean-up** as well. It deletes guest accounts older than 30
+     days, and it's safe here: guests are read-only viewers and the app stores nothing against them,
+     so there is nothing to lose and it keeps your user list honest.
 
 ## B2. Copy your Firebase keys
 
-1. Click the ⚙️ gear next to **Project Overview** → **Project settings**.
-2. Scroll to **Your apps**. Click the web icon **`</>`**.
+1. In the left menu click **Settings** (the ⚙️ directly under **Project Overview**) → **General**.
+2. **Your apps** is a panel partway down the *page* — not an entry in the Settings menu. Scroll to
+   it. On a new project it reads *"There are no apps in your project"*. Click the web icon
+   **`</>`**.
 3. Nickname it anything. **Do not** tick Firebase Hosting. Click **Register app**.
 4. You'll see a block of code containing `apiKey`, `authDomain`, `projectId`, `storageBucket`,
    `messagingSenderId` and `appId`. **Leave this browser tab open** — you need these values in B3.
@@ -62,7 +86,13 @@ Do the steps in order. **Step 7 is the one everyone gets stuck on** — read it 
 ## B3. Get your own copy of the code
 
 1. Create a free account at **https://github.com** if you don't have one.
-2. Open the repository on GitHub and click **Fork** (top right) → **Create fork**.
+2. Signed in as yourself, open
+
+   **https://github.com/johnthegardenerbullivant-dotcom/garden-nursery-apps**
+
+   and click **Fork** (top right) → **Create fork**. Accept the defaults on that screen; the copy
+   lands in your own account, still called **`garden-nursery-apps`**. That's the name to look for in
+   B4.
 3. You now have your own copy, and it stays linked to the original. When a new release lands
    upstream, GitHub shows "this branch is N commits behind" with a **Sync fork** button — one click,
    and your sites rebuild. That link is why you fork rather than download the files.
@@ -85,7 +115,7 @@ only Garden is fine; skip the Nursery half of every step below.)
 
 1. Sign up at **https://app.netlify.com** — choose **Sign up with GitHub**.
 2. Click **Add new site → Import an existing project → GitHub**, authorize Netlify when asked, and
-   pick your `garden-apps` repository.
+   pick your `garden-nursery-apps` repository.
 3. On the configuration screen, set:
    - **Base directory:** `apps/garden`
    - **Publish directory:** `apps/garden`
@@ -162,7 +192,9 @@ The repo contains the rules that open it up correctly. Two ways to install them 
 
 1. In your GitHub repo, open `firebase/firestore.rules`. Click the **Raw** button, select all the
    text, copy it.
-2. In Firebase Console: **Firestore Database → Rules** tab. Delete what's there, paste, click
+2. In Firebase Console: **Firestore → Rules** tab (left menu → *Databases & Storage → Firestore*,
+   or the **Firestore** shortcut that now sits under *Project shortcuts*). Delete what's there,
+   paste, click
    **Publish**.
 3. Do the same with `firebase/storage.rules` into **Storage → Rules**.
 
@@ -204,7 +236,7 @@ who found the URL could. So the first admin is created by hand, once.
 1. Open your Garden site and click **Sign in with Google**.
 2. You will land on an **access denied / pending** screen. **This is correct.** Signing in created
    your account record; it has no permissions yet.
-3. Go to Firebase Console → **Firestore Database → Data**. You'll see a `users` collection
+3. Go to Firebase Console → **Firestore** → the **Data** tab. You'll see a `users` collection
    containing one document, its name a long string of letters and numbers (that's your user ID).
 4. Click that document, then **+ Add field**:
    - Field name: `role`
@@ -222,7 +254,8 @@ who found the URL could. So the first admin is created by hand, once.
    grant **viewer** (look only), **editor** (add and change plants) or **admin** (everything,
    including delete and backups). A role granted in one app applies to both.
 3. For someone without a Google account, create an email/password login in Firebase Console →
-   **Authentication → Users → Add user**. There is no sign-up form in the app, on purpose. They then
+   **Security → Authentication → Users → Add user**. There is no sign-up form in the app, on
+   purpose. They then
    sign in with the **Email** form and you grant them a role as above.
 
 ## B9. The last bits

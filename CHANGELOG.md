@@ -23,6 +23,25 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 
 ---
 
+## 2026-08-24
+
+**Action required: none.** Documentation only — sync and you're done.
+
+- **`SETUP.md` now names the repository to fork.** B3 said "open the repository on GitHub and click
+  Fork" without ever giving the address, which is fine if you arrived from a link and useless if you
+  didn't. It's `johnthegardenerbullivant-dotcom/garden-nursery-apps`, and B4 now looks for that name
+  rather than `garden-apps`.
+- **B1 and B2 rewritten for the 2026 Firebase console.** The left menu no longer has a **Build**
+  section; products sit under **Product categories** — Firestore and Storage under *Databases &
+  Storage*, Authentication under *Security*. Also covered, because each stops you dead the first
+  time: **Create database** is a button on the page rather than a menu entry, the database wizard
+  asks **edition → location → rules** in that order, Storage now walks you through **Upgrade
+  project** and a **Set up default bucket** dialog, Google sign-in refuses to save until you give
+  the project a public-facing name and support email, and **Your apps** is a panel inside
+  *Settings → General*, not an item in the Settings menu.
+- **Anonymous sign-in: turn on Auto clean-up.** It deletes guest accounts older than 30 days.
+  Guests are read-only viewers with no Firestore document, so there is nothing to lose.
+
 ## 2026-08-21
 
 **Action required: none.** Documentation only — sync and you're done.

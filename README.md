@@ -85,9 +85,10 @@ Architecture and working conventions are in **[`CLAUDE.md`](CLAUDE.md)**, the Fi
 ## Copies and support
 
 You're welcome to run your own copy — **[`SETUP.md`](SETUP.md)** takes you from nothing to a working
-installation. Fork the repository rather than downloading it: a fork keeps the link upstream, so
-GitHub's **Sync fork** button pulls in later releases with one click. Nothing in this repository is
-installation-specific, so a sync is always a clean fast-forward.
+installation. Fork **https://github.com/johnthegardenerbullivant-dotcom/garden-nursery-apps** rather
+than downloading it: a fork keeps the link upstream, so GitHub's **Sync fork** button pulls in later
+releases with one click. Nothing in this repository is installation-specific, so a sync is always a
+clean fast-forward.
 
 Read **[`CHANGELOG.md`](CHANGELOG.md)** after syncing. Netlify rebuilds your sites for you, but it
 cannot deploy security rules or add environment variables, and both fail *quietly* — every entry
