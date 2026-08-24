@@ -20,7 +20,7 @@ requires a card on file before it will store photos.
 |---|---|---|
 | Firebase, Blaze plan | **Card required**, ~$0/month in practice | Since 3 Feb 2026 a new project must be on Blaze to create a photo bucket at all. Free allowances still apply — 5 GB storage, 100 GB/month transfer. A household garden won't approach that. |
 | Netlify | Free | Two sites, 100 GB bandwidth, 125k function calls/month. |
-| Gemini API key | Free tier, or pennies — **but see B6** | Only for label scanning and AI plant lookup. Everything else works without it. A new project may have no free quota for the model the apps ask for, in which case you either point them at a different model or put the Gemini API on its paid tier. |
+| Gemini API key | Free tier — **but read B6** | Only for label scanning and AI plant lookup. Everything else works without it. Label scanning is free as it stands. Plant lookup searches the web, and web search is only free on some models, so a free-tier key needs one extra setting or every lookup fails. |
 | Domain name | $0 or ~$15/year | A free `something.netlify.app` address is fine. |
 
 **The card is the thing worth knowing up front**: photos will not work at all without it.
@@ -316,21 +316,38 @@ words that the key is missing. You can come back and do this months later.
 
    `HTTP 429` with `RESOURCE_EXHAUSTED` and *"You exceeded your current quota"*, arriving in a
    fraction of a second on a key that has never been used, does **not** mean you have used anything
-   up. **The overwhelmingly likely cause is that the key is attached to the wrong Cloud project** —
-   see the warning in step 1, and make a new key against `Default Gemini Project`.
+   up. On the free tier there is one overwhelmingly likely cause, and it is not what the message
+   says.
 
-   To confirm that's what it is: **AI Studio → Usage & Billing → Rate Limit**, and open the
-   **Project** drop-down at the top. A project Gemini won't serve carries a **⚠ warning icon**;
-   hover it and it says *"Prepay required."* That one badge is the whole diagnosis, and it is
-   easier to find than anything on the page below it.
+   **Plant lookup searches the web, and web search is not free on every model.** Google prices the
+   *google_search* tool separately from the model, and for **Gemini 3.5 Flash** — which is what the
+   apps ask for unless told otherwise — grounding with Google Search is listed as **"Not
+   available"** on the free tier. **Gemini 2.5 Flash** does include it, free, up to 500 requests a
+   day. The research phase always sends the search tool and never falls back to an unsearched
+   answer, on purpose: an ungrounded plant description is a plausible-sounding invention, which is
+   worse than no answer. So it fails outright instead.
 
-   Two things on that page will mislead you if you go looking there first, so don't:
-   - **Rate limits by model** will look perfectly healthy — `Gemini 3.5 Flash` at 5 RPM, 250K TPM,
-     20 RPD with zero usage — because the model allowance genuinely is fine. **Do not start
-     changing `GEMINI_MODEL`.** It is not the model.
-   - **Tools → Search grounding** further down has its own separate allowance, and plant lookup's
-     research phase does search the web while Scan label doesn't. That's a real distinction and a
-     plausible-looking suspect, and it was not the answer here either.
+   **The fix is one variable on each site**, then a redeploy:
+
+   | Key | Value |
+   |---|---|
+   | `GEMINI_MODEL_RESEARCH` | `gemini-2.5-flash` |
+
+   That changes only the searching half; the writing half stays on the newer model. On a **paid**
+   tier you don't need it at all — leave it unset and 3.5 Flash handles both.
+
+   **Scan label should be working already**, because it doesn't search the web — no tools, no
+   grounding, no extra charge. If scanning works and lookup doesn't, that pair of facts *is* the
+   diagnosis, and you can stop reading here.
+
+   Two things will mislead you if you go hunting through **AI Studio → Usage & Billing → Rate
+   Limit** first, so save yourself the trip:
+   - **Rate limits by model** looks perfectly healthy — `Gemini 3.5 Flash` at 5 RPM, 250K TPM, 20
+     RPD, zero used — because the *model* allowance genuinely is fine. Nothing on that table hints
+     that the tool attached to the request isn't sold at that price.
+   - A project may also carry a **⚠ "Prepay required"** badge in the **Project** drop-down — the
+     Firebase project from B1 does, which is the other reason step 1 tells you not to use it. Worth
+     avoiding, but it was not what caused this.
 
 One caveat about plant lookup: Netlify allows these background requests **10 seconds** by default,
 and a thorough plant lookup can want longer. Leave the settings alone at first — the code defaults

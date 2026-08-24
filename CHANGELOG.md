@@ -90,23 +90,28 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 - **Skipping the AI features is now stated as tested rather than promised.** With no key, Scan label
   and Look up plant fail with a "Failed" flag and a panel saying the key is missing. Nothing else is
   affected.
-- **Do not attach the Gemini key to your Firebase project — B6 now says so explicitly.** The Blaze
-  upgrade in B1 attaches a billing account carrying the Google Cloud free trial, and the Gemini API
-  will not run against it: AI Studio flags the project **"Prepay required"** and every call returns
-  `HTTP 429 RESOURCE_EXHAUSTED` in a fraction of a second. It presents as a quota problem and is a
-  billing-plan restriction. Use `Default Gemini Project`, which carries no such flag. The key is
+- **Plant lookup does not work on a free-tier key without one extra setting. Action required if you
+  use the AI features on a free tier:** add `GEMINI_MODEL_RESEARCH` = `gemini-2.5-flash` to **both**
+  sites and redeploy. Google prices web search separately from the model, and for **Gemini 3.5
+  Flash** — what the apps request by default — grounding with Google Search is listed as *"Not
+  available"* on the free tier. 2.5 Flash includes it free up to 500 requests a day. The research
+  phase always sends the search tool and never falls back to an unsearched answer, by design, so it
+  fails outright rather than inventing a plant description. Paid tiers need none of this.
+  **Scan label is unaffected** — it doesn't search the web.
+- **The error you get says none of that.** It arrives as `HTTP 429 RESOURCE_EXHAUSTED`, *"You
+  exceeded your current quota"*, in under half a second on a key with no usage at all. B6 now names
+  it and points at Netlify → *Logs & metrics → Functions → `lookup-plant`*, which logs Google's full
+  message — the apps show only "Lookup service error", and the guide had never mentioned the log.
+- **B6 also names the dead ends, so nobody re-walks them.** *Rate limits by model* shows healthy,
+  unused quota, because the model allowance genuinely is fine and nothing there hints that the tool
+  on the request is priced separately. And a project can carry a ⚠ **"Prepay required"** badge — the
+  Firebase project from B1 does, which is a second reason not to put the key there — but that was
+  not the cause either.
+- **Don't attach the Gemini key to your Firebase project.** Use `Default Gemini Project`. The key is
   used server-side by the Netlify functions and has no relationship to Firebase, so there was never
-  anything to gain by keeping them together.
-- **B6 explains how to read the real error.** Netlify → *Logs & metrics → Functions →
-  `lookup-plant`* logs Google's own message in full; the guide had never pointed anyone at it, and
-  the apps deliberately show only "Lookup service error".
-- **It also names the two dead ends**, because both look right and cost an afternoon: the
-  *Rate limits by model* table will show healthy, unused quota (so don't touch `GEMINI_MODEL`), and
-  *Tools → Search grounding* has a separate allowance that plant lookup does use and Scan label
-  doesn't — a genuine distinction that was still not the cause. The ⚠ badge in the project
-  drop-down is the diagnosis.
+  anything to gain by keeping them together, and the B1 project carries the prepay flag.
 - **The Gemini API's paid tier is not the Firebase Blaze upgrade.** B1 already asks for a card, so
-  assuming it covers Gemini is natural and wrong. The cost table is qualified accordingly.
+  assuming it covers Gemini is natural and wrong. The cost table is corrected accordingly.
 - **New troubleshooting row for "Lookup service error" / "Vision service error"** with a key that is
   correctly set, pointing at the function log. The apps deliberately don't surface Google's message,
   so without that pointer there's nothing to go on.
