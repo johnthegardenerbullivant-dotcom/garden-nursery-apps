@@ -151,7 +151,14 @@ only Garden is fine; skip the Nursery half of every step below.)
    | Branch to deploy | `main` — already correct |
    | **Base directory** | **`apps/garden`** |
 
-   The moment you do, Netlify reads the repo's `netlify.toml` and **fills in the other three by
+   > **The cursor will jump backwards while you type this.** Netlify re-reads the repository after
+   > every keystroke, and each time it does, the caret is thrown back to the start of the box — so
+   > `apps/garden` comes out as `nedrag/sppa` or worse. It is disconcerting and it is not your
+   > typing. Type it, then **look at what's actually in the box** and retype until it reads
+   > `apps/garden` exactly. Pasting it in one go, or typing it somewhere else and pasting, avoids
+   > the fight entirely.
+
+   Once the box is right, Netlify reads the repo's `netlify.toml` and **fills in the other three by
    itself**:
 
    | Field | Fills in as |
@@ -204,10 +211,12 @@ only Garden is fine; skip the Nursery half of every step below.)
 7. **Now the Nursery site.** That signup wizard only ever makes one site, so this time start from
    the Netlify dashboard: **Add new project → Import an existing project → GitHub**. It will offer
    `garden-nursery-apps` straight away — you already granted access in step 3, and there is no
-   second authorization. Same repository, and then as before except:
+   second authorization. This route walks you through three numbered steps and, unlike the signup
+   wizard, gives you a **Project name** box at the top: fill it in (`nursery-yourname`) and you get
+   that address instead of another random one. Then as before, except:
    - **Base directory:** `apps/nursery`
    - the **same six `FIREBASE_*` values** — yes, again; see the note above
-   - and one extra variable:
+   - and one extra variable, which is **much easier to add now than later**:
 
    | Key | Value |
    |---|---|
@@ -215,12 +224,16 @@ only Garden is fine; skip the Nursery half of every step below.)
 
    Nursery uses it for two links back to Garden — a button in the Admin panel and "View in garden"
    on a batch you've planted out. Leave it unset and those links simply don't appear, which is what
-   you want if you're only running Nursery. You can add it later once you know the Garden address;
-   remember to redeploy afterwards.
-8. Go back to Firebase: **Security → Authentication → Settings → Authorized domains → Add
-   domain**, and add
-   **both** Netlify addresses (just the `something.netlify.app` part, no `https://`). **Google
-   sign-in fails with a popup that opens and instantly closes until you do this.**
+   you want if you're only running Nursery.
+
+   **If you forget it here** — easily done, it's the seventh box on a screen where the first six are
+   the point — adding it afterwards is fine, but **the site will not pick it up until it rebuilds**.
+   Netlify does not redeploy when you change a variable. **Project configuration → Environment
+   variables → Add a variable**, then **Deploys → Trigger deploy → Deploy site**. Until you do that
+   second half, the links stay missing and nothing tells you why.
+8. Go back to Firebase: **Security → Authentication → Settings → Authorized domains → Add domain**,
+   and add **both** Netlify addresses (just the `something.netlify.app` part, no `https://`).
+   **Google sign-in fails with a popup that opens and instantly closes until you do this.**
 
 ## B5. Turn on the AI features (optional, 5 minutes)
 
@@ -253,12 +266,20 @@ The repo contains the rules that open it up correctly. Two ways to install them 
 **The easy way (copy and paste):**
 
 1. In your GitHub repo, open `firebase/firestore.rules`. Click the **Raw** button, select all the
-   text, copy it.
+   text, copy it. (GitHub's **copy raw file** icon — the little clipboard at the top right of the
+   file view — is more reliable than select-all on the raw page, and doesn't need the Raw button
+   at all.)
 2. In Firebase Console: **Firestore → Rules** tab (left menu → *Databases & Storage → Firestore*,
    or the **Firestore** shortcut that now sits under *Project shortcuts*). Delete what's there,
-   paste, click
-   **Publish**.
+   paste, click **Publish**.
 3. Do the same with `firebase/storage.rules` into **Storage → Rules**.
+
+   > **If the Storage editor won't take a paste**, you have almost certainly landed on it with the
+   > **Rules Playground** panel open on the left — that panel takes the keyboard, and the rules
+   > text beside it looks selected but isn't focused, so `Ctrl+V` goes nowhere. Close the playground
+   > (or click directly into the code, on a line of text, and check you have a blinking caret)
+   > before selecting all and pasting. If it still refuses, don't fight it — use the command-line
+   > route below, which is the better option for Storage anyway.
 
 **The proper way (command line)** — better if you'll ever change the rules, because it keeps the
 repo as the single source of truth. Needs Node.js installed:

@@ -59,6 +59,16 @@ Every entry below therefore carries an **Action required** line. `none` means sy
   an address like `precious-zuccutto-800b80.netlify.app` is expected rather than a mistake.
 - **Post-processing can sit on "In progress" after the log says `Site is live`.** Stale panel, not a
   stuck build. Reload.
+- **Warned about the cursor jumping while you type the base directory.** Netlify re-reads the repo
+  on every keystroke and throws the caret back to the start of the box each time, so `apps/garden`
+  comes out scrambled. Paste it, or check the box afterwards.
+- **The second site can be named at creation.** The dashboard route has a **Project name** field the
+  signup wizard doesn't, so only the first site has to get a random address.
+- **`GARDEN_URL` needs a redeploy if you add it after the fact**, and Netlify won't do that for you.
+  It's the easiest of the seven variables to miss, and the symptom — two links quietly absent — is
+  indistinguishable from a Nursery-only installation.
+- **If the Storage rules editor won't accept a paste,** the Rules Playground panel has the keyboard.
+  Close it, or use the CLI. Also points at GitHub's *copy raw file* button, which beats select-all.
 
 ## 2026-08-21
 
