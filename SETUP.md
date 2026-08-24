@@ -20,7 +20,7 @@ requires a card on file before it will store photos.
 |---|---|---|
 | Firebase, Blaze plan | **Card required**, ~$0/month in practice | Since 3 Feb 2026 a new project must be on Blaze to create a photo bucket at all. Free allowances still apply — 5 GB storage, 100 GB/month transfer. A household garden won't approach that. |
 | Netlify | Free | Two sites, 100 GB bandwidth, 125k function calls/month. |
-| Gemini API key | Free tier, or pennies | Only for label scanning and AI plant lookup. Everything else works without it. |
+| Gemini API key | Free tier, or pennies — **but see B6** | Only for label scanning and AI plant lookup. Everything else works without it. A new project may have no free quota for the model the apps ask for, in which case you either point them at a different model or put the Gemini API on its paid tier. |
 | Domain name | $0 or ~$15/year | A free `something.netlify.app` address is fine. |
 
 **The card is the thing worth knowing up front**: photos will not work at all without it.
@@ -301,6 +301,22 @@ words that the key is missing. You can come back and do this months later.
    Environment variables are **per site** — you have to add it twice, once to each.
 3. Trigger a redeploy of each site (**Deploys → Trigger deploy → Deploy site**). Environment
    variables only take effect on the next build.
+4. **Try a lookup, and expect to have to deal with quota.** A correctly-installed key on a
+   brand-new project can still fail immediately with **"Lookup service error"**. That is not a
+   setup mistake, and the app hides the reason from you — the function logs it in full. Netlify →
+   **Logs & metrics → Functions → `lookup-plant`**, run a lookup, and read the `HTTP <code>` line.
+
+   `HTTP 429` with `RESOURCE_EXHAUSTED` and *"You exceeded your current quota"*, arriving in a
+   fraction of a second on a key that has never been used, means there is **no free-tier allowance
+   for the model being asked for** — not that you have used anything up. Check what your key is
+   actually allowed at **Google AI Studio → Usage & Billing → Rate Limit**, with your project
+   selected. Two ways forward from there:
+   - **Point the apps at a model your key does have quota for**, with no code change: add
+     `GEMINI_MODEL` to both sites, redeploy, and try again. Unset, the code asks for
+     `gemini-3.5-flash`.
+   - **Or move the project to the Gemini API's paid tier**, via *Activate billing* on the AI Studio
+     key list. This is separate from the Firebase Blaze upgrade in B1 — putting a card on Firebase
+     does not put the Gemini API on a paid tier.
 
 One caveat about plant lookup: Netlify allows these background requests **10 seconds** by default,
 and a thorough plant lookup can want longer. Leave the settings alone at first — the code defaults
@@ -446,5 +462,6 @@ who found the URL could. So the first admin is created by hand, once.
 | `firebase deploy` says "No currently active project" | `firebase use --add` hasn't been run in that folder (B7). |
 | Nursery has no links to Garden | `GARDEN_URL` isn't set on the Nursery site, or it hasn't rebuilt since (B4 step 7). Working as designed if you only run Nursery. |
 | Page loads with no styling at all | The build didn't run. Check the site's base directory is `apps/garden` or `apps/nursery`, not the repo root. |
-| Scan label / Look up plant error out | `GEMINI_API_KEY` missing on that site, or added but not redeployed since (B6). |
+| Scan label / Look up plant error out | `GEMINI_API_KEY` missing on that site, or added but not redeployed since (B6). If the key *is* set and redeployed, read the real error — see below. |
+| "Lookup service error" / "Vision service error" with the key correctly set | Gemini itself rejected the call. The app deliberately doesn't show you Google's message, but the function logs it in full: Netlify → **Logs & metrics → Functions → `lookup-plant`** (or `scan-label`), then run a lookup and watch. You'll get `HTTP <code>` and Google's own explanation. **429 / RESOURCE_EXHAUSTED on a brand-new key** means quota, not a broken setup — see B6. |
 | Photos won't upload | The Storage bucket was never created — the Blaze upgrade in B1 step 5 didn't complete. |

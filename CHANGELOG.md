@@ -90,6 +90,17 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 - **Skipping the AI features is now stated as tested rather than promised.** With no key, Scan label
   and Look up plant fail with a "Failed" flag and a panel saying the key is missing. Nothing else is
   affected.
+- **A correctly-installed Gemini key can still fail on a new project, and B6 now expects it.** A
+  first-ever lookup came back `HTTP 429 RESOURCE_EXHAUSTED` in under 400 ms — no free-tier
+  allowance for the model, rather than any allowance used up. B6 explains how to read the real
+  error (Netlify → *Logs & metrics → Functions → `lookup-plant`*, which logs Google's own message
+  in full), where to see what your key is actually permitted (AI Studio → *Rate Limit*), and the
+  two ways out: set `GEMINI_MODEL` to something your key has quota for, or put the project on the
+  Gemini API's paid tier. **That tier is separate from Firebase Blaze** — a card on Firebase does
+  not pay for Gemini. The cost table is qualified accordingly.
+- **New troubleshooting row for "Lookup service error" / "Vision service error"** with a key that is
+  correctly set, pointing at the function log. The apps deliberately don't surface Google's message,
+  so without that pointer there's nothing to go on.
 - **"It signed me in" is not the same as "it signed me in as me."** Firebase keeps a session between
   visits, so an earlier *Continue as Guest* is still live and the app opens as that guest — who is
   read-only and has no `users` record to grant a role to. B7 now says to check who you are, and sign
