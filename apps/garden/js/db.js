@@ -84,6 +84,77 @@ export async function updatePlant(id, data) {
     });
 }
 
+// =============================================
+//  Plant tag codes
+// =============================================
+// A printed tag carries a QR code, and what it encodes is a SHORT code rather
+// than the plant's 20-character Firestore ID. That is not cosmetic: it is what
+// lets the code fit a label printer's tape.
+//
+// The encoder picks QR's alphanumeric mode when every character is upper case,
+// which is denser than byte mode. Host + '/P/' + a six-character code stays
+// inside a 29-module version-3 symbol, and 29 modules plus the four-module
+// quiet zone each side is 37 across — exactly three printer dots per module on
+// an 18 mm tape's 112 usable pins. Two dots per module is the difference
+// between a tag that scans covered in mud and one that does not.
+//
+// Crockford's Base32 alphabet: no I, L, O or U, so nothing on a printed tag
+// can be misread as something else, and every character is legal in QR
+// alphanumeric mode. See docs/plant-tags.md.
+const TAG_CODE_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+const TAG_CODE_LENGTH   = 6;
+
+/** Is this path segment shaped like a tag code rather than a Firestore ID? */
+export function isTagCode(value) {
+    return new RegExp(`^[${TAG_CODE_ALPHABET}]{${TAG_CODE_LENGTH}}$`).test(String(value || '').toUpperCase());
+}
+
+function randomTagCode() {
+    const bytes = new Uint8Array(TAG_CODE_LENGTH);
+    crypto.getRandomValues(bytes);
+    // Modulo bias is irrelevant here: the alphabet is 32 long and divides 256
+    // exactly, so every character is uniformly distributed.
+    return [...bytes].map(b => TAG_CODE_ALPHABET[b % TAG_CODE_ALPHABET.length]).join('');
+}
+
+/** The plant a printed tag's code belongs to, or null if nothing matches. */
+export async function getPlantByTagCode(code) {
+    const snap = await getDocs(query(
+        collection(db, 'plants'),
+        where('tagCode', '==', String(code).toUpperCase()),
+        limit(1)
+    ));
+    if (snap.empty) return null;
+    const d = snap.docs[0];
+    return { id: d.id, ...d.data() };
+}
+
+/**
+ * The plant's tag code, minting and saving one the first time it is needed.
+ *
+ * Lazy on purpose: existing plants get a code when someone first prints a tag
+ * for them, so adding this feature needs no migration over the collection.
+ * Writing requires editor, which every path that prints a tag already does.
+ *
+ * Collisions are checked rather than assumed. 32^6 is a billion codes, so a
+ * retry is close to unheard of, but a duplicate would silently point two tags
+ * at one plant and that is not a failure worth leaving to probability.
+ */
+export async function ensureTagCode(plant) {
+    if (plant.tagCode) return plant.tagCode;
+
+    let code = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+        const candidate = randomTagCode();
+        if (!(await getPlantByTagCode(candidate))) { code = candidate; break; }
+    }
+    if (!code) throw new Error('Could not allocate a unique plant tag code');
+
+    await updatePlant(plant.id, { tagCode: code });
+    plant.tagCode = code;               // keep the caller's copy in step
+    return code;
+}
+
 /** Delete a plant and all its instances and photos */
 export async function deletePlant(id) {
     // Delete instances

@@ -2,9 +2,9 @@
 //  main.js — App entry point, initialisation & router
 // =============================================================
 
-import { initFirebase, getPendingUserCount } from './db.js';
+import { initFirebase, getPendingUserCount, getPlantByTagCode, isTagCode } from './db.js';
 import { initAuth, getAuthInstance, loadRole, setCurrentUser, setRole,
-         getCurrentUser, getCurrentRole, signOutUser } from './auth.js';
+         getCurrentUser, getCurrentRole, signInAsGuest, signOutUser } from './auth.js';
 import { showLoginOverlay, hideLoginOverlay, showAccessDenied } from './auth-view.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
@@ -48,6 +48,42 @@ const adminNavBtn = bottomNav.querySelector('[data-view="admin"]');
 let currentView = 'tasks';
 let currentId   = null;
 let navHistory  = [];
+
+// =============================================
+//  Plant tag arrival  (/p/<code>)
+// =============================================
+// A printed QR plant tag encodes  https://<site>/P/<tagCode>.  `_redirects`
+// rewrites that path to this app with a 200, so the path is still there when
+// this file loads; absorbTagPath() turns it into an ordinary hash route
+// before the router reads the hash, which keeps the whole of the rest of the
+// router ignorant that tags exist.
+//
+// Two shapes are accepted. A six-character tag code becomes #plant-tag/<code>,
+// which the router resolves to a plant. Anything else is taken for a raw
+// Firestore document ID and becomes #plant-detail/<id> directly — that form
+// predates tag codes, costs one line to keep, and means a tag printed before
+// this change still works.
+//
+// The flag it sets is what tells the auth listener that this visitor arrived
+// off a tag and should be let in as a read-only guest rather than shown a
+// login screen — a sign-in wall behind a QR code on a plant label is a wall
+// in front of a garden visitor holding a phone.
+let arrivedFromTag = false;
+
+function absorbTagPath() {
+    // Split rather than match: location.pathname already excludes the query and
+    // the hash, so the two segments are all there is to check, and it keeps a
+    // fiddly escaped regex out of a path that silently disables every tag if it
+    // is ever got wrong.
+    const parts = window.location.pathname.split('/').filter(Boolean);
+    if (parts.length !== 2) return;
+    if (parts[0] !== 'p' && parts[0] !== 'P') return;
+
+    arrivedFromTag = true;
+    const raw = decodeURIComponent(parts[1]);
+    const to  = isTagCode(raw) ? `plant-tag/${raw.toUpperCase()}` : `plant-detail/${raw}`;
+    history.replaceState(null, '', `/#${to}`);
+}
 
 // =============================================
 //  Navigation
@@ -137,6 +173,28 @@ async function route(view, id, state = {}) {
             pageTitleEl.textContent = 'Plant Detail';
             await renderPlantDetail(mainEl, headerAction, backBtn, id);
             break;
+
+        // Reached only from a scanned tag. Resolving a tag code needs
+        // Firestore, so it cannot happen in absorbTagPath() before the app has
+        // booted; it happens here instead and then hands over to the ordinary
+        // plant-detail route, replacing the history entry so Back does not
+        // bounce the visitor through the lookup again.
+        case 'plant-tag': {
+            pageTitleEl.textContent = 'Plant Detail';
+            mainEl.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            const tagged = await getPlantByTagCode(id);
+            if (tagged) {
+                await navigateReplace('plant-detail', tagged.id);
+            } else {
+                mainEl.innerHTML = `<div class="empty-state">
+                    <div class="empty-state-icon">🏷️</div>
+                    <h3>Tag not recognised</h3>
+                    <p>No plant carries the code <strong>${String(id || '').toUpperCase()}</strong>.
+                       It may have been reprinted, or the plant removed.</p>
+                </div>`;
+            }
+            break;
+        }
 
         case 'areas':
             pageTitleEl.textContent = '\u{1F5FA}\uFE0F Garden Areas';
@@ -318,6 +376,9 @@ function applyRoleToNav(role) {
 // =============================================
 
 function boot() {
+    // Before anything reads the URL: /p/<code> becomes a normal hash route.
+    absorbTagPath();
+
     const firebase = initFirebase();
 
     if (!firebase) {
@@ -334,9 +395,20 @@ function boot() {
     // Listen for auth state changes
     onAuthStateChanged(getAuthInstance(), async (user) => {
         if (!user) {
-            // Not signed in — show login screen
             setCurrentUser(null);
             userChipEl.style.display = 'none';
+
+            // Scanned a plant tag: sign in anonymously and go straight to the
+            // plant. Guests are viewers — read-only — and the Firestore rules
+            // are what enforce that, not this branch. Cleared first so a
+            // failed sign-in falls back to the login screen instead of looping.
+            if (arrivedFromTag) {
+                arrivedFromTag = false;
+                signInAsGuest().catch(() => showLoginOverlay());
+                return;
+            }
+
+            // Not signed in — show login screen
             showLoginOverlay();
             return;
         }

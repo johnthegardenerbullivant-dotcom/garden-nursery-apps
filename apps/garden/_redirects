@@ -1,0 +1,26 @@
+# Netlify redirect rules — Garden Management
+# Served from the publish directory root (this folder).
+
+# ---------- Plant tag short links ----------
+# A printed QR plant tag encodes  https://<site>/P/<tagCode>
+#
+# 200, not 301: this REWRITES to the app rather than redirecting, so the
+# short form stays in the address bar and the path survives for js/main.js
+# to read (absorbTagPath() turns it into the normal #plant-detail/<id>
+# route). A tag is stamped into aluminium and buried in a border for years,
+# so it gets a URL of its own with one line of indirection behind it — if
+# the app's routing ever changes, these lines move and the tags still work.
+#
+# BOTH CASES ARE LISTED ON PURPOSE. The QR encodes the URL in upper case,
+# because that lets the encoder use QR's alphanumeric mode instead of byte
+# mode and drops the code from 33 modules to 29 — which is what makes it
+# fit a label printer's tape at three printer dots per module. Scheme and
+# host are case-insensitive per RFC 3986 and the browser normalises them,
+# but the PATH is not, and Netlify matches paths case-sensitively. The
+# lower-case rule stays for links typed or shared by hand.
+# See docs/plant-tags.md.
+#
+# NOTE: index.html's own asset paths must stay root-absolute (/js/main.js,
+# /styles.css, …) or they resolve against /p/ and 404 under this rewrite.
+/p/*   /index.html   200
+/P/*   /index.html   200

@@ -23,6 +23,55 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 
 ---
 
+## 2026-09-01
+
+**Action required: none — but set `GARDEN_URL` on the Garden site if you intend to print tags.**
+
+- **QR codes on plant tags.** A printed label can now carry a QR code that opens that plant's page.
+  Plant detail has a tag button (editor and above) for a single tag; an area's **Print** dialog has
+  a third option, **Plant tags**, which lays out a sheet of them — 12 per page, cut guides included,
+  sized to fit US Letter and A4 alike.
+
+- **Label printers are supported directly.** The tag dialog also prints a layout for continuous
+  label tape on a Brother P-touch, through the printer's own driver over USB — pick the tape width
+  and it sizes the code to a whole number of printer dots. 18 mm and 24 mm tape both give a 15.7 mm
+  code at three dots per module; 12 mm and narrower cannot carry the code and are not offered.
+  Not over Bluetooth: the PT-P710BT speaks Bluetooth Classic, the Web Bluetooth API speaks only
+  BLE, and a browser cannot reach it. [`docs/plant-tags.md`](docs/plant-tags.md) has the details.
+
+- **Tags encode `HTTPS://<SITE>/P/<TAGCODE>`.** `apps/garden/_redirects` rewrites `/p/*` and `/P/*`
+  to the app (a 200 rewrite, so the path survives) and the router turns it into the existing
+  `#plant-detail/<id>` view. The indirection is the point: a tag in the ground outlives any change
+  to the app's routing, and only those lines have to keep the promise. Existing
+  `#plant-detail/<id>` links, including Nursery's, are untouched.
+
+- **`tagCode` is a new field on `plants`** — six characters, minted the first time a tag is printed
+  for that plant, so **there is nothing to migrate**. Plants you never tag never get one. It exists
+  because the 20-character Firestore ID makes a code too dense to print on label tape; the short
+  code, upper-cased, is what fits 18 mm tape at three printer dots per module. No new collection and
+  **no Firestore rules change** — resolving a code is an ordinary `plants` read.
+
+- **Scanning a tag no longer meets a login screen.** Someone arriving on a `/p/` URL while signed
+  out is signed in anonymously and taken to the plant. Anonymous users are viewers — read-only, as
+  enforced by the Firestore rules. Nothing became readable that a guest could not already read by
+  pressing *Continue as Guest*; the speed bump in front of it is gone.
+
+- **`index.html`'s asset paths are now root-absolute** (`/styles.css`, `/js/main.js`, `/shared/…`).
+  Under the `/p/` rewrite the old relative paths would resolve to `/p/styles.css` and 404. If you
+  maintain a fork and have edited `index.html`, keep those paths absolute.
+
+- **`GARDEN_URL` now matters on Garden too.** It was documented as Nursery-only. Tags fall back to
+  whatever host generated them, so a sheet printed from a deploy preview would be stamped with that
+  preview's temporary address and would die with the pull request. Setting `GARDEN_URL` on the
+  Garden site pins tags to the real one. The sheet prints the address it used along its top edge.
+  It also sets the length budget for the code: the whole upper-cased URL must stay within 47
+  characters to keep the tag printable on tape, which leaves 38 for the host.
+
+- **New dependency:** `uqr` (MIT, ~27 KB, no dependencies), loaded from jsDelivr like
+  `browser-image-compression`. Full notes, including why the QR error correction is level Q, why the
+  quiet zone is four modules and why the encoded URL is upper case, are in
+  [`docs/plant-tags.md`](docs/plant-tags.md).
+
 ## 2026-08-21
 
 **Action required: none.** Documentation only — sync and you're done.

@@ -2770,3 +2770,74 @@ textarea::placeholder {
     70%  { box-shadow: 0 0 0 4px rgba(82,183,136,0.35); }
     100% { box-shadow: 0 0 0 0 rgba(82,183,136,0.0); }
 }
+
+/* =============================================
+   PLANT TAG QR
+   The code a printed plant label carries. The print sheet's and
+   the label tape's own CSS is in js/qr.js instead of here,
+   because it is injected into a separate print window that never
+   loads this stylesheet.
+   ============================================= */
+
+/* Plant detail now has two icon buttons in the header: tag, then edit. */
+.header-action { gap: 4px; }
+
+.qr-tag-modal { text-align: center; }
+
+.qr-tag-code {
+    width: 180px;
+    height: 180px;
+    margin: 0 auto 14px;
+    padding: 8px;
+    background: #fff;                 /* never themed — a QR code needs real white */
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+.qr-tag-code svg { width: 100%; height: 100%; display: block; }
+
+.qr-tag-id {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: var(--grey-800, #333);
+    margin-bottom: 4px;
+}
+
+.qr-tag-url {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.78rem;
+    color: var(--grey-600);
+    word-break: break-all;
+    margin-bottom: 10px;
+}
+
+.qr-tag-hint {
+    font-size: 0.85rem;
+    color: var(--grey-600);
+    line-height: 1.45;
+    margin-bottom: 16px;
+}
+
+/* Label-tape row: width picker plus its own print button. */
+.qr-tape-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+.qr-tape-row label {
+    font-size: 0.85rem;
+    color: var(--grey-600);
+}
+.qr-tape-row select {
+    padding: 8px 10px;
+    border: 1px solid var(--grey-200);
+    border-radius: 6px;
+    background: var(--white, #fff);
+    color: var(--grey-800);
+    cursor: pointer;
+    font-size: 0.9rem;
+}
