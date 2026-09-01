@@ -14,7 +14,7 @@ Two Progressive Web Apps, one Firebase project, one repo, two Netlify sites.
 |---|---|---|
 | What it does | Plant collection, areas, tasks, irrigation, blog/journal, compost bin | Propagation batches from sowing to planted-out, given-away or lost |
 | Folder | `apps/garden/` | `apps/nursery/` |
-| JS modules | 15 | 20 |
+| JS modules | 16 | 20 |
 | Netlify site | #1 | #2 |
 
 - **Firebase project:** one project — Firestore + Storage + Auth — **shared by both apps**. Which
@@ -78,11 +78,12 @@ garden-apps/
 │   │   ├── firebase-config.js ← GENERATED at build time from FIREBASE_*. Gitignored.
 │   │   ├── app-config.js     ← GENERATED at build time from GARDEN_URL. Gitignored.
 │   │   ├── index.html  styles.css  manifest.json  sw.js  robots.txt  _headers
+│   │   ├── _redirects        ← /P/<tagCode> → the app, for printed QR plant tags
 │   │   ├── compress-photos.html  ← standalone one-off photo-compression utility
 │   │   ├── icons/            ← 3 PNGs
 │   │   ├── functions/         ← 2 Netlify functions, both calling Gemini:
 │   │   │                        scan-label.js · lookup-plant.js
-│   │   └── js/               ← 15 ES modules
+│   │   └── js/               ← 16 ES modules
 │   │
 │   └── nursery/              ← Netlify site #2. Same shape, 20 JS modules.
 │
@@ -158,6 +159,7 @@ Everything third-party comes from a CDN:
 |---|---|---|
 | Firebase SDK (`app`, `firestore`, `storage`, `auth`) | 10.12.0, from `gstatic.com` | both |
 | `browser-image-compression` | 2.x, from jsdelivr | both |
+| `uqr` (QR encoder) | 0.1.3, from jsdelivr | **Garden only** (plant tags) |
 | Quill | 1.3.7, from `cdn.quilljs.com` | **Garden only** (blog editor) |
 
 Import paths in JS are either relative (`./db.js`) or full CDN URLs.
@@ -277,9 +279,9 @@ composite indexes or fight Netlify.
 
 ## Standing rules
 
-1. **`node --check` every JS file after generating or moving any of them.** All 42: 15 Garden
+1. **`node --check` every JS file after generating or moving any of them.** All 44: 16 Garden
    modules, 20 Nursery modules, 2 `functions/scan-label.js`, 2 `functions/lookup-plant.js`, and the
-   3 scripts in `tools/`. If it reports an error, treat it as real — never dismiss it as a false
+   4 scripts in `tools/`. If it reports an error, treat it as real — never dismiss it as a false
    alarm. One command covers the lot:
 
    ```
