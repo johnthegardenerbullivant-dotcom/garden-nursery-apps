@@ -7,12 +7,13 @@ import {
     getInstancesInArea, getPlants,
     getPhotosForArea, uploadAreaPhoto, deletePhoto, updatePhotoOrders, getFirstPhotoForPlants,
     getTaskAssignments,
-    formatBotanicalName, escHtml
+    formatBotanicalName, escHtml, ensureTagCode
 } from './db.js';
 import { showModal, hideModal, showToast, setLoading, navigate, initPhotoCarousel, initPhotoDragSort } from './ui-utils.js';
 import { renderAreaTasksSection } from './tasks-view.js';
 import { showAddPlantToAreaModal, showPlantForm } from './plants-view.js';
 import { isAtLeast } from './auth.js';
+import { openTagSheet } from './qr.js';
 
 // =============================================
 //  AREAS LIST
@@ -716,9 +717,13 @@ function showPrintOptions(area, instances, plantMap) {
                 <div style="font-weight:700;">Detailed</div>
                 <div style="font-size:0.82rem;font-weight:400;opacity:0.75;margin-top:2px;">Summary + Height &middot; Width &middot; Notes</div>
             </button>
+            <button class="btn btn-secondary" id="print-tags-btn" style="text-align:left;padding:12px 16px;">
+                <div style="font-weight:700;">Plant tags</div>
+                <div style="font-size:0.82rem;font-weight:400;opacity:0.75;margin-top:2px;">QR tags to cut out &middot; 12 per sheet</div>
+            </button>
         </div>
     `;
-    showModal('Print Plant List', html);
+    showModal('Print', html);
 
     document.getElementById('print-summary-btn').addEventListener('click', () => {
         hideModal();
@@ -727,6 +732,10 @@ function showPrintOptions(area, instances, plantMap) {
     document.getElementById('print-detailed-btn').addEventListener('click', () => {
         hideModal();
         openPrintWindow(area, instances, plantMap, 'detailed');
+    });
+    document.getElementById('print-tags-btn').addEventListener('click', () => {
+        hideModal();
+        openAreaTagSheet(area, instances, plantMap);
     });
 }
 
@@ -841,4 +850,57 @@ function openPrintWindow(area, instances, plantMap, mode) {
         URL.revokeObjectURL(url);
     }
     // Browser keeps the blob URL alive until the tab loads; it will be GC'd after
+}
+
+// =============================================
+//  Plant tags
+// =============================================
+
+/**
+ * Prints a sheet of QR plant tags for everything in this area.
+ *
+ * ONE TAG PER PLANT, not per instance. Two instance rows for the same plant in
+ * one area are two clumps of the same thing and would carry an identical code,
+ * so they are folded into a single tag and the quantities added up. If you
+ * want a tag per clump, print the sheet twice — that is rarer than the
+ * duplicate-tag confusion this avoids.
+ */
+async function openAreaTagSheet(area, instances, plantMap) {
+    const byPlant = new Map();
+    for (const inst of instances) {
+        const plant = plantMap[inst.plantId];
+        if (!plant) continue;                       // instance pointing at a deleted plant
+        const entry = byPlant.get(inst.plantId) || { plant, qty: 0 };
+        entry.qty += Number(inst.quantity) || 1;
+        byPlant.set(inst.plantId, entry);
+    }
+
+    const entries = [...byPlant.values()].sort((a, b) => {
+        const na = (a.plant.genus || a.plant.commonName || '').toLowerCase();
+        const nb = (b.plant.genus || b.plant.commonName || '').toLowerCase();
+        return na.localeCompare(nb);
+    });
+
+    if (!entries.length) {
+        showToast('No plants in this area to make tags for', 'error');
+        return;
+    }
+
+    // Tag codes are minted lazily, so the first sheet for an area may have to
+    // write one for each plant. Sequential rather than parallel: allocation
+    // checks the collection for a collision before it writes, and firing them
+    // all at once would race those checks against each other.
+    const needed = entries.filter(e => !e.plant.tagCode).length;
+    if (needed) showToast(`Preparing ${needed} new tag code${needed !== 1 ? 's' : ''}…`, 'info');
+    try {
+        for (const e of entries) await ensureTagCode(e.plant);
+    } catch (err) {
+        showToast('Could not create tag codes for every plant', 'error');
+        return;
+    }
+
+    openTagSheet(entries.map(e => ({
+        plant: e.plant,
+        note:  e.qty > 1 ? `${area.name} · ×${e.qty}` : area.name
+    })), area.name);
 }

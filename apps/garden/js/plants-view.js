@@ -9,13 +9,15 @@ import {
     getPhotosForPlant, uploadPhoto, deletePhoto, updatePhotoOrders, getPlantIdsWithPhotos,
     getDeceasedPlants, recordPlantDeath,
     getNurseryLocations, transferToNursery,
-    formatBotanicalName, escHtml
+    formatBotanicalName, escHtml, ensureTagCode
 } from './db.js';
 import { showModal, hideModal, showToast, setLoading, navigate, goBack, initPhotoCarousel, datePicker, initDatePickers, initPhotoDragSort } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
 import { DEATH_CAUSES } from './compost-view.js';
 import { scanPanelHTML, initLabelScan, focusScanCard } from './label-scan.js';
 import { lookupPanelHTML, initPlantLookup } from './plant-lookup.js';
+import { plantQrSvg, plantTagUrl, openTagSheet, openTapeLabels,
+         tapeQrPlan, qrModulesAcross, TAPE_MARGIN_PINS } from './qr.js';
 
 // Plain-text botanical name (strips the HTML that formatBotanicalName returns)
 function plainName(plant) {
@@ -251,9 +253,10 @@ export async function renderPlantDetail(container, headerActionEl, backBtn, plan
     const areaMap = Object.fromEntries(areas.map(a => [a.id, a]));
     const enriched = instances.map(i => ({ ...i, area: areaMap[i.areaId] }));
 
-    // Header actions — edit button for editor+
+    // Header actions — tag + edit buttons for editor+
     headerActionEl.innerHTML = isAtLeast('editor')
-        ? `<button class="btn-icon" id="edit-plant-btn" title="Edit plant">✏️</button>`
+        ? `<button class="btn-icon" id="plant-qr-btn" title="Plant tag QR code">🏷️</button>
+           <button class="btn-icon" id="edit-plant-btn" title="Edit plant">✏️</button>`
         : '';
 
     container.innerHTML = buildPlantDetailHTML(plant, enriched, photos);
@@ -262,6 +265,14 @@ export async function renderPlantDetail(container, headerActionEl, backBtn, plan
     container.querySelector('#botanic-search-btn')?.addEventListener('click', () => {
         const btn = container.querySelector('#botanic-search-btn');
         window.open(`https://www.google.com/search?q=${btn.dataset.query}`, '_blank');
+    });
+
+    // Plant tag (editor+) — the QR code a printed label carries, and the two
+    // ways of printing it. A whole area's worth of paper tags prints from Area
+    // detail; label tape is one plant at a time, which is how a label printer
+    // is used in practice.
+    headerActionEl.querySelector('#plant-qr-btn')?.addEventListener('click', async () => {
+        await showPlantTagModal(plant);
     });
 
     // Edit button (editor+)
@@ -1520,5 +1531,99 @@ export async function showAddPlantToAreaModal(areaId, areaName, onSave) {
             saveBtn.disabled = false;
             saveBtn.textContent = 'Add plant';
         }
+    });
+}
+
+// =============================================
+//  Plant tag
+// =============================================
+
+/**
+ * The plant tag modal: the code a printed label carries, and the two ways of
+ * getting it onto something physical.
+ *
+ * Minting the tag code is a write, so this is editor-only — which the button
+ * that opens it already is.
+ */
+async function showPlantTagModal(plant) {
+    showModal('Plant tag', `<div class="qr-tag-modal">
+        <div class="loading"><div class="spinner"></div></div>
+    </div>`);
+
+    let code;
+    try {
+        code = await ensureTagCode(plant);
+    } catch (err) {
+        hideModal();
+        showToast('Could not create a tag code for this plant', 'error');
+        return;
+    }
+
+    const tagUrl  = plantTagUrl(code);
+    const svg     = plantQrSvg(code);
+    const modules = qrModulesAcross(svg);
+
+    // Only the tape widths that can actually carry this code. Anything under
+    // 12 mm cannot hold it at even one dot per module, so it is not offered.
+    const tapeOptions = Object.keys(TAPE_MARGIN_PINS)
+        .map(Number)
+        .filter(w => w >= 12)
+        .sort((a, b) => a - b)
+        .map(w => ({ w, plan: tapeQrPlan(w, modules) }))
+        .filter(o => o.plan && o.plan.ok);
+
+    const defaultTape = (tapeOptions.find(o => o.plan.good) || tapeOptions[tapeOptions.length - 1])?.w;
+
+    const tapeBlock = tapeOptions.length ? `
+        <div class="qr-tape-row">
+            <label for="qr-tape-width">Label tape</label>
+            <select id="qr-tape-width">
+                ${tapeOptions.map(o => `<option value="${o.w}" ${o.w === defaultTape ? 'selected' : ''}>${o.w} mm</option>`).join('')}
+            </select>
+            <button class="btn btn-secondary" id="qr-tape-btn">🏷️ Print tape</button>
+        </div>
+        <p class="qr-tag-hint" id="qr-tape-note"></p>
+    ` : '';
+
+    showModal('Plant tag', `
+        <div class="qr-tag-modal">
+            <div class="qr-tag-code">${svg}</div>
+            <p class="qr-tag-id">${escHtml(code)}</p>
+            <p class="qr-tag-url">${escHtml(tagUrl)}</p>
+            <p class="qr-tag-hint">
+                Scanning this opens this plant's page. On paper, print it at 30&nbsp;mm or bigger,
+                matte rather than glossy, and leave the white margin around the code alone.
+            </p>
+            <button class="btn btn-primary" id="qr-print-btn">🖨️ Print paper tag</button>
+            ${tapeBlock}
+        </div>
+    `);
+
+    document.getElementById('qr-print-btn')?.addEventListener('click', () => {
+        hideModal();
+        openTagSheet([{ plant, note: '' }], plainName(plant));
+    });
+
+    // Live read-out of how the code lands on the chosen tape. The number that
+    // matters is dots per module: a QR module has to be a whole number of
+    // printer dots, and two is the floor for something that lives outdoors.
+    const tapeSel  = document.getElementById('qr-tape-width');
+    const tapeNote = document.getElementById('qr-tape-note');
+    function describeTape() {
+        if (!tapeSel || !tapeNote) return;
+        const plan = tapeQrPlan(Number(tapeSel.value), modules);
+        if (!plan) return;
+        tapeNote.textContent =
+            `${plan.sideMm.toFixed(1)} mm code on ${plan.printableMm.toFixed(1)} mm of usable tape — `
+            + `${plan.dotsPerModule} printer dots per module`
+            + (plan.good ? '.' : ', which is tight. Wider tape scans more reliably.');
+    }
+    tapeSel?.addEventListener('change', describeTape);
+    describeTape();
+
+    document.getElementById('qr-tape-btn')?.addEventListener('click', () => {
+        const width = Number(tapeSel.value);
+        hideModal();
+        openTapeLabels([{ plant, note: '' }], width);
     });
 }
