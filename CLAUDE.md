@@ -286,8 +286,10 @@ composite indexes or fight Netlify.
    the app. This has bitten before: in May 2026 `irrigationZones` and `irrigationLogs` were in
    `db.js` but missing from the rules, and the Admin panel broke.
 4. **Run `node tools/check-drift.mjs` before pushing changes to `auth.js`, `ui-utils.js`,
-   `scan-label.js`, `functions/lookup-plant.js` or `js/plant-lookup.js`.** Exit 0 is clean;
-   warnings are known deltas.
+   `scan-label.js`, `functions/lookup-plant.js`, `js/plant-lookup.js`, `SETUP.md` or
+   `QUICKSTART.md`.** Exit 0 is clean; warnings are known deltas. It also verifies that every
+   `SETUP.md#…` link in the checklist still resolves — renaming a heading in `SETUP.md` breaks
+   them silently, without changing a byte of `QUICKSTART.md`.
 5. **Never commit a backup JSON or `plant-import.json`.** They belong in the private data folder
    outside the repo — `LOCAL.md` says where.
 6. **Commit style:** conventional prefixes — `feat:`, `fix:`, `chore:`, `docs:`. Branches:
