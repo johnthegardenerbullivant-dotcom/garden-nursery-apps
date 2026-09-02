@@ -11,13 +11,19 @@
  * It also checks that firestore.rules / storage.rules have not crept back
  * into an app folder — they live in firebase/ now, in exactly one copy.
  *
+ * And it checks the one deliberate duplication of PROSE: QUICKSTART.md is the
+ * same setup journey as SETUP.md with the reasoning stripped out, and every
+ * step of it deep-links to the SETUP.md section it condenses. Renaming a
+ * heading in SETUP.md breaks those links without touching QUICKSTART.md, so
+ * nothing but a check like this one would notice.
+ *
  * Usage, from anywhere in the repo:
  *     node tools/check-drift.mjs
  *
  * Exit codes:  0 = clean (warnings allowed)   1 = drift that needs fixing
  *
- * Run this before pushing changes to auth.js, ui-utils.js, scan-label.js or
- * lookup-plant.js.
+ * Run this before pushing changes to auth.js, ui-utils.js, scan-label.js,
+ * lookup-plant.js, SETUP.md or QUICKSTART.md.
  */
 
 import { readFileSync, existsSync } from 'node:fs';
@@ -65,6 +71,67 @@ const PAIRS = [
 
 /** Files that must NOT exist inside an app folder — single copy lives in firebase/. */
 const SINGLE_COPY_ONLY = ['firestore.rules', 'storage.rules'];
+
+/**
+ * Documents that deliberately say the same thing twice, where one deep-links
+ * into the other's headings.
+ *
+ * SETUP.md is the authority on the WHY; QUICKSTART.md is the same journey as a
+ * checklist with the reasoning stripped out, and every step of it links to the
+ * SETUP.md section it condenses. That is the repo's one deliberate duplication
+ * of prose, and it has a failure mode nothing else here has: **renaming a
+ * heading in SETUP.md silently breaks the links without changing a byte of
+ * QUICKSTART.md.** Markdown anchors are generated from heading text, so the
+ * link and the thing it points at are coupled through a string that appears in
+ * neither file.
+ *
+ *   `anchors`  — every SETUP.md#… link in QUICKSTART.md must resolve to a real
+ *                heading. A broken one is an ERROR: it is unambiguously wrong
+ *                and there is no judgement to make.
+ *   `sections` — every numbered section in SETUP.md should be linked from
+ *                QUICKSTART.md. A missing one is a WARNING rather than an
+ *                error, because a new section is not always a new checklist
+ *                step — but a B11 that the checklist never mentions is usually
+ *                a step someone will skip.
+ */
+const CROSS_DOC_LINKS = [
+  {
+    from: 'QUICKSTART.md',
+    to: 'SETUP.md',
+    // Numbered setup steps: "## B1. Create your Firebase project (the database)"
+    sectionPattern: /^#{2,3}\s+(B\d+)\.\s/,
+    note: 'The checklist deep-links to SETUP.md\'s headings. Renaming one silently breaks them.',
+  },
+];
+
+/**
+ * GitHub's heading-anchor rules: lower-case, drop anything that is not a word
+ * character, whitespace or a hyphen, then whitespace to hyphens. Repeated
+ * headings get -1, -2, … appended in document order, which is why this returns
+ * a Set built in one pass rather than a plain map.
+ */
+function anchorsOf(markdown) {
+  const seen = new Map();
+  const anchors = new Set();
+  for (const m of markdown.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)) {
+    const base = m[1]
+      .trim()
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s/g, '-');
+    const n = seen.get(base) ?? 0;
+    seen.set(base, n + 1);
+    anchors.add(n === 0 ? base : `${base}-${n}`);
+  }
+  return anchors;
+}
+
+/** Every `<file>#anchor` link in `markdown`, deduplicated, in first-seen order. */
+function linksInto(markdown, targetFile) {
+  const escaped = targetFile.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`${escaped}#([A-Za-z0-9_-]+)`, 'g');
+  return [...new Set([...markdown.matchAll(re)].map((m) => m[1]))];
+}
 
 const md5 = (buf) => createHash('md5').update(buf).digest('hex');
 
@@ -148,6 +215,69 @@ for (const name of SINGLE_COPY_ONLY) {
   }
 }
 
+
+console.log('\ncross-document links (deliberately duplicated prose)\n');
+
+for (const doc of CROSS_DOC_LINKS) {
+  const fromPath = join(REPO, doc.from);
+  const toPath = join(REPO, doc.to);
+
+  // A checkout without the checklist is a legitimate state, not a fault: it is
+  // optional, and a fork may never have taken it. Nothing to compare, so say so
+  // and move on rather than manufacturing an error.
+  if (!existsSync(fromPath)) {
+    console.log(`  SKIP     ${doc.from} — not in this checkout, nothing to check against ${doc.to}`);
+    continue;
+  }
+  if (!existsSync(toPath)) {
+    errors++;
+    console.log(`  MISSING  ${doc.to} — but ${doc.from} links into it`);
+    continue;
+  }
+
+  const fromText = readFileSync(fromPath, 'utf8');
+  const toText = readFileSync(toPath, 'utf8');
+
+  const anchors = anchorsOf(toText);
+  const links = linksInto(fromText, doc.to);
+  const broken = links.filter((a) => !anchors.has(a));
+
+  if (links.length === 0) {
+    warnings++;
+    console.log(`  WARN     ${doc.from} has no links into ${doc.to}`);
+    console.log(`      ${doc.note}`);
+    console.log('      Either the checklist stopped deep-linking, or the link format changed');
+    console.log('      and this check is now blind. Both are worth a look.');
+    console.log('');
+  } else if (broken.length === 0) {
+    console.log(`  OK       ${doc.from} → ${doc.to}  (${links.length} link${links.length === 1 ? '' : 's'}, all resolve)`);
+  } else {
+    errors++;
+    console.log(`  BROKEN   ${doc.from} → ${doc.to}  (${broken.length} of ${links.length} link${links.length === 1 ? '' : 's'} dead)`);
+    console.log(`      ${doc.note}`);
+    for (const a of broken) console.log(`        ${doc.to}#${a}`);
+    console.log(`      Fix by restoring the heading in ${doc.to}, or updating the link in ${doc.from}.`);
+    console.log('');
+  }
+
+  // Coverage: numbered sections that the checklist never points at.
+  if (doc.sectionPattern) {
+    const sections = [...toText.matchAll(new RegExp(doc.sectionPattern.source, 'gm'))].map((m) => m[1]);
+    const linked = new Set(links);
+    const unlinked = sections.filter(
+      (id) => ![...linked].some((a) => a.startsWith(`${id.toLowerCase()}-`) || a === id.toLowerCase()),
+    );
+    if (unlinked.length > 0) {
+      warnings++;
+      console.log(`  WARN     ${doc.to} has ${unlinked.length} numbered section${unlinked.length === 1 ? '' : 's'} ${doc.from} never links to:`);
+      console.log(`        ${unlinked.join(', ')}`);
+      console.log(`      A step in the guide with no line in the checklist is a step someone skips.`);
+      console.log('');
+    } else if (sections.length > 0) {
+      console.log(`  OK       all ${sections.length} numbered ${doc.to} sections are linked from ${doc.from}`);
+    }
+  }
+}
 console.log('');
 if (errors > 0) {
   console.log(`FAILED — ${errors} problem${errors === 1 ? '' : 's'}, ${warnings} warning${warnings === 1 ? '' : 's'}`);
