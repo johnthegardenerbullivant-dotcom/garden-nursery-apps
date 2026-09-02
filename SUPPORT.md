@@ -27,7 +27,7 @@ The rest of the usual suspects:
 | Every list is empty, no error | Rules not deployed (above) |
 | Green **"Setup required"** screen | The six `FIREBASE_*` variables aren't set on that Netlify site, or were set but the site hasn't rebuilt since |
 | Google sign-in popup opens and instantly closes | Your Netlify address isn't in Firebase → Authentication → Settings → **Authorized domains** |
-| **"Access denied"** right after signing in | Normal until someone grants you a role. The very first admin is created by hand — see step B7 of [`SETUP.md`](SETUP.md) |
+| **"Access denied"** right after signing in | Normal until someone grants you a role. The very first admin is created by hand — see step B8 of [`SETUP.md`](SETUP.md) |
 | Build fails, *"contains a non-ASCII character"* | A value was pasted from a masked display and is full of `•` characters. Re-copy it from the Firebase console's config block. The build is stopping this from reaching your site |
 | Photos won't upload | The Storage bucket was never created — the Blaze upgrade didn't complete |
 | Nursery has no links to Garden | `GARDEN_URL` isn't set on the Nursery site. Working as designed if you only run Nursery |

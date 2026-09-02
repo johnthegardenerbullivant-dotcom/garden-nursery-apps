@@ -72,6 +72,116 @@ Every entry below therefore carries an **Action required** line. `none` means sy
   quiet zone is four modules and why the encoded URL is upper case, are in
   [`docs/plant-tags.md`](docs/plant-tags.md).
 
+## 2026-08-24
+
+**Action required: none**, unless you use AI plant lookup — see the Gemini entry below.
+
+- **[`QUICKSTART.md`](QUICKSTART.md) added.** The same setup as a two-page checklist, reasoning
+  stripped out, every step deep-linked to its section in `SETUP.md`. The full guide roughly doubled
+  in length over a day of testing it against the real consoles — all of it earned, none of it what
+  a newcomer wants to read before they've started. Begin with whichever suits you.
+- **`SETUP.md` now names the repository to fork.** B3 said "open the repository on GitHub and click
+  Fork" without ever giving the address, which is fine if you arrived from a link and useless if you
+  didn't. It's `johnthegardenerbullivant-dotcom/garden-nursery-apps`, and B4 now looks for that name
+  rather than `garden-apps`.
+- **B3 also says which GitHub buttons to ignore.** A brand-new account opens on a dashboard offering
+  **Create repository** and **Import repository**. Both are wrong, and Import is the actively harmful
+  one: it copies the files but drops the upstream link, so there's no **Sync fork** button and every
+  future update becomes a hand-merge.
+- **B1 and B2 rewritten for the 2026 Firebase console.** The left menu no longer has a **Build**
+  section; products sit under **Product categories** — Firestore and Storage under *Databases &
+  Storage*, Authentication under *Security*. Also covered, because each stops you dead the first
+  time: **Create database** is a button on the page rather than a menu entry, the database wizard
+  asks **edition → location → rules** in that order, Storage now walks you through **Upgrade
+  project** and a **Set up default bucket** dialog, Google sign-in refuses to save until you give
+  the project a public-facing name and support email, and **Your apps** is a panel inside
+  *Settings → General*, not an item in the Settings menu.
+- **Anonymous sign-in: turn on Auto clean-up.** It deletes guest accounts older than 30 days.
+  Guests are read-only viewers with no Firestore document, so there is nothing to lose.
+- **B4 rewritten for Netlify's first-run flow**, which is not the one it described. Creating your
+  first site doesn't go through *Add new site* at all — signup runs a questionnaire (the team name
+  at the end is the one answer that sticks), then offers an AI site-builder you should ignore, then
+  two *separate* GitHub windows people conflate: **Authorize Netlify** (consent) and **Install
+  Netlify** (which repositories it may touch — pick *Only select repositories*). The build settings
+  are collapsed behind **Edit build settings ↓**.
+- **You type the base directory and nothing else.** Netlify reads the repo's `netlify.toml` and
+  auto-fills the build command, publish directory and functions directory for you. The guide used to
+  ask for the publish directory as well, which was redundant. Leave whatever Netlify puts there.
+- **Netlify calls sites "projects" now.** *Site configuration* is **Project configuration**
+  throughout, including where you rename a site — and it never offers to name it during setup, so
+  an address like `precious-zuccutto-800b80.netlify.app` is expected rather than a mistake.
+- **Post-processing can sit on "In progress" after the log says `Site is live`.** Stale panel, not a
+  stuck build. Reload.
+- **Warned about the cursor jumping while you type the base directory.** Netlify re-reads the repo
+  on every keystroke and throws the caret back to the start of the box each time, so `apps/garden`
+  comes out scrambled. Paste it, or check the box afterwards.
+- **The second site can be named at creation.** The dashboard route has a **Project name** field the
+  signup wizard doesn't, so only the first site has to get a random address.
+- **`GARDEN_URL` needs a redeploy if you add it after the fact**, and Netlify won't do that for you.
+  It's the easiest of the seven variables to miss, and the symptom — two links quietly absent — is
+  indistinguishable from a Nursery-only installation.
+- **If the Storage rules editor won't accept a paste, click onto a line of the code first** —
+  confirmed fix. The page opens with the Rules Playground beside the editor and the editor holding
+  no keyboard focus, so select-all and paste silently do nothing. Also points at GitHub's *copy raw
+  file* button, which beats select-all on the Raw page.
+- **Authorized domains is now its own section, B5** — the sections after it shift up by one, so the
+  admin step is **B8** and the last bits are **B10**. It was the closing bullet of the Netlify
+  section, and there it got skipped, which makes B8 not merely harder but impossible: Google sign-in
+  opens a popup that shuts itself with no message on either site, so no account is ever created to
+  promote. The underlying `auth/unauthorized-domain` shows only in the browser console.
+- **Setting `role: admin` may not take effect on a reload — sign out and sign in.** The app re-reads
+  the role at every start, so a reload ought to be enough; in testing it wasn't, and the
+  access-denied screen persisted until a full sign-out. B8 and B9 both say so now, because the same
+  thing will happen to anyone you grant a role to.
+- **B8 now says what the other fields in the user document are for**, so nobody edits
+  `status: "pending"` trying to help. Nothing reads it for access; `role` is the whole mechanism.
+- **B6 covers the Google AI Studio key dialog**, which now asks you to name the key and choose a
+  Cloud project. Pick the Firebase project from B1, so key, quota and billing stay together instead
+  of landing in a stray "Default Gemini Project". Also: a Gemini key starts **`AQ.`** and is about
+  50 characters — *not* the `AIza…`-and-39 shape of `FIREBASE_API_KEY`, so it looks wrong and isn't.
+  Nothing validates it at build time; a bad one shows up as a failed scan.
+- **Skipping the AI features is now stated as tested rather than promised.** With no key, Scan label
+  and Look up plant fail with a "Failed" flag and a panel saying the key is missing. Nothing else is
+  affected.
+- **Plant lookup now requires billing enabled on the Gemini API. Scan label does not.** Google sells
+  the web-search tool separately from the model and does not include it in the free tier of *any*
+  Gemini 3.x model; the two older models that did allow it, `gemini-2.5-flash` and
+  `gemini-2.5-flash-lite`, now answer `HTTP 404 … no longer available to new users`. Tested
+  directly against the API on 24 Aug 2026, not inferred: grounded calls fail on every reachable
+  model, an ungrounded call to the same key succeeds. **There is no model or environment variable
+  that works around it** — leave `GEMINI_MODEL` and `GEMINI_MODEL_RESEARCH` alone. Enable billing
+  in AI Studio and it works; the first **5,000 grounded searches a month are free**. Measured on the
+  author's own installation, the Gemini API bill for 24 days was **$3.34**, in a month that included
+  building and testing the feature — a household should expect pennies. Two things B6 now warns
+  about: the API bills as **prepaid credits** with **auto-reload likely switched on**, which is the
+  part that can quietly recur; and it is a **separate billing account from the Firebase card in B1**,
+  so a Firebase budget alert will not warn you about it.
+  The research phase never falls back to an unsearched answer, by design — an ungrounded plant
+  description is a confident invention — so it fails outright instead.
+- **The error you get says none of that.** It arrives as `HTTP 429 RESOURCE_EXHAUSTED`, *"You
+  exceeded your current quota"*, in under half a second on a key with no usage at all. B6 now names
+  it and points at Netlify → *Logs & metrics → Functions → `lookup-plant`*, which logs Google's full
+  message — the apps show only "Lookup service error", and the guide had never mentioned the log.
+- **B6 also names the dead ends, so nobody re-walks them.** *Rate limits by model* shows healthy,
+  unused quota, because the model allowance genuinely is fine and nothing there hints that the tool
+  on the request is priced separately. And a project can carry a ⚠ **"Prepay required"** badge — the
+  Firebase project from B1 does, which is a second reason not to put the key there — but that was
+  not the cause either.
+- **Don't attach the Gemini key to your Firebase project.** Use `Default Gemini Project`. The key is
+  used server-side by the Netlify functions and has no relationship to Firebase, so there was never
+  anything to gain by keeping them together, and the B1 project carries the prepay flag.
+- **The Gemini API's paid tier is not the Firebase Blaze upgrade.** B1 already asks for a card, so
+  assuming it covers Gemini is natural and wrong. The cost table is corrected accordingly.
+- **New troubleshooting row for "Lookup service error" / "Vision service error"** with a key that is
+  correctly set, pointing at the function log. The apps deliberately don't surface Google's message,
+  so without that pointer there's nothing to go on.
+- **"It signed me in" is not the same as "it signed me in as me."** Firebase keeps a session between
+  visits, so an earlier *Continue as Guest* is still live and the app opens as that guest — who is
+  read-only and has no `users` record to grant a role to. B7 now says to check who you are, and sign
+  out first.
+- **Netlify project names are unique across all of Netlify**, not just your account, so the obvious
+  ones are taken and the box rejects them.
+
 ## 2026-08-21
 
 **Action required: none.** Documentation only — sync and you're done.

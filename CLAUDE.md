@@ -38,9 +38,17 @@ Two Progressive Web Apps, one Firebase project, one repo, two Netlify sites.
 garden-apps/
 ├── CLAUDE.md                 ← this file: shared conventions + data model
 ├── README.md
-├── SETUP.md                  ← friend-facing: stand up a copy from nothing.
-│                                The ONLY copy of that guide — docs/making-a-copy.md
-│                                points here rather than repeating it.
+├── SETUP.md                  ← friend-facing: stand up a copy from nothing. The
+│                                authority on the WHY — docs/making-a-copy.md points
+│                                here rather than repeating it.
+├── QUICKSTART.md             ← the same journey as a checklist, no reasoning.
+│                                DELIBERATE DUPLICATION, and the only place in this
+│                                repo where instructions are stated twice. If you
+│                                change a step, a value or a section number in
+│                                SETUP.md, change it here in the same commit — the
+│                                checklist deep-links to SETUP.md's anchors, so a
+│                                renamed heading silently breaks them. SETUP.md wins
+│                                any disagreement.
 ├── CHANGELOG.md              ← one entry per release, each with an "Action required"
 │                                line. A fork owner's sync updates files but cannot
 │                                deploy rules or add env vars; both fail silently.
