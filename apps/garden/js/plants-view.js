@@ -17,7 +17,8 @@ import { DEATH_CAUSES } from './compost-view.js';
 import { scanPanelHTML, initLabelScan, focusScanCard } from './label-scan.js';
 import { lookupPanelHTML, initPlantLookup } from './plant-lookup.js';
 import { plantQrSvg, plantTagUrl, openTagSheet, openTapeLabels,
-         tapeQrPlan, qrModulesAcross, TAPE_MARGIN_PINS } from './qr.js';
+         tapeQrPlan, qrModulesAcross, TAPE_MARGIN_PINS,
+         TAG_STOCK, DEFAULT_TAG_STOCK, tapeLabelPlan } from './qr.js';
 
 // Plain-text botanical name (strips the HTML that formatBotanicalName returns)
 function plainName(plant) {
@@ -1580,6 +1581,12 @@ async function showPlantTagModal(plant) {
             <select id="qr-tape-width">
                 ${tapeOptions.map(o => `<option value="${o.w}" ${o.w === defaultTape ? 'selected' : ''}>${o.w} mm</option>`).join('')}
             </select>
+        </div>
+        <div class="qr-tape-row">
+            <label for="qr-tape-stock">Aluminum tag</label>
+            <select id="qr-tape-stock">
+                ${Object.values(TAG_STOCK).map(t => `<option value="${t.id}" ${t.id === DEFAULT_TAG_STOCK ? 'selected' : ''}>${escHtml(t.label)}</option>`).join('')}
+            </select>
             <button class="btn btn-secondary" id="qr-tape-btn">🏷️ Print tape</button>
         </div>
         <p class="qr-tag-hint" id="qr-tape-note"></p>
@@ -1608,22 +1615,30 @@ async function showPlantTagModal(plant) {
     // matters is dots per module: a QR module has to be a whole number of
     // printer dots, and two is the floor for something that lives outdoors.
     const tapeSel  = document.getElementById('qr-tape-width');
+    const stockSel = document.getElementById('qr-tape-stock');
     const tapeNote = document.getElementById('qr-tape-note');
     function describeTape() {
         if (!tapeSel || !tapeNote) return;
-        const plan = tapeQrPlan(Number(tapeSel.value), modules);
+        const plan = tapeLabelPlan([{ plant, note: '' }],
+                                   Number(tapeSel.value), stockSel?.value, modules);
         if (!plan) return;
+        // Length is the number worth showing: it is the tape this label will
+        // actually spend, and it moves with the tag as much as with the name.
         tapeNote.textContent =
-            `${plan.sideMm.toFixed(1)} mm code on ${plan.printableMm.toFixed(1)} mm of usable tape — `
-            + `${plan.dotsPerModule} printer dots per module`
-            + (plan.good ? '.' : ', which is tight. Wider tape scans more reliably.');
+            `${plan.labelLengthMm} mm label (${(plan.labelLengthMm / 25.4).toFixed(1)}"), `
+            + `name on ${plan.nameLines === 1 ? 'one line' : 'two lines'} — `
+            + `${plan.sideMm.toFixed(1)} mm code at ${plan.dotsPerModule} printer dots per module`
+            + (plan.good ? '.' : ', which is tight. Wider tape scans more reliably.')
+            + (plan.fitsTag ? '' : ' This name is too long for the tag and will be clipped.');
     }
     tapeSel?.addEventListener('change', describeTape);
+    stockSel?.addEventListener('change', describeTape);
     describeTape();
 
     document.getElementById('qr-tape-btn')?.addEventListener('click', () => {
         const width = Number(tapeSel.value);
+        const stock = stockSel?.value || DEFAULT_TAG_STOCK;
         hideModal();
-        openTapeLabels([{ plant, note: '' }], width);
+        openTapeLabels([{ plant, note: '' }], width, stock);
     });
 }

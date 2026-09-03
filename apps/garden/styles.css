@@ -2828,6 +2828,9 @@ textarea::placeholder {
     flex-wrap: wrap;
     margin-top: 14px;
 }
+.qr-tape-row + .qr-tape-row {
+    margin-top: 8px;
+}
 .qr-tape-row label {
     font-size: 0.85rem;
     color: var(--grey-600);

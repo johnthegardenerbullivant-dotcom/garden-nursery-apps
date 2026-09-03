@@ -163,6 +163,157 @@ export function qrModulesAcross(svg) {
 }
 
 // =============================================
+//  The aluminium tag the tape is stuck to
+// =============================================
+// Tape is continuous; the tag is not. The tag is therefore the thing that
+// really caps a label's length, and knowing which one a label is destined for
+// is what lets the layout choose between one long line and two short ones.
+//
+//   7" x 3/4" strip   long and shallow. The tape all but covers its height,
+//                     so one line reads better than two and there is length
+//                     to spare for it.
+//   4" x 1 1/2" plate short and deep. Two lines are natural here, and the
+//                     shorter label is the cheaper one.
+
+export const TAG_STOCK = {
+    strip: { id: 'strip', label: '7" x 3/4" strip',   lengthMm: 177.8, heightMm: 19.05, lines: 1 },
+    plate: { id: 'plate', label: '4" x 1 1/2" plate', lengthMm: 101.6, heightMm: 38.10, lines: 2 }
+};
+
+export const DEFAULT_TAG_STOCK = 'strip';
+
+/** Bare metal left at each end, so the tape is not fighting the tag's edge. */
+const TAG_EDGE_MM = 3;
+
+export function tagStock(stockId) {
+    return TAG_STOCK[stockId] || TAG_STOCK[DEFAULT_TAG_STOCK];
+}
+
+/** The longest label that will sit on a given tag. */
+export function tagUsableLengthMm(stockId) {
+    return tagStock(stockId).lengthMm - TAG_EDGE_MM * 2;
+}
+
+// =============================================
+//  Measuring the name, rather than guessing it
+// =============================================
+// This used to be an estimate — character count times an assumed average
+// advance — and it was wrong in the expensive direction. Measured on
+// "Weinmannia trichosperma" it reserved 47.7 mm for a name that inked 26.0 mm,
+// because the estimate assumed one line while the CSS clamps to two. Every
+// millimetre of that over-reservation is thermal tape fed out and thrown away.
+// Canvas can measure the same font the label prints in, so ask it.
+
+const LABEL_FONT = 'Arial, Helvetica, sans-serif';
+
+/** A few percent of headroom: a name mixes italic and roman, we measure one. */
+const MEASURE_SAFETY = 1.03;
+
+function measureCtx() {
+    if (!measureCtx.ctx) {
+        measureCtx.ctx = document.createElement('canvas').getContext('2d');
+    }
+    return measureCtx.ctx;
+}
+
+/**
+ * Width of `text` in mm, set in the label's own font at `sizeMm`.
+ *
+ * Measured at a large pixel size and scaled down. At 4 mm the browser rounds
+ * glyph advances to whole pixels, and on a short string that rounding is a
+ * percent or two of error in the direction that truncates a name.
+ */
+export function textWidthMm(text, sizeMm, { bold = true, italic = true } = {}) {
+    const PX  = 400;
+    const ctx = measureCtx();
+    ctx.font = `${italic ? 'italic ' : ''}${bold ? '700 ' : '400 '}${PX}px ${LABEL_FONT}`;
+    return ctx.measureText(text).width / PX * sizeMm;
+}
+
+/**
+ * The narrowest box that holds `text` in at most `maxLines` lines.
+ *
+ * Every break at a space is tried and the split whose longest line is
+ * shortest wins — a balanced wrap. That is both tidier than the greedy wrap a
+ * browser produces when simply handed a narrow box, and shorter: greedy
+ * leaves "Weinmannia" alone on line one and sets the box by "trichosperma"
+ * anyway, while balancing can often do better on a three-word name.
+ */
+export function nameBlockWidthMm(text, sizeMm, maxLines) {
+    const full = textWidthMm(text, sizeMm);
+    if (maxLines < 2) return full;
+
+    const words = text.split(/\s+/).filter(Boolean);
+    if (words.length < 2) return full;
+
+    let best = full;
+    for (let i = 1; i < words.length; i++) {
+        const a = textWidthMm(words.slice(0, i).join(' '), sizeMm);
+        const b = textWidthMm(words.slice(i).join(' '),    sizeMm);
+        best = Math.min(best, Math.max(a, b));
+    }
+    return best;
+}
+
+/**
+ * The whole tape-label plan for one print run: type sizes, how many lines the
+ * name gets, and the page length that follows from both.
+ *
+ * Every label in one job shares a page size — that is a print-dialog
+ * constraint, not a choice — so the run is sized by its widest name.
+ */
+export function tapeLabelPlan(tags, tapeWidthMm, stockId, modules) {
+    const plan = tapeQrPlan(tapeWidthMm, modules);
+    if (!plan) return null;
+
+    const stock     = tagStock(stockId);
+    const usableMm  = tagUsableLengthMm(stockId);
+    const pad       = 1.2;
+    const textRoom  = usableMm - plan.sideMm - pad * 3;
+
+    // Type sizes as a share of the printable strip. Dropping the tag code
+    // freed the height the code used to take, so the name gets noticeably
+    // more of it than the old three-line stack allowed.
+    const anyCommon    = tags.some(t => t.plant.commonName);
+    const oneLineMm    = plan.printableMm * (anyCommon ? 0.34 : 0.45);
+    const twoLineMm    = plan.printableMm * (anyCommon ? 0.26 : 0.34);
+    const commonSizeMm = plan.printableMm * 0.20;
+
+    const names   = tags.map(t => plainTagName(t.plant));
+    const commons = tags.map(t => t.plant.commonName || '');
+
+    const widestCommon = size => Math.max(0, ...commons.map(c =>
+        c ? textWidthMm(c, size, { italic: false, bold: false }) : 0));
+
+    // One line if the tag wants it and the names will take it; otherwise two.
+    const oneLineNeed = Math.max(
+        ...names.map(n => textWidthMm(n, oneLineMm)),
+        widestCommon(commonSizeMm)
+    ) * MEASURE_SAFETY;
+
+    const single = stock.lines === 1 && oneLineNeed <= textRoom;
+
+    const nameSizeMm = single ? oneLineMm : twoLineMm;
+    const needMm = single ? oneLineNeed : Math.max(
+        ...names.map(n => nameBlockWidthMm(n, twoLineMm, 2)),
+        widestCommon(commonSizeMm)
+    ) * MEASURE_SAFETY;
+
+    const textMm = Math.min(needMm, textRoom);
+
+    return {
+        ...plan,
+        stock, pad, usableMm,
+        nameLines:    single ? 1 : 2,
+        nameSizeMm,
+        commonSizeMm,
+        textMm,
+        labelLengthMm: Math.round(plan.sideMm + pad * 3 + textMm),
+        fitsTag:       needMm <= textRoom
+    };
+}
+
+// =============================================
 //  Tag markup — paper sheet
 // =============================================
 
@@ -295,17 +446,17 @@ export function openTagSheet(tags, heading) {
  * unlimited and tape width is not, so the QR is sized by the width and the
  * name sits beside it in as much length as it needs.
  */
-export function openTapeLabels(tags, tapeWidthMm) {
+export function openTapeLabels(tags, tapeWidthMm, stockId = DEFAULT_TAG_STOCK) {
     if (!tags || !tags.length) {
         showToast('Nothing to print', 'error');
         return;
     }
 
-    // Every label in one job shares a page size, so the geometry is measured
-    // once off the first code. They are all the same width: the URL is a fixed
-    // host plus a fixed-length code, so every tag is the same QR version.
+    // The geometry is measured once off the first code because they are all
+    // the same width: the URL is a fixed host plus a fixed-length code, so
+    // every tag is the same QR version.
     const modules = qrModulesAcross(plantQrSvg(tags[0].plant.tagCode));
-    const plan    = modules ? tapeQrPlan(tapeWidthMm, modules) : null;
+    const plan    = modules ? tapeLabelPlan(tags, tapeWidthMm, stockId, modules) : null;
 
     if (!plan) {
         showToast(`No geometry for ${tapeWidthMm} mm tape`, 'error');
@@ -316,21 +467,7 @@ export function openTapeLabels(tags, tapeWidthMm) {
         return;
     }
 
-    // The label is as long as its longest name needs, because every label in
-    // one print job shares a page size and the tape is a continuous roll —
-    // length is the cheap dimension here, and a truncated botanical name on a
-    // plant label defeats the point of printing the name at all.
-    //
-    // Names still wrap to a second line if they must (see .label-name below);
-    // this only tries to make that the exception. The width estimate is rough
-    // on purpose: Arial's average advance is around 0.5 em and guessing high
-    // costs a few millimetres of tape, while guessing low costs a reprint.
-    const pad      = 1.2;
-    const nameEm   = 0.26;                       // .label-name, as a share of the height
-    const longest  = Math.max(...tags.map(t => plainTagName(t.plant).length));
-    const textMm   = longest * plan.printableMm * nameEm * 0.5;
-    const labelLengthMm = Math.max(55, Math.min(110,
-        Math.round(plan.sideMm + pad * 3 + textMm)));
+    const { pad, labelLengthMm } = plan;
 
     const css = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -350,22 +487,19 @@ export function openTapeLabels(tags, tapeWidthMm) {
   .label-qr { width: ${plan.sideMm.toFixed(2)}mm; height: ${plan.sideMm.toFixed(2)}mm; flex: none; }
   .label-qr svg { width: 100%; height: 100%; display: block; }
   .label-text { min-width: 0; line-height: 1.15; }
-  /* Two lines, then ellipsis. A name long enough to overrun two lines at this
-     size is past what a tape label can usefully carry, and the code beside it
-     still resolves to the full record. */
-  .label-name { font-size: ${(plan.printableMm * nameEm).toFixed(2)}mm; font-weight: 700;
-                display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  /* The line count is the tag's, not the name's: a 7" strip is shallow enough
+     that one long line reads better, a 4" plate is deep enough for two. */
+  .label-name { font-size: ${plan.nameSizeMm.toFixed(2)}mm; font-weight: 700;
+                display: -webkit-box; -webkit-line-clamp: ${plan.nameLines}; -webkit-box-orient: vertical;
                 overflow: hidden; overflow-wrap: anywhere; }
   .label-name em { font-style: italic; }
-  .label-common { font-size: ${(plan.printableMm * 0.19).toFixed(2)}mm; margin-top: 0.4mm;
+  .label-common { font-size: ${plan.commonSizeMm.toFixed(2)}mm; margin-top: 0.4mm;
                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .label-code { font-family: ui-monospace, Consolas, monospace;
-                font-size: ${(plan.printableMm * 0.16).toFixed(1)}mm; letter-spacing: 0.08em;
-                margin-top: 0.5mm; }
-  .screen-only { font-family: Arial, Helvetica, sans-serif; padding: 16px; max-width: 620px;
+  .screen-only { font-family: Arial, Helvetica, sans-serif; padding: 16px; max-width: 640px;
                  line-height: 1.5; font-size: 13px; color: #222; }
   .screen-only h2 { font-size: 15px; color: #2d6a4f; margin-bottom: 6px; }
   .screen-only ol { margin: 8px 0 12px 20px; }
+  .screen-only li { margin-bottom: 4px; }
   .screen-only .warn { color: #a33; }
   .print-btn { padding: 8px 20px; background: #2d6a4f; color: #fff; border: none;
                border-radius: 6px; cursor: pointer; font-size: 13px; }
@@ -379,6 +513,10 @@ export function openTapeLabels(tags, tapeWidthMm) {
         : `<span class="warn">only ${plan.dotsPerModule} dots per module (${plan.moduleMm.toFixed(2)} mm)
            — it should scan, but 18 mm or wider tape gives a more forgiving code.</span>`;
 
+    const overrun = plan.fitsTag ? '' :
+        `<p class="warn">The longest name here needs more than the
+         ${plan.stock.label} will take, so it is clipped. A ${TAG_STOCK.strip.label} holds more.</p>`;
+
     const body = tags.map(t => {
         const p = t.plant;
         const common = p.commonName ? `<div class="label-common">${escHtml(p.commonName)}</div>` : '';
@@ -387,7 +525,6 @@ export function openTapeLabels(tags, tapeWidthMm) {
         <div class="label-text">
             <div class="label-name">${tagBotanicalHTML(p)}</div>
             ${common}
-            <div class="label-code">${escHtml(p.tagCode)}</div>
         </div>
     </div>`;
     }).join('');
@@ -395,9 +532,13 @@ export function openTapeLabels(tags, tapeWidthMm) {
     openPrintDocument(`Plant Tape Labels — ${tapeWidthMm} mm`, css, `
   <div class="screen-only">
     <h2>&#127991;&#65039; ${tags.length} label${tags.length !== 1 ? 's' : ''} for ${tapeWidthMm} mm tape</h2>
+    <p>${labelLengthMm} mm long (${(labelLengthMm / 25.4).toFixed(1)}"), for the
+       <strong>${plan.stock.label}</strong>, name on
+       ${plan.nameLines === 1 ? 'one line' : 'two lines'}.</p>
     <p>The code is ${modules} modules across including its quiet zone, printed at
        ${plan.sideMm.toFixed(1)} mm on ${plan.printableMm.toFixed(1)} mm of usable tape:
        ${quality}</p>
+    ${overrun}
     <div class="rule"></div>
     <ol>
       <li>Load <strong>${tapeWidthMm} mm</strong> tape and connect the printer over <strong>USB</strong>.</li>
@@ -406,7 +547,12 @@ export function openTapeLabels(tags, tapeWidthMm) {
           and scale <strong>100%</strong> — <em>not</em> "Fit to page", which resizes the code and
           breaks the whole-dot module sizing this layout depends on.</li>
       <li>Turn <strong>off</strong> headers and footers.</li>
+      <li>Check the preview says <strong>1 sheet of paper</strong> per label. More than that means
+          the driver's paper size is wrong, and it will feed a blank strip for every extra page.</li>
     </ol>
+    <p>In the Brother driver's Printing preferences, set the <strong>margin</strong> to its smallest
+       value — that is the blank tape fed before the first printed dot, and its default is large
+       enough to double what a short label costs.</p>
     <p>Codes point at ${escHtml(tagBaseUrl())}</p>
     <button class="print-btn" onclick="window.print()">&#128438; Print</button>
     <div class="rule"></div>
