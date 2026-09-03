@@ -266,53 +266,65 @@ export function tapeLabelPlan(tags, tapeWidthMm, stockId, modules) {
     const plan = tapeQrPlan(tapeWidthMm, modules);
     if (!plan) return null;
 
-    const stock     = tagStock(stockId);
-    const usableMm  = tagUsableLengthMm(stockId);
-    const pad       = 1.2;
-    const textRoom  = usableMm - plan.sideMm - pad * 3;
-
-    // Type sizes as a share of the printable strip. Dropping the tag code
-    // freed the height the code used to take, so the name gets noticeably
-    // more of it than the old three-line stack allowed.
-    const anyCommon    = tags.some(t => t.plant.commonName);
-    const oneLineMm    = plan.printableMm * (anyCommon ? 0.34 : 0.45);
-    const twoLineMm    = plan.printableMm * (anyCommon ? 0.26 : 0.34);
-    const commonSizeMm = plan.printableMm * 0.20;
+    const stock    = tagStock(stockId);
+    const usableMm = tagUsableLengthMm(stockId);
+    const pad      = 1.2;
+    const textRoom = usableMm - plan.sideMm - pad * 3;
 
     const names   = tags.map(t => plainTagName(t.plant));
     const commons = tags.map(t => t.plant.commonName || '');
 
-    const widestCommon = size => Math.max(0, ...commons.map(c =>
-        c ? textWidthMm(c, size, { italic: false, bold: false }) : 0));
+    const anyCommon    = commons.some(Boolean);
+    const commonSizeMm = plan.printableMm * 0.20;
+    const commonMm     = Math.max(0, ...commons.map(c =>
+        c ? textWidthMm(c, commonSizeMm, { italic: false, bold: false }) : 0));
 
-    // One line if the tag wants it and the names will take it; otherwise two.
-    const oneLineNeed = Math.max(
-        ...names.map(n => textWidthMm(n, oneLineMm)),
-        widestCommon(commonSizeMm)
-    ) * MEASURE_SAFETY;
+    // Type is sized to FILL what the tag and the tape between them allow,
+    // rather than to a fixed share of the strip. A fixed share is what made
+    // the first printed labels legible only up close: it set 7 mm type on a
+    // 7" tag that had room for 10, and left an inch of bare aluminium.
+    //
+    // Two ceilings apply and the lower one wins:
+    //   height  the printable strip, split between the lines and any common name
+    //   length  what is left beside the code, once the tag's ends are allowed for
+    //
+    // Text width scales linearly with type size, so the length ceiling is one
+    // measurement at 1 mm and a division — no search needed.
+    const commonStackMm = anyCommon ? commonSizeMm * 1.15 + 0.4 : 0;
 
-    const single = stock.lines === 1 && oneLineNeed <= textRoom;
+    function candidate(lines) {
+        const heightCap = (plan.printableMm - commonStackMm) / (lines * 1.15);
+        const unitWidth = Math.max(...names.map(n => nameBlockWidthMm(n, 1, lines)));
+        const lengthCap = unitWidth > 0
+            ? textRoom / (unitWidth * MEASURE_SAFETY)
+            : heightCap;
+        const sizeMm = Math.min(heightCap, lengthCap);
+        return { lines, sizeMm, nameMm: unitWidth * sizeMm * MEASURE_SAFETY };
+    }
 
-    const nameSizeMm = single ? oneLineMm : twoLineMm;
-    const needMm = single ? oneLineNeed : Math.max(
-        ...names.map(n => nameBlockWidthMm(n, twoLineMm, 2)),
-        widestCommon(commonSizeMm)
-    ) * MEASURE_SAFETY;
+    // The tag asks for one line, but only gets it while one line is the more
+    // legible answer. A name long enough to drive single-line type below what
+    // two lines would give is better set on two — the strip is 3/4" deep, and
+    // 5 mm across two lines reads from further away than 3 mm across one.
+    const two  = candidate(2);
+    const best = stock.lines === 1
+        ? [candidate(1), two].reduce((a, b) => (b.sizeMm > a.sizeMm ? b : a))
+        : two;
 
+    const needMm = Math.max(best.nameMm, commonMm);
     const textMm = Math.min(needMm, textRoom);
 
     return {
         ...plan,
         stock, pad, usableMm,
-        nameLines:    single ? 1 : 2,
-        nameSizeMm,
+        nameLines:     best.lines,
+        nameSizeMm:    best.sizeMm,
         commonSizeMm,
         textMm,
         labelLengthMm: Math.round(plan.sideMm + pad * 3 + textMm),
-        fitsTag:       needMm <= textRoom
+        fitsTag:       needMm <= textRoom + 0.01
     };
 }
-
 // =============================================
 //  Tag markup — paper sheet
 // =============================================
@@ -548,11 +560,17 @@ export function openTapeLabels(tags, tapeWidthMm, stockId = DEFAULT_TAG_STOCK) {
           breaks the whole-dot module sizing this layout depends on.</li>
       <li>Turn <strong>off</strong> headers and footers.</li>
       <li>Check the preview says <strong>1 sheet of paper</strong> per label. More than that means
-          the driver's paper size is wrong, and it will feed a blank strip for every extra page.</li>
+          the driver's length is shorter than this label, and it will split it across strips.</li>
     </ol>
-    <p>In the Brother driver's Printing preferences, set the <strong>margin</strong> to its smallest
-       value — that is the blank tape fed before the first printed dot, and its default is large
-       enough to double what a short label costs.</p>
+    <p><strong>Set the driver's <em>Length</em> to ${(labelLengthMm / 25.4).toFixed(1)}" for this
+       run.</strong> The 0.70" paper has a Length box of its own in Printing preferences, it is
+       fixed rather than automatic, and it defaults to 3.00". A label longer than that gets scaled
+       down to fit or split across strips — which shrinks the QR along with the type, and a QR
+       whose modules are no longer whole printer dots is the one that stops scanning in the rain.</p>
+    <p>Matching Length to the label exactly wastes nothing. If retyping it per label gets tiresome,
+       try setting it to the tag instead — 4.00" for the plates, 7.00" for the strips — and ticking
+       <strong>Trim tape after data</strong>, which should cut the strip where the printing stops
+       rather than padding it to the full length. Worth proving on one label before a batch.</p>
     <p>Codes point at ${escHtml(tagBaseUrl())}</p>
     <button class="print-btn" onclick="window.print()">&#128438; Print</button>
     <div class="rule"></div>
