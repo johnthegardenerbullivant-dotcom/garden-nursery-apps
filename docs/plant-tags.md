@@ -241,6 +241,14 @@ Nothing here is enforced by the code, but the tags are only as good as what they
 - **The plant's name is printed beside the code on purpose.** A label only a smartphone can read is
   not a plant label. On paper tags the six-character tag code is printed too, so a worn tag can
   still be typed in by hand; on tape the name gets that height instead.
+- **The driver's paper length is fixed, and it is the setting that bites.** The PT-P710BT's
+  Windows driver publishes exactly one form, `0.70"`, and that form carries its own **Length**
+  box — defaulting to **3.00"**. It is not automatic. A label longer than the Length is scaled
+  down to fit or split across separate strips, and scaling is the dangerous one: it shrinks the
+  QR too, so the whole-dot module sizing above quietly stops holding. Set Length to the label
+  length the print window reports, or to the tag (4.00" / 7.00") with **Trim tape after data**
+  ticked. Confirmed on John's machine 2026-09-02: a 3.00" Length against a 4.4" label printed
+  one strip of data between two blank ones.
 - **Set the Brother driver's margin to its smallest value.** That margin is blank tape fed before
   the first printed dot, and the Windows default is large enough to double what a short label
   costs. Check the print preview says **1 sheet of paper** per label as well — more than that means
