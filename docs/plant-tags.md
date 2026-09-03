@@ -219,10 +219,18 @@ Three millimetres of bare metal is left at each end, which is where the usable l
 The name is **measured, not estimated**. It used to be sized from character count times an assumed
 average advance, which over-reserved badly whenever a name wrapped: measured on
 *Weinmannia trichosperma* the old estimate asked for 47.7 mm of name width against 26.0 mm of
-actual ink, and every one of those millimetres is thermal tape fed out and thrown away.
-`tapeLabelPlan()` now measures the real font on a canvas and, for a two-line name, tries every
-break at a space and keeps the split whose longest line is shortest — a balanced wrap is both
-tidier and narrower than the greedy one a browser produces from a narrow box.
+actual ink. That over-reservation does not cost tape — the driver's Length decides how much tape a
+label costs, see below — it costs **type size**, because the width the name is allowed is exactly
+what caps how large it can be set. `tapeLabelPlan()` now measures the real font on a canvas and,
+for a two-line name, tries every break at a space and keeps the split whose longest line is
+shortest — a balanced wrap is both tidier and narrower than the greedy one a browser produces from
+a narrow box.
+
+**The page itself is the tag's usable length, not the name's.** `tapeLabelPlan()` returns
+`labelLengthMm = round(usableMm)` — a constant **172 mm** for the strip and **96 mm** for the
+plate. Sizing the page down to the text would save nothing, because the P-touch feeds and cuts to
+its own **Length** setting whatever the page says, and it would mean retyping that setting for
+every batch. A constant page means one Length per stock, and a page that always matches the driver.
 
 The **six-character tag code is not printed on tape.** It is on the paper tags, where there is room
 for it; on tape it cost a line of height for something only ever needed when the QR will not scan,
@@ -241,18 +249,42 @@ Nothing here is enforced by the code, but the tags are only as good as what they
 - **The plant's name is printed beside the code on purpose.** A label only a smartphone can read is
   not a plant label. On paper tags the six-character tag code is printed too, so a worn tag can
   still be typed in by hand; on tape the name gets that height instead.
-- **The driver's paper length is fixed, and it is the setting that bites.** The PT-P710BT's
+- **The driver's Length is the whole game, and it decides the physical strip.** The PT-P710BT's
   Windows driver publishes exactly one form, `0.70"`, and that form carries its own **Length**
-  box — defaulting to **3.00"**. It is not automatic. A label longer than the Length is scaled
-  down to fit or split across separate strips, and scaling is the dangerous one: it shrinks the
-  QR too, so the whole-dot module sizing above quietly stops holding. Set Length to the label
-  length the print window reports, or to the tag (4.00" / 7.00") with **Trim tape after data**
-  ticked. Confirmed on John's machine 2026-09-02: a 3.00" Length against a 4.4" label printed
-  one strip of data between two blank ones.
-- **Set the Brother driver's margin to its smallest value.** That margin is blank tape fed before
-  the first printed dot, and the Windows default is large enough to double what a short label
-  costs. Check the print preview says **1 sheet of paper** per label as well — more than that means
-  the driver's paper size is wrong, and it will feed a blank strip for every extra page.
+  box — defaulting to **3.00"**. It is not automatic. **The strip that comes out is exactly that
+  Length, every time, whatever the label measures.** Set it to the length the print window reports:
+  **6.8" for the strip, 3.8" for the plate**. Those are constants per stock — set it when you
+  switch stock, not per run.
+
+  A label *longer* than the Length is **clipped**, mid-word and silently. Measured 2026-09-03: a
+  172 mm label against a 3.00" Length printed `Weinmannia trici` and stopped. This is not the older
+  failure, where an over-long label was scaled down to fit — that one is more dangerous, because it
+  shrinks the QR along with the type and the whole-dot module sizing above quietly stops holding.
+  Either way the Length is the fix.
+
+- **"Trim tape after data" does nothing when printing from a browser. Do not rely on it.** It reads
+  like the answer — cut where the printing stops, so one generous Length would serve every label —
+  and it does not work. Measured 2026-09-03 with Trim **on** and Length 7.00": a 172 mm label and a
+  96 mm label printed strips of **identical length**. Chrome rasterizes the full page, white space
+  included, so the "image edge" the driver looks for is the end of the page, and there is no bare
+  tape left to trim.
+
+  Two consequences. A shorter label **saves no tape at all**, which is why `tapeLabelPlan()` sizes
+  the page to the tag rather than to the text — the strip costs the same either way, and a page
+  that matches the driver is one that cannot clip. And the Trim checkbox **does not reliably
+  persist**: on 2026-09-03 it was ticked, applied and OK'd in both Printing Preferences and
+  Printing Defaults, and read back as `FeedToMediaSize` (off) from both print tickets afterwards.
+  If you ever do need it, verify it rather than trusting the dialog.
+
+- **The driver does not cap the Length — that theory is dead.** Its `PageMediaSizeMediaSizeHeight`
+  parameter declares `MinValue` 4000 microns and `MaxValue` **1000000 microns (1000 mm / 39.37")**,
+  so nothing about 172 mm troubles it. If a long label misbehaves the Length is set wrong; it is
+  not a limit being hit.
+- **The Brother driver's Feed margin is already at its floor — leave it.** That margin is the blank
+  tape fed before the first printed dot. Its `MinValue` and its `DefaultValue` are both **2000
+  microns (0.08")**, so there is nothing to win here. Do still check the print preview says
+  **1 sheet of paper** per label — more than that means the driver's paper size is wrong, and it
+  will feed a blank strip for every extra page.
 
 ## Dependency
 

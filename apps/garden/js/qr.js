@@ -314,6 +314,20 @@ export function tapeLabelPlan(tags, tapeWidthMm, stockId, modules) {
     const needMm = Math.max(best.nameMm, commonMm);
     const textMm = Math.min(needMm, textRoom);
 
+    // The page is the TAG's usable length, not the text's. That looks wasteful
+    // and is not: the P-touch driver feeds and cuts to its own fixed Length
+    // setting, so the strip that comes out is that length whatever this page
+    // says. Measured 2026-09-03 — a 172 mm label and a 96 mm one printed strips
+    // of identical length, and before that every label came out at exactly the
+    // 3.00" the driver was set to. A shorter page therefore saves no tape at
+    // all; it only stops the page matching the driver, which is the mismatch
+    // that clipped names mid-word.
+    //
+    // Pinning it to the tag makes the driver's Length two constants — 6.8" for
+    // the strip, 3.8" for the plate — set once per stock instead of retyped for
+    // every batch, and leaves the 3 mm of bare metal at each end that
+    // TAG_EDGE_MM is there to reserve.
+
     return {
         ...plan,
         stock, pad, usableMm,
@@ -321,7 +335,7 @@ export function tapeLabelPlan(tags, tapeWidthMm, stockId, modules) {
         nameSizeMm:    best.sizeMm,
         commonSizeMm,
         textMm,
-        labelLengthMm: Math.round(plan.sideMm + pad * 3 + textMm),
+        labelLengthMm: Math.round(usableMm),
         fitsTag:       needMm <= textRoom + 0.01
     };
 }
@@ -562,15 +576,19 @@ export function openTapeLabels(tags, tapeWidthMm, stockId = DEFAULT_TAG_STOCK) {
       <li>Check the preview says <strong>1 sheet of paper</strong> per label. More than that means
           the driver's length is shorter than this label, and it will split it across strips.</li>
     </ol>
-    <p><strong>Set the driver's <em>Length</em> to ${(labelLengthMm / 25.4).toFixed(1)}" for this
-       run.</strong> The 0.70" paper has a Length box of its own in Printing preferences, it is
-       fixed rather than automatic, and it defaults to 3.00". A label longer than that gets scaled
-       down to fit or split across strips — which shrinks the QR along with the type, and a QR
-       whose modules are no longer whole printer dots is the one that stops scanning in the rain.</p>
-    <p>Matching Length to the label exactly wastes nothing. If retyping it per label gets tiresome,
-       try setting it to the tag instead — 4.00" for the plates, 7.00" for the strips — and ticking
-       <strong>Trim tape after data</strong>, which should cut the strip where the printing stops
-       rather than padding it to the full length. Worth proving on one label before a batch.</p>
+    <p><strong>Set the driver's <em>Length</em> to ${(labelLengthMm / 25.4).toFixed(1)}" — the same
+       for every ${plan.stock.label} run.</strong> The 0.70" paper has a Length box of its own in
+       Printing preferences, it is fixed rather than automatic, and it defaults to 3.00". A label
+       longer than the Length is <em>clipped</em>, mid-word and without warning; earlier drivers
+       scaled it down instead, which is worse, because it shrinks the QR along with the type and a
+       QR whose modules are no longer whole printer dots is the one that stops scanning in the rain.</p>
+    <p>The length above is the tag's, not this name's, so it does not change between runs on the
+       same stock — set it when you switch stock and leave it. <strong>Do not rely on
+       <em>Trim tape after data</em></strong>: the strip that comes out is always exactly the
+       driver's Length, whatever the label or that setting says. Confirmed 2026-09-03 on a
+       PT-P710BT over USB — a 172 mm label and a 96 mm one printed strips of identical length with
+       Trim on, and every strip before that came out at exactly the 3.00" the driver was set to.
+       Chrome sends a full-page raster, so there is no bare tape for the driver to trim.</p>
     <p>Codes point at ${escHtml(tagBaseUrl())}</p>
     <button class="print-btn" onclick="window.print()">&#128438; Print</button>
     <div class="rule"></div>
