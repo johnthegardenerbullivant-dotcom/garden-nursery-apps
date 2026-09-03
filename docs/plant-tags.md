@@ -199,11 +199,34 @@ three dots is already all that 37 modules can take before overrunning either tap
 (37 modules × 3 dots) and decoding it — it reads back correctly at the true print raster.
 
 The layout runs **along** the tape rather than across it, because length is unlimited and width is
-not: the QR is sized by the width, and the name sits beside it. The label's length is chosen to fit
-the longest name in the batch, clamped to 55–110 mm, and names wrap to a second line if they must.
+not: the QR is sized by the width, and the name sits beside it.
 
 The label box is the **full tape width** with its contents centred, not just the printable strip —
 the driver centres its own printable window on the tape, so the two agree.
+
+### Length, and the tag underneath
+
+Tape is continuous; the aluminium tag it is stuck to is not, so the **tag** is what caps a label's
+length and decides how the name is set. Two are stocked:
+
+| Tag | Usable length | Name | Why |
+|---|---|---|---|
+| **7 × ¾ in strip** | 171.8 mm | one line, 7.1 mm | shallow enough that two lines crowd it, long enough that one fits |
+| **4 × 1½ in plate** | 95.6 mm | two lines, 5.4 mm | deep enough for two lines, and the shorter label is the cheaper one |
+
+Three millimetres of bare metal is left at each end, which is where the usable lengths come from.
+
+The name is **measured, not estimated**. It used to be sized from character count times an assumed
+average advance, which over-reserved badly whenever a name wrapped: measured on
+*Weinmannia trichosperma* the old estimate asked for 47.7 mm of name width against 26.0 mm of
+actual ink, and every one of those millimetres is thermal tape fed out and thrown away.
+`tapeLabelPlan()` now measures the real font on a canvas and, for a two-line name, tries every
+break at a space and keeps the split whose longest line is shortest — a balanced wrap is both
+tidier and narrower than the greedy one a browser produces from a narrow box.
+
+The **six-character tag code is not printed on tape.** It is on the paper tags, where there is room
+for it; on tape it cost a line of height for something only ever needed when the QR will not scan,
+and the height is worth more to the name.
 
 ## Printing them so they last
 
@@ -216,8 +239,12 @@ Nothing here is enforced by the code, but the tags are only as good as what they
 - **Laminated TZe tape is the tidy route**, and it is already weatherproof — that is what it is for.
   Use **18 mm or 24 mm**; 12 mm cannot carry this code.
 - **The plant's name is printed beside the code on purpose.** A label only a smartphone can read is
-  not a plant label. The six-character tag code is printed too, so a worn tag can still be typed in
-  by hand.
+  not a plant label. On paper tags the six-character tag code is printed too, so a worn tag can
+  still be typed in by hand; on tape the name gets that height instead.
+- **Set the Brother driver's margin to its smallest value.** That margin is blank tape fed before
+  the first printed dot, and the Windows default is large enough to double what a short label
+  costs. Check the print preview says **1 sheet of paper** per label as well — more than that means
+  the driver's paper size is wrong, and it will feed a blank strip for every extra page.
 
 ## Dependency
 
