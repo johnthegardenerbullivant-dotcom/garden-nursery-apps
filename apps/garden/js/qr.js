@@ -568,7 +568,9 @@ export function openTapeLabels(tags, tapeWidthMm, stockId = DEFAULT_TAG_STOCK) {
     <div class="rule"></div>
     <ol>
       <li>Load <strong>${tapeWidthMm} mm</strong> tape and connect the printer over <strong>USB</strong>.</li>
-      <li>Press Print, then choose the <strong>Brother PT-P710BT</strong> as the destination.</li>
+      <li>Press Print, then choose the <strong>Brother PT-P710BT</strong> as the destination — or,
+          if you have set up one queue per tag as below, the one for the
+          <strong>${plan.stock.label}</strong>.</li>
       <li>Set the paper size to the <strong>${tapeWidthMm} mm</strong> tape, margins <strong>None</strong>,
           and scale <strong>100%</strong> — <em>not</em> "Fit to page", which resizes the code and
           breaks the whole-dot module sizing this layout depends on.</li>
@@ -589,6 +591,12 @@ export function openTapeLabels(tags, tapeWidthMm, stockId = DEFAULT_TAG_STOCK) {
        PT-P710BT over USB — a 172 mm label and a 96 mm one printed strips of identical length with
        Trim on, and every strip before that came out at exactly the 3.00" the driver was set to.
        Chrome sends a full-page raster, so there is no bare tape for the driver to trim.</p>
+    <p><strong>Better than retyping it: install the driver once per tag.</strong> Windows will add
+       the same printer twice on the same USB port under different names, each keeping its own
+       Length — one at 6.8" for the ${TAG_STOCK.strip.label}, one at 3.8" for the
+       ${TAG_STOCK.plate.label}. Switching stock is then just picking the destination above,
+       instead of opening driver settings at all. Copy the settings from a working queue when you
+       do it: a queue added from scratch comes up on the driver's default tape width, not yours.</p>
     <p>Codes point at ${escHtml(tagBaseUrl())}</p>
     <button class="print-btn" onclick="window.print()">&#128438; Print</button>
     <div class="rule"></div>

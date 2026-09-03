@@ -276,6 +276,19 @@ Nothing here is enforced by the code, but the tags are only as good as what they
   Printing Defaults, and read back as `FeedToMediaSize` (off) from both print tickets afterwards.
   If you ever do need it, verify it rather than trusting the dialog.
 
+- **Install the driver once per tag, rather than retyping the Length.** Windows will add the same
+  printer twice on the same USB port under different names, each holding its own Length — e.g.
+  `Brother PT-P710BT - 7in strip` at 6.8" and `Brother PT-P710BT - 4in plate` at 3.8". Switching
+  stock then means picking the destination in the print dialog, which you are already in, instead
+  of opening driver settings. No web page can set the paper length itself — Chrome exposes no such
+  API and `@page size` only picks among published forms, of which this driver has one — so the
+  choice has to live on the OS side, and a destination dropdown is the least annoying place for it.
+
+  **A queue added from scratch does not inherit your tape width.** Both new queues came up at
+  24 mm on 2026-09-03 while the tape and the working queue were 18.1 mm, which would print onto the
+  wrong page height. Copy a working queue's PrintTicket to the new one and override only the
+  Length, then read all of width, length, orientation and feed back before trusting it.
+
 - **The driver does not cap the Length — that theory is dead.** Its `PageMediaSizeMediaSizeHeight`
   parameter declares `MinValue` 4000 microns and `MaxValue` **1000000 microns (1000 mm / 39.37")**,
   so nothing about 172 mm troubles it. If a long label misbehaves the Length is set wrong; it is
