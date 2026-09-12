@@ -566,7 +566,11 @@ export const METHOD_LABELS = {
     'acquired-potted':  'Acquired (potted plant)'
 };
 
+// 'pre-sowing' applies only to seed batches with a pre-sowing treatment
+// (stratification, scarifying…) — see pretreatment.js. Views show it only
+// where a batch is actually in it, so other batches keep a five-step pipeline.
 export const STAGE_LABELS = {
+    'pre-sowing':    'Pre-sowing',
     'propagating':   'Propagating',
     'rooted':        'Rooted',
     'potted-up':     'Potted up',
@@ -576,7 +580,7 @@ export const STAGE_LABELS = {
 };
 
 export const STAGE_ORDER = [
-    'propagating', 'rooted', 'potted-up', 'hardening-off', 'ready', 'completed'
+    'pre-sowing', 'propagating', 'rooted', 'potted-up', 'hardening-off', 'ready', 'completed'
 ];
 
 export const LOSS_REASON_LABELS = {

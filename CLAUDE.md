@@ -14,7 +14,7 @@ Two Progressive Web Apps, one Firebase project, one repo, two Netlify sites.
 |---|---|---|
 | What it does | Plant collection, areas, tasks, irrigation, blog/journal, compost bin | Propagation batches from sowing to planted-out, given-away or lost |
 | Folder | `apps/garden/` | `apps/nursery/` |
-| JS modules | 16 | 20 |
+| JS modules | 16 | 22 |
 | Netlify site | #1 | #2 |
 
 - **Firebase project:** one project — Firestore + Storage + Auth — **shared by both apps**. Which
@@ -85,7 +85,7 @@ garden-apps/
 │   │   │                        scan-label.js · lookup-plant.js
 │   │   └── js/               ← 16 ES modules
 │   │
-│   └── nursery/              ← Netlify site #2. Same shape, 20 JS modules.
+│   └── nursery/              ← Netlify site #2. Same shape, 22 JS modules.
 │
 ├── firebase/                 ← deployed by the Firebase CLI, NOT served by Netlify
 │   ├── firebase.json         ← .firebaserc sits here too, but is gitignored:
@@ -279,8 +279,8 @@ composite indexes or fight Netlify.
 
 ## Standing rules
 
-1. **`node --check` every JS file after generating or moving any of them.** All 44: 16 Garden
-   modules, 20 Nursery modules, 2 `functions/scan-label.js`, 2 `functions/lookup-plant.js`, and the
+1. **`node --check` every JS file after generating or moving any of them.** All 46: 16 Garden
+   modules, 22 Nursery modules, 2 `functions/scan-label.js`, 2 `functions/lookup-plant.js`, and the
    4 scripts in `tools/`. If it reports an error, treat it as real — never dismiss it as a false
    alarm. One command covers the lot:
 

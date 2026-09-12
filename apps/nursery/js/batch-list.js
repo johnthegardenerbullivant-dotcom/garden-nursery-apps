@@ -73,7 +73,11 @@ export async function renderBatchesList(container, headerActionEl, backBtn) {
         { key: 'active',    label: 'Active' },
         { key: 'completed', label: 'Completed' },
     ];
-    const stagePills = STAGE_ORDER.filter(s => s !== 'completed').map(s => ({ key: s, label: STAGE_LABELS[s] }));
+    // Pre-sowing only exists for treated seed, so its pill appears only when a batch is in it.
+    const showPreSowing = currentStages.has('pre-sowing') || batches.some(b => b.stage === 'pre-sowing');
+    const stagePills = STAGE_ORDER
+        .filter(s => s !== 'completed' && (s !== 'pre-sowing' || showPreSowing))
+        .map(s => ({ key: s, label: STAGE_LABELS[s] }));
 
     container.innerHTML = `
         <div class="view-content view-content--list">

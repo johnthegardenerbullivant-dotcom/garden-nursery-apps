@@ -8,6 +8,7 @@ import {
     STAGE_LABELS, STAGE_ORDER, LOSS_REASON_LABELS, todayStr
 } from './db.js';
 import { showModal, hideModal, showToast, initDatePickers, datePicker, isValidDateStr } from './ui-utils.js';
+import { hasPretreatment, checkUpdates, sowUpdates } from './pretreatment.js';
 
 // =============================================
 //  LOG FORM (add a log entry)
@@ -175,7 +176,13 @@ async function showLogForm(batch, onSaved) {
             });
 
             // Update batch stage / location if the log changed them.
-            const batchUpdates = {};
+            // At Pre-sowing any entry counts as a check, and moving the
+            // stage on means the seeds were sown.
+            let batchUpdates = {};
+            if (batch.stage === 'pre-sowing' && hasPretreatment(batch)) {
+                batchUpdates = checkUpdates(batch, date);
+                if (stageTo) batchUpdates = sowUpdates({ ...batch, ...batchUpdates }, date);
+            }
             if (stageTo)      batchUpdates.stage      = stageTo;
             if (locationToId) batchUpdates.locationId = locationToId;
             if (Object.keys(batchUpdates).length > 0) {

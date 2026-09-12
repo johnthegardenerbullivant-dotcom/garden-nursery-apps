@@ -2,7 +2,8 @@
 //  dashboard-view.js — Nursery dashboard (home screen)
 // =============================================================
 
-import { getNurseryBatches, escHtml, fmtDate, STAGE_LABELS, STAGE_ORDER, METHOD_LABELS, formatBatchQty, formatBotanicalName } from './db.js';
+import { getNurseryBatches, escHtml, fmtDate, todayStr, STAGE_LABELS, STAGE_ORDER, METHOD_LABELS, formatBatchQty, formatBotanicalName } from './db.js';
+import { pretreatmentNeedsAttention } from './pretreatment.js';
 import { navigate } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
 
@@ -33,7 +34,11 @@ export async function renderDashboard(container, headerActionEl, backBtn) {
     // "Needs attention" — active batches with no updatedAt in last 10 days
     const tenDaysAgo = new Date();
     tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+    // Pre-sowing batches run on their own clock instead: a check every N days,
+    // and whenever a step is due, sowing is due, or a maximum has passed.
+    const today = todayStr();
     const needsAttention = active.filter(b => {
+        if (b.stage === 'pre-sowing' && b.pretreatment) return pretreatmentNeedsAttention(b, today);
         if (!b.updatedAt) return true;
         const updated = b.updatedAt.toDate ? b.updatedAt.toDate() : new Date(b.updatedAt);
         return updated < tenDaysAgo;
@@ -80,7 +85,7 @@ export async function renderDashboard(container, headerActionEl, backBtn) {
                 ${active.length === 0
                     ? `<p class="empty-hint">No active batches — everything's been completed or you haven't started yet.</p>`
                     : `<div class="stage-pipeline">
-                        ${STAGE_ORDER.filter(s => s !== 'completed').map(s => `
+                        ${STAGE_ORDER.filter(s => s !== 'completed' && (s !== 'pre-sowing' || stageCounts[s] > 0)).map(s => `
                             <button class="stage-pill ${stageCounts[s] > 0 ? 'has-count' : ''}"
                                     data-stage="${s}"
                                     title="View ${STAGE_LABELS[s]} batches">

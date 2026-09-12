@@ -23,6 +23,35 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 
 ---
 
+## 2026-09-12
+
+**Action required: none.** No new collection, no rules change, no environment variable.
+
+- **Pre-sowing treatment for seed batches.** A seed batch can now record the steps its seed needs
+  before it is sown — cleaning, scarifying, soaking, smoke water, GA3, warm or cold moist
+  stratification, dry after-ripening — in order, each with a minimum and an optional maximum number
+  of days. Such a batch starts at a new first stage, **Pre-sowing**, and its page shows where the
+  treatment stands: day N of the current step, when the next check is due, and the sow-from and
+  sow-by dates.
+
+- **Checks, next steps and sowing.** *Checked — all fine* logs a check and restarts the check clock
+  (every 14 days by default; any log entry counts as a check too). *Start next step* moves a
+  warm-then-cold sequence on. *Sow now* records the sowing date and moves the batch to Propagating —
+  early if the seed has started germinating in the bag. *Don't sow before* holds a finished
+  treatment until a chosen date, so 90 days in the fridge from September waits for January.
+
+- **Reminders are worked out, not stored.** The dashboard's *Needs a check-in* list now uses a
+  pre-sowing batch's own dates — a check falling due, a step or sowing falling due, a maximum passed
+  — instead of the ten-days-without-an-update rule other batches use. Because nothing is written
+  down in advance, extending a step or sowing early cannot leave a stale reminder behind.
+
+- **Stats count a treated batch in the month it was sown**, not the month its treatment began.
+
+- Existing batches are untouched, and the Pre-sowing stage only appears in pipelines and filters
+  when a batch is actually in it.
+
+---
+
 ## 2026-09-01
 
 **Action required: none — but set `GARDEN_URL` on the Garden site if you intend to print tags.**

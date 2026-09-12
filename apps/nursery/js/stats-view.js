@@ -71,9 +71,12 @@ export async function renderStats(container, headerActionEl, backBtn) {
 
     // ---- By month started ----
     const byMonth = {};
+    // A stratified seed batch starts when the treatment does — months before
+    // sowing — so count it in the month it was actually sown.
     for (const b of propBatches) {
-        if (!b.startDate) continue;
-        const [y, m] = b.startDate.split('-');
+        const started = b.sownDate || b.startDate;
+        if (!started) continue;
+        const [y, m] = started.split('-');
         const key = `${y}-${m}`;
         if (!byMonth[key]) byMonth[key] = 0;
         byMonth[key]++;
@@ -157,7 +160,7 @@ export async function renderStats(container, headerActionEl, backBtn) {
             <section class="dashboard-section">
                 <h2 class="section-heading">Active batches by stage</h2>
                 <div class="stats-pipeline">
-                    ${STAGE_ORDER.filter(s => s !== 'completed').map((s, i, arr) => {
+                    ${STAGE_ORDER.filter(s => s !== 'completed' && (s !== 'pre-sowing' || stageCounts[s])).map((s, i, arr) => {
                         const count = stageCounts[s] || 0;
                         return `
                         <div class="pipeline-step ${count > 0 ? 'has-batches' : 'empty'}">

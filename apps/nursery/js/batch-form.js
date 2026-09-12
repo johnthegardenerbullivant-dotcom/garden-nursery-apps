@@ -11,6 +11,7 @@ import {
 import { showModal, hideModal, showToast, initDatePickers, datePicker, isValidDateStr } from './ui-utils.js';
 import { scanPanelHTML, initLabelScan } from './label-scan.js';
 import { lookupPanelHTML, initPlantLookup } from './plant-lookup.js';
+import { pretreatmentFormHTML, initPretreatmentForm, readPretreatmentForm } from './batch-pretreatment.js';
 
 // Cache garden plants for the session (fetched once per form open)
 let _gardenPlantsCache = null;
@@ -116,6 +117,7 @@ async function showBatchForm(existing, locations, onSaved, prefill = null) {
                        value="${escHtml(String(src.seedYear || ''))}"
                        placeholder="${new Date().getFullYear()}">
             </div>
+            ${pretreatmentFormHTML(existing, isEdit)}
             <div class="form-group" id="starting-stage-group" style="display:${existing?.method === 'acquired-potted' ? 'block' : 'none'};">
                 <label class="form-label" for="starting-stage">Current stage <span class="required">*</span></label>
                 <select class="form-input" id="starting-stage" name="startingStage">
@@ -666,6 +668,8 @@ async function showBatchForm(existing, locations, onSaved, prefill = null) {
     function updateMethodUI(isInitial = false) {
         const isAcquired = methodSelect?.value === 'acquired-potted';
         seedYearGrp.style.display      = (methodSelect?.value === 'seed') ? 'block' : 'none';
+        const ptGrp = document.getElementById('pretreatment-group');
+        if (ptGrp) ptGrp.style.display = (methodSelect?.value === 'seed') ? 'block' : 'none';
         if (startingStageGrp) startingStageGrp.style.display = isAcquired ? 'block' : 'none';
         if (purposeGrp)       purposeGrp.style.display       = isAcquired ? 'block' : 'none';
         // When switching to acquired on a new batch, apply sensible defaults
@@ -694,6 +698,7 @@ async function showBatchForm(existing, locations, onSaved, prefill = null) {
     });
     updateMethodUI(true);
     updateSourceUI();
+    initPretreatmentForm();
 
     // ---- Form submit ----
     document.getElementById('batch-form')?.addEventListener('submit', async e => {
@@ -727,6 +732,9 @@ async function showBatchForm(existing, locations, onSaved, prefill = null) {
             showToast('Please enter a valid start date as YYYY-MM-DD', 'error');
             return;
         }
+
+        const pt = readPretreatmentForm({ method: methodSelect?.value, existing, startDate });
+        if (pt.error) { showToast(pt.error, 'error'); return; }
 
         // Remaining quantity: convert a hand-typed figure into a signed offset
         // from what the logs and outcomes derive, so the correction survives
@@ -762,6 +770,17 @@ async function showBatchForm(existing, locations, onSaved, prefill = null) {
 
         // Build full botanical name string (correct × placement)
         const botanicalName = formatBotanicalName({ genus, species, subspecies, variety, cultivar, authority, hybridType });
+
+        // Acquired plants choose their stage. Otherwise the form only decides
+        // between Pre-sowing and Propagating; later stages are left alone.
+        let stage = isEdit ? existing.stage : 'propagating';
+        if (methodSelect?.value === 'acquired-potted') {
+            stage = startingStage || 'potted-up';
+        } else if (pt.pretreatment && !pt.sownDate && (!isEdit || stage === 'propagating')) {
+            stage = 'pre-sowing';
+        } else if (stage === 'pre-sowing' && (!pt.pretreatment || pt.sownDate)) {
+            stage = 'propagating';
+        }
 
         const data = {
             plantId:      selectedPlantId || null,
@@ -806,9 +825,9 @@ async function showBatchForm(existing, locations, onSaved, prefill = null) {
             notes:      document.getElementById('notes-input')?.value.trim() || '',
             tags:       document.getElementById('tags-input')?.value
                             .split(',').map(t => t.trim()).filter(Boolean),
-            stage:      methodSelect?.value === 'acquired-potted'
-                ? (startingStage || 'potted-up')
-                : (existing?.id ? existing.stage : 'propagating'),
+            pretreatment: pt.pretreatment,
+            sownDate:     pt.sownDate,
+            stage,
         };
 
         const saveBtn = document.getElementById('batch-save-btn');
