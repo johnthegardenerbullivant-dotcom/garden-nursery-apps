@@ -344,6 +344,13 @@ changed. **A base directory does not scope builds on its own** — Netlify rebui
 site on any push unless you add this. If you ever change one, verify both directions: touch a Garden
 file and confirm Nursery skips, then the reverse.
 
+**A merge must never diff as "no change".** `CACHED_COMMIT_REF` is the last commit the *site* built
+in any context, deploy previews included, and a PR's preview already contains that PR's changes. With
+only that diff, merging a PR right after its preview canceled the production build — PR #35 sat
+merged but not live on 2026-09-13, with "Canceled build due to no content change" in the deploy
+log. So each `ignore` also diffs `$COMMIT_REF^` → `$COMMIT_REF`, and a build skips only when both are
+empty. After any merge, confirm the production deploy says *Published*, not *Canceled*.
+
 ---
 
 ## History

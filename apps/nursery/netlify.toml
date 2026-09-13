@@ -40,7 +40,16 @@
   # Exit 0 = nothing changed here = SKIP the build. Exit 1 = build.
   # If CACHED_COMMIT_REF is unset (first build after this was added) git errors,
   # which is non-zero, so it builds. Failing towards building is the safe default.
-  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ../../shared ../../tools/build.mjs"
+  #
+  # The second diff, against the commit's first parent, was added 2026-09-13.
+  # CACHED_COMMIT_REF is the last commit this SITE built in ANY context, deploy
+  # previews included. A pull request's preview already contains its changes, so
+  # when the PR merged, the merge commit diffed as "nothing changed" against the
+  # preview and the production build was canceled ("Canceled build due to no
+  # content change") — PR #35 never reached the live site. Diffing against the
+  # first parent sees everything a merge brings into main. Skip only when BOTH
+  # diffs are empty; if either git command errors, the build runs.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ../../shared ../../tools/build.mjs && git diff --quiet $COMMIT_REF^ $COMMIT_REF -- . ../../shared ../../tools/build.mjs"
 
   # Netlify's secret scanner stops a build when it finds the VALUE of an
   # environment variable in the build output — which, now that build.mjs writes
