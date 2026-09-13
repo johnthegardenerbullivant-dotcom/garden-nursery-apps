@@ -168,7 +168,7 @@ export async function renderWalkRound(container, headerActionEl, backBtn, areaId
                 <p>Walk the area with this list and tick off each plant as you find it.
                    If something is missing or has changed, tap <strong>⋯</strong> to say what happened.
                    Add anything you find that isn’t listed.</p>
-                <p class="form-hint">Progress is saved as you go, so you can stop and carry on later — on this phone or another.</p>
+                <p class="form-hint">Progress is saved as you go. Tap <strong>Finish later</strong> to stop and carry on another time — on this phone or another.</p>
                 <button type="button" class="btn btn-primary" id="wr-start" style="margin-top:12px;">🚶 Start walk-round</button>
             </div>`;
 
@@ -205,6 +205,7 @@ export async function renderWalkRound(container, headerActionEl, backBtn, areaId
                 <div class="wr-undo-bar" id="wr-undo-bar"></div>
                 <div class="wr-footer-buttons">
                     <button type="button" class="btn btn-secondary" id="wr-add">+ Not listed</button>
+                    <button type="button" class="btn btn-secondary" id="wr-later">Finish later</button>
                     <button type="button" class="btn btn-primary" id="wr-finish">Finish</button>
                 </div>
             </div>`;
@@ -235,6 +236,18 @@ export async function renderWalkRound(container, headerActionEl, backBtn, areaId
 
         container.querySelector('#wr-add').addEventListener('click', () => {
             showAddPlantToAreaModal(areaId, area.name, () => rerender({ previousIds: allIds }));
+        });
+
+        // Finish later = Back, said out loud: the walk-round stays open and resumes
+        // from the area's "Continue walk-round" button. Leaving the view is safe with
+        // writes still in flight — they carry on while the app stays open — but
+        // closing the app is not, so say so if any are waiting.
+        container.querySelector('#wr-later').addEventListener('click', () => {
+            showToast(pendingWrites > 0
+                ? `Still sending ${pendingWrites} change${pendingWrites !== 1 ? 's' : ''} — keep the app open until they’re saved`
+                : 'Progress saved — tap “Continue walk-round” to pick up where you left off',
+                pendingWrites > 0 ? 'info' : 'success');
+            goBack();
         });
 
         container.querySelector('#wr-finish').addEventListener('click', showFinish);

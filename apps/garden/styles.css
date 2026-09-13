@@ -2935,3 +2935,6 @@ textarea::placeholder {
 #wr-filters .filter-chip span { margin-left: 5px; font-weight: 700; }
 .wr-undo-bar  { min-height: 34px; }
 .wr-undo-hint { font-size: 0.82rem; color: var(--grey-500); }
+/* Three footer buttons must fit a 320px phone: trim padding, never wrap a label */
+.wr-footer-buttons      { gap: 6px; }
+.wr-footer-buttons .btn { padding-left: 6px; padding-right: 6px; white-space: nowrap; font-size: 0.88rem; }
