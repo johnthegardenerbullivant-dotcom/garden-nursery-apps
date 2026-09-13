@@ -986,6 +986,7 @@ textarea::placeholder {
     white-space: nowrap;
     flex-shrink: 0;
 }
+.stage-pre-sowing   { background: #e0f2f1; color: #00695c; }
 .stage-propagating  { background: #e3f2fd; color: #1565c0; }
 .stage-rooted       { background: #e8f5e9; color: #2e7d32; }
 .stage-potted-up    { background: #f3e5f5; color: #6a1b9a; }
@@ -1595,6 +1596,92 @@ textarea::placeholder {
     gap: 8px;
 }
 .stage-advance-bar .btn { width: 100%; }
+
+/* ============================================================
+   Pre-sowing treatment — batch detail card and batch form section
+   (batch-pretreatment.js). The card class carries the state:
+   pretreat-in-progress | -step-due | -waiting | -ready-to-sow | -overdue
+   ============================================================ */
+.pretreat-card {
+    background: #f1f8f8;
+    border: 1.5px solid #b2dfdb;
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 16px;
+}
+.pretreat-card.pretreat-ready-to-sow,
+.pretreat-card.pretreat-step-due { background: var(--green-50); border-color: var(--green-300); }
+.pretreat-card.pretreat-overdue  { background: #fff8e1; border-color: var(--amber); }
+.pretreat-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; flex-wrap: wrap; margin-bottom: 6px;
+}
+.pretreat-title { font-size: 0.95rem; font-weight: 700; color: var(--grey-800); margin: 0; }
+.pretreat-state {
+    font-size: 0.72rem; font-weight: 700; padding: 2px 9px; border-radius: 20px;
+    background: #e0f2f1; color: #00695c; white-space: nowrap;
+}
+.pretreat-ready-to-sow .pretreat-state,
+.pretreat-step-due .pretreat-state { background: var(--green-100); color: var(--green-800); }
+.pretreat-overdue .pretreat-state  { background: #ffe0b2; color: #8a4b00; }
+.pretreat-now { font-size: 0.88rem; color: var(--grey-700); margin: 4px 0 6px; }
+.pretreat-bar { height: 6px; background: var(--grey-200); border-radius: 3px; overflow: hidden; margin-bottom: 10px; }
+.pretreat-bar-fill { height: 100%; background: #26a69a; border-radius: 3px; }
+.pretreat-ready-to-sow .pretreat-bar-fill,
+.pretreat-step-due .pretreat-bar-fill { background: var(--green-500); }
+
+.pretreat-steps { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pretreat-step { position: relative; display: flex; align-items: flex-start; gap: 8px; padding-left: 18px; font-size: 0.85rem; }
+.pretreat-step-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.pretreat-step-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.pretreat-step-actions .btn-icon { width: 32px; height: 32px; font-size: 0.85rem; }
+.pretreat-date.wide { grid-column: 1 / -1; }
+.pretreat-step::before {
+    content: ''; position: absolute; left: 1px; top: 4px;
+    width: 9px; height: 9px; border-radius: 50%;
+    border: 2px solid var(--grey-300); background: var(--white);
+}
+.pretreat-step.done::before   { background: var(--green-500); border-color: var(--green-500); }
+.pretreat-step.active::before { background: #26a69a; border-color: #26a69a; box-shadow: 0 0 0 3px #b2dfdb; }
+.pretreat-step.pending        { color: var(--grey-500); }
+.pretreat-step-name           { font-weight: 600; }
+.pretreat-step.pending .pretreat-step-name { font-weight: 500; }
+.pretreat-step-dur            { font-weight: 400; color: var(--grey-500); }
+.pretreat-step-dates,
+.pretreat-step-notes          { font-size: 0.78rem; color: var(--grey-600); }
+.pretreat-step-notes          { font-style: italic; }
+
+.pretreat-dates {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px;
+    padding-top: 8px; border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+.pretreat-date { display: flex; flex-direction: column; gap: 2px; }
+.pretreat-date.due .detail-value { color: #8a4b00; font-weight: 700; }
+.pretreat-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.pretreat-actions .btn { width: 100%; }
+.pretreat-history p { margin: 0; }
+
+/* Form section */
+.pretreat-toggle {
+    display: flex; align-items: flex-start; gap: 10px; margin: 4px 0 12px;
+    font-size: 0.9rem; font-weight: 600; color: var(--grey-800); cursor: pointer;
+}
+.pretreat-toggle input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--green-700); flex-shrink: 0; }
+.pretreat-steps-edit { counter-reset: pretreat-step; }
+.pretreat-step-row {
+    background: var(--grey-50); border: 1.5px solid var(--grey-200);
+    border-radius: var(--radius-sm); padding: 10px; margin-bottom: 10px;
+}
+.pretreat-step-row-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.pretreat-step-row-head .pt-type { flex: 1; min-width: 0; }
+/* Two narrow number inputs sit side by side even on a phone, unlike .form-row-two. */
+.pretreat-days-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pretreat-step-num {
+    width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--green-100); color: var(--green-800); font-size: 0.75rem; font-weight: 700;
+}
+.pretreat-step-num::before { counter-increment: pretreat-step; content: counter(pretreat-step); }
 
 /* ============================================================
    Log entry cards (batch detail)

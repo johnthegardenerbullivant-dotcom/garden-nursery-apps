@@ -21,7 +21,7 @@ Every collection listed here has a matching `match` block in
 | `irrigationLogs` | Garden | watering events per zone, queryable by zone and by date range |
 | `blogPosts` | Garden | `title`, `postDate` (YYYY-MM-DD), `contentDelta` (Quill JSON string), `contentHtml`, `tags[]`, `plantRefs[]` (`{plantId, name}`), `published` (bool), `createdAt`, `updatedAt` |
 | `deceasedPlants` | Garden | `plantId`, `plantName`, `commonName`, `areaId`, `areaName`, `quantity`, `cause`, `notes`, `diedDate`, `createdAt` — one row per death event, per area |
-| `nursery_batches` | Nursery | `plantName`/`plantId`, botanical fields, `method`, `stage`, `purpose`, `startDate`, `startQty`, `currentQty`, `qtyAdjustment`, `outcome`, `completedAt`, `locationId`, `sourceParentBatchId`, `createdAt`, `updatedAt` |
+| `nursery_batches` | Nursery | `plantName`/`plantId`, botanical fields, `method`, `stage`, `purpose`, `startDate`, `startQty`, `currentQty`, `qtyAdjustment`, `outcome`, `completedAt`, `locationId`, `sourceParentBatchId`, `pretreatment` (seed only: `steps[]` of `{type, days, maxDays, notes, startDate, endDate}`, `checkEveryDays`, `sowNotBefore`, `lastCheckDate`), `sownDate`, `createdAt`, `updatedAt` |
 | `nursery_logs` | Nursery | `batchId`, `date`, `note`, `lossCount`, `lossReason`, `createdAt` |
 | `nursery_outcomes` | Nursery | `batchId`, `date`, `type` (`planted-out`\|`given-away`\|`lost`\|`retired`), `quantity`, `areaId`/`areaName` or `recipientName`, `notes` |
 | `nursery_locations` | Nursery | `name`, `type`, `createdAt` — propagation locations (bench, cold frame, …) |
@@ -33,12 +33,14 @@ Every collection listed here has a matching `match` block in
 Nursery's label constants live in `apps/nursery/js/db.js` and are the authoritative list:
 
 ```
-stage:   propagating → rooted → potted-up → hardening-off → ready → completed   (STAGE_ORDER)
+stage:   pre-sowing → propagating → rooted → potted-up → hardening-off → ready → completed   (STAGE_ORDER)
 method:  seed · stem-cutting · hardwood-cutting · root-cutting · leaf-cutting ·
          division · layering-offset · grafting · acquired-potted                (METHOD_LABELS)
 outcome: planted-out · given-away · lost · retired   (retired = kept as a stock plant)
 loss:    damping-off · rot · dried-out · pest · cold · discarded · unknown · other
                                                                     (LOSS_REASON_LABELS)
+treat:   clean · scarify · soak · smoke · ga3 · warm-moist · cold-moist · after-ripen · other
+                                                  (PRETREATMENT_TYPES, in pretreatment.js)
 plan:    method (PLAN_METHOD_LABELS) · timing (PLAN_TIMING_OPTIONS, 10 season slugs) ·
          status idea|planned|done (PLAN_STATUS_LABELS)
 ```

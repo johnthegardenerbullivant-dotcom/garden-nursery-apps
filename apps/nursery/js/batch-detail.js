@@ -17,6 +17,8 @@ import { showLogForm } from './batch-log-form.js';
 import { showEditLogForm } from './batch-log-edit.js';
 import { loadAndRenderOutcomes, showOutcomeForm } from './batch-outcomes.js';
 import { showBatchForm, buildSourceLabel, invalidatePlantsCache, invalidateStockCache } from './batch-form.js';
+import { pretreatmentCardHTML, pretreatmentHistoryHTML, initPretreatmentActions } from './batch-pretreatment.js';
+import { hasPretreatment, initialStage } from './pretreatment.js';
 
 // =============================================
 //  BATCH DETAIL
@@ -58,8 +60,12 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
     </button>` : '';
     headerActionEl.innerHTML = `<div style="display:flex;gap:6px;">${editBtn}${deleteBtn}</div>`;
 
-    // Stage pipeline (excluding completed)
-    const activeStages    = STAGE_ORDER.filter(s => s !== 'completed');
+    // Stage pipeline (excluding completed). Pre-sowing is shown only for a
+    // batch with a pre-sowing treatment; other batches keep five steps.
+    const isPreSowing     = batch.stage === 'pre-sowing';
+    const isTreating      = isPreSowing && hasPretreatment(batch);
+    const activeStages    = STAGE_ORDER.filter(s =>
+        s !== 'completed' && (s !== 'pre-sowing' || isPreSowing || hasPretreatment(batch)));
     const currentStageIdx = activeStages.indexOf(batch.stage || 'propagating');
     const nextStage       = batch.stage !== 'ready' && batch.stage !== 'completed'
         ? activeStages[currentStageIdx + 1] : null;
@@ -83,7 +89,11 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
                 ${isAtLeast('editor') ? `<button class="btn btn-primary btn-sm" id="take-cuttings-btn" style="width:100%;">✂️ Take cuttings / divisions from this plant</button>` : ''}
             </div>` : '';
 
-    const advanceBarHtml = (!isStockPlant && isAtLeast('editor') && batch.stage !== 'completed') ? `
+    // A batch in treatment moves on with the card's Sow now button instead.
+    const pretreatmentHtml = isTreating ? pretreatmentCardHTML(batch, isAtLeast('editor')) : '';
+    const pretreatmentHistory = !isPreSowing && hasPretreatment(batch) ? pretreatmentHistoryHTML(batch) : '';
+
+    const advanceBarHtml = (!isStockPlant && !isTreating && isAtLeast('editor') && batch.stage !== 'completed') ? `
             <div class="stage-advance-bar">
                 ${nextStage ? `
                 <button class="btn btn-primary btn-sm" id="advance-stage-btn">
@@ -126,6 +136,7 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
             <!-- Stock plant banner / stage advance -->
             ${stockPlantBarHtml}
             ${advanceBarHtml}
+            ${pretreatmentHtml}
 
             <!-- Details grid -->
             <div class="detail-grid">
@@ -178,6 +189,8 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
                     <span class="detail-value">${escHtml(batch.authority)}</span>
                 </div>` : ''}
             </div>
+
+            ${pretreatmentHistory}
 
             ${batch.notes ? `
             <div class="detail-notes">
@@ -337,6 +350,9 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
         showLogForm(batch, async () => { await reload(); });
     });
 
+    // Pre-sowing card: Checked / Start next step / Sow now
+    if (isTreating && isAtLeast('editor')) initPretreatmentActions(container, batch, reload);
+
     // Load outcomes + logs + photos (async, after DOM is ready)
     loadAndRenderOutcomes(container, batch);
     loadAndRenderLogs(container, batch, reload);
@@ -407,9 +423,14 @@ async function loadAndRenderLogs(container, batch, reload) {
                 // across all logs; deleting a log may need to roll it back.
                 const remainingLogs = await getLogsForBatch(batch.id); // newest-first
                 const latestStageLog = remainingLogs.find(l => l.stageTo);
-                const correctStage   = latestStageLog ? latestStageLog.stageTo : 'propagating';
+                // With no stage entries left, fall back to where the batch began —
+                // Pre-sowing for treated seed. Deleting the entry that sowed it undoes the sowing.
+                const undoesSowing   = !latestStageLog && hasPretreatment(batch) && !!log?.stageTo;
+                const correctStage   = latestStageLog ? latestStageLog.stageTo
+                                     : undoesSowing ? 'pre-sowing' : initialStage(batch);
                 if (correctStage !== batch.stage) {
                     const stageUpdate = { stage: correctStage };
+                    if (correctStage === 'pre-sowing') stageUpdate.sownDate = null;
                     if (correctStage !== 'completed') {
                         stageUpdate.completedAt = null;
                         stageUpdate.outcome     = null;

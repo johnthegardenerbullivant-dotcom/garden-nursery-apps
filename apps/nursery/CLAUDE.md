@@ -65,12 +65,12 @@ apps/nursery/
 ├── functions/               ← 2 Netlify serverless functions, both byte-identical
 │   ├── scan-label.js        ←   to Garden's copies
 │   └── lookup-plant.js      ←
-└── js/                      ← 20 ES modules
+└── js/                      ← 22 ES modules
 ```
 
 ---
 
-## JS module map (20 modules)
+## JS module map (22 modules)
 
 ### Core
 
@@ -101,6 +101,8 @@ so `main.js` has one import site while the implementation lives in focused modul
 | `batch-log-edit.js` | Edit an existing log entry | `showEditLogForm` |
 | `batch-outcomes.js` | Record and render outcomes: planted-out / given-away / lost / retired | `loadAndRenderOutcomes`, `showOutcomeForm` |
 | `batch-photos.js` | Batch photo grid and lightbox | `openNurseryPhotoLightbox`, `loadAndRenderBatchPhotos` |
+| `batch-pretreatment.js` | Pre-sowing treatment UI: the batch-form section, the detail card, and its Checked / Start next step / Sow now actions | `pretreatmentFormHTML`, `initPretreatmentForm`, `readPretreatmentForm`, `pretreatmentCardHTML`, `pretreatmentHistoryHTML`, `initPretreatmentActions` |
+| `pretreatment.js` | Pre-sowing treatment logic: step types, date arithmetic, status, and the partial updates for check / next step / sow. **No imports**, so Node can load it to test the dates. | `PRETREATMENT_TYPES`, `pretreatmentStatus`, `pretreatmentNeedsAttention`, `initialStage`, `checkUpdates`, `nextStepUpdates`, `sowUpdates` |
 
 ### Other views
 
@@ -166,7 +168,7 @@ Stage is otherwise left alone.
 ### Stages, methods, outcomes
 
 ```
-stage:   propagating → rooted → potted-up → hardening-off → ready → completed   (STAGE_ORDER)
+stage:   pre-sowing → propagating → rooted → potted-up → hardening-off → ready → completed   (STAGE_ORDER)
 method:  seed · stem-cutting · hardwood-cutting · root-cutting · leaf-cutting ·
          division · layering-offset · grafting · acquired-potted
 outcome: planted-out · given-away · lost · retired        (retired = kept as a stock plant)
@@ -176,6 +178,29 @@ loss:    damping-off · rot · dried-out · pest · cold · discarded · unknown
 A batch with `purpose: 'stock-plant'` can't be "planted out" — the outcome form offers
 *given away* and *retire* instead. Batches raised from a stock plant carry
 `sourceParentBatchId`, which `getChildBatches()` follows.
+
+### Pre-sowing treatment
+
+A seed batch can carry `pretreatment: { steps[], checkEveryDays, sowNotBefore, lastCheckDate }` and a
+top-level `sownDate`. Such a batch starts at **`pre-sowing`**, a stage that only ever appears on
+batches that are in it or have been through it — the dashboard, batch list and stats pipelines leave
+it out otherwise, so every other batch keeps five steps.
+
+- **Saving the batch saves a plan; nothing starts by itself.** Each step is marked by hand, in order,
+  with its own `startDate`/`endDate`. A step with no minimum `days` is a one-off (cleaning, scarifying)
+  and *Mark done* sets both dates to the day. A timed step is *Start*ed and runs until the next step
+  is marked, *Finish* is pressed, or the seed is sown. A marked step's dates can be corrected, and the
+  most recent one undone; `stepDateBounds()` keeps them in order.
+- **Nothing about a reminder is stored.** Next check, sow-from, sow-by and the card's state are all
+  derived by `pretreatmentStatus(batch, today)`, so extending a step or sowing early cannot leave a
+  stale reminder. Checks fall due only while a timed step is running, and a plan not yet started
+  never asks for attention. Any log entry on a pre-sowing batch counts as a check.
+- **Sowing** writes `sownDate`, closes the active step and moves the batch to `propagating` —
+  from the card, from a log entry that advances the stage, or from a log edit. Deleting the entry
+  that sowed a batch puts it back to `pre-sowing`: the log-delete fallback is `initialStage()`,
+  not a hard-coded `'propagating'`.
+- **Stats** bucket a batch by `sownDate || startDate`, so a stratified batch counts in the month it
+  was sown rather than the month it went into the fridge.
 
 ### Plant out → Garden
 

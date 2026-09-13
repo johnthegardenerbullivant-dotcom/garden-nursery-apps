@@ -10,6 +10,7 @@ import {
 } from './db.js';
 import { showModal, hideModal, showToast, initPhotoDragSort, initDatePickers, datePicker, isValidDateStr } from './ui-utils.js';
 import { openNurseryPhotoLightbox } from './batch-photos.js';
+import { sowUpdates } from './pretreatment.js';
 
 // =============================================
 //  EDIT LOG ENTRY
@@ -136,7 +137,14 @@ async function showEditLogForm(log, batch, onSaved) {
             });
 
             // Sync batch stage and location to reflect the corrected log entry
-            const batchUpdates = { stage: newStage };
+            let batchUpdates = { stage: newStage };
+            // Keep the sowing record in step when a correction crosses Pre-sowing.
+            if (freshBatch.stage === 'pre-sowing' && newStage !== 'pre-sowing'
+                && freshBatch.pretreatment && !freshBatch.sownDate) {
+                batchUpdates = { ...sowUpdates(freshBatch, date), stage: newStage };
+            } else if (newStage === 'pre-sowing' && freshBatch.stage !== 'pre-sowing') {
+                batchUpdates.sownDate = null;
+            }
             if (newLocationId) batchUpdates.locationId = newLocationId;
             await updateNurseryBatch(freshBatch.id, batchUpdates);
 
