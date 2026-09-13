@@ -23,6 +23,18 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 
 ---
 
+## 2026-09-13
+
+**Action required: none** — but if a change you merged never reached your live site, trigger a
+deploy of `main` for that site in Netlify once.
+
+- **Fixed: production builds canceled after a deploy preview.** Each site's `ignore` command
+  compared the commit being built with the last commit that site built in any context, deploy
+  previews included. A pull request's preview already contains its changes, so the merge commit
+  looked unchanged and Netlify canceled the production build ("Canceled build due to no content
+  change"). The command now also compares the commit with its first parent, and a build is skipped
+  only when both comparisons are empty.
+
 ## 2026-09-12
 
 **Action required: none.** No new collection, no rules change, no environment variable.
