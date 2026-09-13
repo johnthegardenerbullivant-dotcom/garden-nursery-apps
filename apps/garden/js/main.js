@@ -11,6 +11,7 @@ import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/f
 import { setNavigateFn, setGoBackFn, setNavigateReplaceFn, hideModal } from './ui-utils.js';
 import { renderPlantsList, renderPlantDetail, clearPlantSearch } from './plants-view.js';
 import { renderAreasList, renderAreaDetail }   from './areas-view.js';
+import { renderWalkRound }                     from './walkround-view.js';
 import { renderGardenView }                    from './garden-view.js';
 import { renderAdminView }                     from './admin-view.js';
 import { renderTasksView }                     from './tasks-view.js';
@@ -204,6 +205,12 @@ async function route(view, id, state = {}) {
         case 'area-detail':
             pageTitleEl.textContent = 'Area Detail';
             await renderAreaDetail(mainEl, headerAction, backBtn, id, state.activeTab || null);
+            break;
+
+        // Named area-… so the Areas tab stays highlighted and Back falls back to Areas.
+        case 'area-walk':
+            pageTitleEl.textContent = '\u{1F6B6} Walk-round';
+            await renderWalkRound(mainEl, headerAction, backBtn, id);
             break;
 
         case 'garden':

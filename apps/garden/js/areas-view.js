@@ -102,6 +102,12 @@ export async function renderAreasList(container, headerActionEl, backBtn) {
 }
 
 function areaCard(area, activeTasks = 0, overdueTasks = 0) {
+    // Walk-round status — in progress, or when the area was last walked round
+    const walkBadge = area.walkRoundStarted
+        ? `<span class="area-walk-badge in-progress">🚶 Walk-round in progress</span>`
+        : area.lastWalkRound
+            ? `<span class="area-walk-badge">✓ Walked ${escHtml(area.lastWalkRound)}</span>`
+            : '';
     const taskBadge = activeTasks > 0
         ? `<span class="area-task-badge${overdueTasks > 0 ? ' overdue' : ''}">
                ${overdueTasks > 0 ? '⚠️ ' : ''}${activeTasks} task${activeTasks !== 1 ? 's' : ''}
@@ -113,7 +119,7 @@ function areaCard(area, activeTasks = 0, overdueTasks = 0) {
             <div class="card-body">
                 <div class="card-title">${escHtml(area.name)}</div>
                 ${area.description ? `<div class="card-subtitle">${escHtml(area.description)}</div>` : ''}
-                ${taskBadge ? `<div class="card-meta" style="margin-top:6px;">${taskBadge}</div>` : ''}
+                ${taskBadge || walkBadge ? `<div class="card-meta" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">${taskBadge}${walkBadge}</div>` : ''}
             </div>
             ${isAtLeast('editor') ? `
             <button class="area-card-edit-btn btn-icon" data-id="${area.id}" title="Edit area"
@@ -197,6 +203,8 @@ export async function renderAreaDetail(container, headerActionEl, backBtn, areaI
                 const details   = [
                     inst.quantity > 1 ? `${inst.quantity} plants` : null,
                     inst.datePlanted  ? `Planted ${inst.datePlanted}` : null,
+                    inst.lastSeen     ? `Seen ${inst.lastSeen}` : null,
+                    inst.notFoundOn   ? `⚠ Not found ${inst.notFoundOn}` : null,
                     inst.notes || null,
                 ].filter(Boolean);
                 return `
@@ -260,6 +268,8 @@ export async function renderAreaDetail(container, headerActionEl, backBtn, areaI
             <div class="plant-detail-subtitle">
                 ${area.description ? `<span>${escHtml(area.description)}&ensp;&middot;&ensp;</span>` : ''}
                 <span>${instances.length} plant record${instances.length !== 1 ? 's' : ''}</span>
+                <span>&ensp;&middot;&ensp;${area.walkRoundStarted ? 'Walk-round in progress'
+                    : area.lastWalkRound ? `Last walk-round ${escHtml(area.lastWalkRound)}` : 'Never walked round'}</span>
             </div>
         </div>
 
@@ -317,9 +327,11 @@ export async function renderAreaDetail(container, headerActionEl, backBtn, areaI
                             margin-bottom:12px;gap:12px;flex-wrap:wrap;">
                     <div class="detail-section-title" style="margin-bottom:0;">Plants in this area</div>
                     ${isAtLeast('editor') ? `
-                    <div style="display:flex;gap:6px;flex-shrink:0;">
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
                         <button class="btn btn-sm btn-primary" id="new-plant-to-area-btn">+ New plant</button>
                         <button class="btn btn-sm btn-secondary" id="existing-plant-to-area-btn">+ Existing</button>
+                        <button class="btn btn-sm btn-secondary" id="walk-round-btn"
+                                title="Walk the area and check every plant is still there">🚶 ${area.walkRoundStarted ? 'Continue walk-round' : 'Walk-round'}</button>
                     </div>` : ''}
                 </div>
                 ${plantsHtml}
@@ -384,6 +396,11 @@ export async function renderAreaDetail(container, headerActionEl, backBtn, areaI
         await showPlantForm(null, async () => {
             await renderAreaDetail(container, headerActionEl, backBtn, areaId);
         }, areaId);
+    });
+
+    // ---- Walk-round — check every plant in this area on foot (walkround-view.js) ----
+    container.querySelector('#walk-round-btn')?.addEventListener('click', () => {
+        navigate('area-walk', areaId);
     });
 
     // ---- Existing plant — pick from the plant catalogue ----
