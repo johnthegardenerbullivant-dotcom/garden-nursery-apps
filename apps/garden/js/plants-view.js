@@ -557,6 +557,8 @@ function instanceRow(inst) {
     const details  = [
         inst.quantity > 1 ? `${inst.quantity} plants` : null,
         inst.datePlanted ? `Planted ${inst.datePlanted}` : null,
+        inst.lastSeen    ? `Seen ${escHtml(inst.lastSeen)}` : null,
+        inst.notFoundOn  ? `⚠ Not found ${escHtml(inst.notFoundOn)}` : null,
         inst.notes ? escHtml(inst.notes) : null,
     ].filter(Boolean);
 
@@ -583,7 +585,7 @@ function instanceRow(inst) {
 //  RECORD DEATH MODAL  (move to Compost Bin)
 // =============================================
 
-function showDeathModal(plant, instance, onSave) {
+export function showDeathModal(plant, instance, onSave) {
     const had      = instance.quantity || 1;
     const areaName = instance.area ? instance.area.name : 'Unknown area';
     const pName    = plainName(plant);

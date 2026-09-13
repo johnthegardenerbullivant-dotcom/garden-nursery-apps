@@ -2844,3 +2844,97 @@ textarea::placeholder {
     cursor: pointer;
     font-size: 0.9rem;
 }
+
+/* =============================================
+   WALK-ROUND  (walkround-view.js)
+   Used one-handed, outdoors, often in bright light:
+   large targets, strong contrast, nothing that needs a hover.
+   ============================================= */
+.area-walk-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--green-50);
+    color: var(--green-800);
+    border: 1px solid var(--green-200);
+}
+.area-walk-badge.in-progress { background: #fff6ea; color: #8a4b00; border-color: var(--amber); }
+
+.wr-progress-text { font-size: 0.95rem; color: var(--grey-700); margin-bottom: 8px; }
+.wr-flag-count    { color: #8a4b00; font-weight: 600; }
+.wr-progress      { height: 10px; border-radius: 5px; background: var(--grey-200); overflow: hidden; }
+.wr-progress i    { display: block; height: 100%; width: 0; background: var(--green-500); transition: width var(--transition); }
+.wr-pending         { font-size: 0.8rem; color: var(--grey-500); margin-top: 8px; }
+.wr-pending.waiting { color: #8a4b00; }
+
+.wr-search { margin: 4px 0 10px; }
+.wr-list   { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 12px; }
+.wr-empty  { text-align: center; color: var(--grey-500); padding: 24px 8px; font-size: 0.9rem; }
+
+.wr-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    background: var(--white);
+    border: 1px solid var(--grey-200);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+}
+.wr-row.checked { background: var(--green-50); border-color: var(--green-200); }
+.wr-row.flagged { background: #fffaf2; border-color: var(--amber); }
+.wr-row-info    { flex: 1; min-width: 0; }
+.wr-row-name    { font-size: 0.95rem; color: var(--grey-800); line-height: 1.3; overflow-wrap: anywhere; }
+.wr-row-common  { font-size: 0.82rem; color: var(--grey-500); }
+.wr-row-meta    { font-size: 0.8rem; color: var(--grey-600); margin-top: 2px; }
+.wr-status          { display: inline-block; font-size: 0.78rem; color: var(--grey-500); margin-top: 4px; }
+.wr-status.seen     { color: var(--green-800); font-weight: 600; }
+.wr-status.flagged  { color: #8a4b00; font-weight: 600; }
+.wr-row-actions      { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.wr-row-actions .btn { min-width: 84px; min-height: 40px; justify-content: center; }
+
+.wr-footer {
+    position: sticky;
+    bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 8px);
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.97);
+    border: 1px solid var(--grey-200);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+}
+.wr-footer-buttons      { display: flex; gap: 8px; }
+.wr-footer-buttons .btn { flex: 1; min-height: 44px; justify-content: center; }
+.wr-undo-bar            { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.88rem; color: var(--grey-800); }
+.wr-undo-name           { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.wr-sheet { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.wr-sheet-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    width: 100%;
+    padding: 12px 14px;
+    text-align: left;
+    font: inherit;
+    color: var(--grey-800);
+    background: var(--white);
+    border: 1px solid var(--grey-200);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+.wr-sheet-btn:hover      { border-color: var(--green-400); background: var(--green-50); }
+.wr-sheet-btn span       { font-size: 0.8rem; color: var(--grey-500); }
+.wr-sheet-btn.danger b   { color: var(--red); }
+
+.wr-link { background: none; border: none; padding: 0; font: inherit; color: var(--green-700); text-decoration: underline; cursor: pointer; }
+#wr-filters .filter-chip span { margin-left: 5px; font-weight: 700; }
+.wr-undo-bar  { min-height: 34px; }
+.wr-undo-hint { font-size: 0.82rem; color: var(--grey-500); }
+/* Three footer buttons must fit a 320px phone: trim padding, never wrap a label */
+.wr-footer-buttons      { gap: 6px; }
+.wr-footer-buttons .btn { padding-left: 6px; padding-right: 6px; white-space: nowrap; font-size: 0.88rem; }

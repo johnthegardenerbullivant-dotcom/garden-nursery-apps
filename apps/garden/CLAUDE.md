@@ -60,7 +60,7 @@ apps/garden/
 ├── functions/               ← 2 Netlify serverless functions, both calling Gemini
 │   ├── scan-label.js        ← reads a printed plant label from photos
 │   └── lookup-plant.js      ← researches a plant from its name, with web search
-└── js/                      ← 16 ES modules
+└── js/                      ← 17 ES modules
 ```
 
 `compress-photos.html` is a self-contained one-off page that re-compresses existing photos in
@@ -69,7 +69,7 @@ navigation. It ships with the site but nothing in `js/` depends on it.
 
 ---
 
-## JS module map (16 modules)
+## JS module map (17 modules)
 
 | File | Responsibility | Key exports |
 |---|---|---|
@@ -79,8 +79,9 @@ navigation. It ships with the site but nothing in `js/` depends on it.
 | `ui-utils.js` | Modal, toast, carousel, drag-sort, date picker | `navigate`, `goBack`, `showModal`, `hideModal`, `showToast`, `initPhotoCarousel`, `initPhotoDragSort`, `datePicker`, `initDatePickers` |
 | `auth-view.js` | Login / access-denied overlay | `showLoginOverlay`, `hideLoginOverlay`, `showAccessDenied` |
 | `garden-view.js` | Overview dashboard | `renderGardenView` |
-| `plants-view.js` | Plants list, plant detail, plant form | `renderPlantsList`, `renderPlantDetail`, `clearPlantSearch`, `showPlantForm`, `showAddPlantToAreaModal` |
+| `plants-view.js` | Plants list, plant detail, plant form | `renderPlantsList`, `renderPlantDetail`, `clearPlantSearch`, `showPlantForm`, `showAddPlantToAreaModal`, `showDeathModal` |
 | `areas-view.js` | Areas list, area detail (plants / tasks / gallery tabs) | `renderAreasList`, `renderAreaDetail`, `showAreaForm` |
+| `walkround-view.js` | Walk-round: inventory one area on a phone — tick off each plant, record what happened to the missing, add the unlisted. Route `#area-walk/<areaId>`. | `renderWalkRound` |
 | `tasks-view.js` | Tasks: recurring, by-area, by-status | `renderTasksView`, `renderAreaTasksSection`, `buildTaskRow`, `attachTaskHandlers`, `showTaskForm`, `showAssignExistingTaskModal`, `updateNavBadge`, `GENERAL_AREA_ID` |
 | `irrigation-view.js` | Irrigation zones and watering logs (~74 KB, the largest view) | `renderIrrigationView`, `getIrrigationBannerInfo` |
 | `blog-view.js` | Blog/Journal list, post reader, admin editor (Quill) | `renderBlogList`, `renderBlogPost`, `renderBlogEditor` |
@@ -132,5 +133,19 @@ case** or the code grows past what a label tape can carry. Read
 [`docs/plant-tags.md`](../../docs/plant-tags.md) before changing the URL shape, the print sizes or
 the QR settings — the error-correction level, the quiet zone and the six-character code length are
 measured choices, not defaults.
+
+**Walk-round.** `js/walkround-view.js`, opened from the Walk-round button on Area detail. An
+inventory of one area, done on foot: tick each plant as seen; for anything missing or changed, the
+⋯ sheet records a different count, a move to another area, a death (the plant page's own
+`showDeathModal`), a "can't find it, look again later" flag, or a removal; unlisted plants go in
+through `showAddPlantToAreaModal`, label scan included. It stores **only fields on existing
+documents**, so no rules change: `instances.lastSeen` and `instances.notFoundOn` (YYYY-MM-DD),
+`areas.walkRoundStarted` (set while in progress, `null` otherwise) and `areas.lastWalkRound`. A
+plant is checked on the current walk-round when `lastSeen >= walkRoundStarted`, which is why progress
+resumes on any device. **Writes are tracked, not awaited:** out of signal Firestore's promise does not
+settle until the server has the write, and the memory cache means closing the page loses anything
+unsent — so ticks update the screen at once, a refused write is rolled back with a toast, and a
+`beforeunload` guard warns while writes are waiting. Death, add-plant and new-plant still await, as
+they do everywhere else.
 
 **UX notes and improvement ideas:** [`docs/ux-review.md`](../../docs/ux-review.md).
