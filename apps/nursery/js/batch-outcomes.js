@@ -10,6 +10,7 @@ import {
 } from './db.js';
 import { showModal, hideModal, showToast, initDatePickers, datePicker, isValidDateStr } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
+import { isUncounted } from './germination.js';
 
 // =============================================
 //  GARDEN AREAS CACHE
@@ -299,6 +300,11 @@ function wireAreaSelect(initAreaId) {
 // =============================================
 
 async function showOutcomeForm(batch, onSaved) {
+    // Outcomes move plants, and a seed batch not yet counted has none to move.
+    if (isUncounted(batch)) {
+        showToast('Record germination first — this batch has no plant count yet', 'error');
+        return;
+    }
     const initType = batch.purpose === 'stock-plant' ? 'given-away' : 'planted-out';
     showModal('Record Outcome', buildOutcomeFormHTML(batch, null));
     initDatePickers(document.getElementById('modal-body') || document.body);

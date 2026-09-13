@@ -28,6 +28,18 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 **Action required: none** — but if a change you merged never reached your live site, trigger a
 deploy of `main` for that site in Netlify once.
 
+- **Seed counts and germination.** A seed batch no longer needs a starting quantity. *Seeds sown*
+  is optional — fill it in if you counted them, leave it blank for fine seed that's scattered — and
+  the batch shows *Sown · not counted* until **Record germination** counts the seedlings. That moves
+  it on to a stage that reads **Germinated** for seed, and shows a germination rate when seeds were
+  counted, e.g. *12 of 40 seeds (30%)*. Record it again as more come up; losses and thinning still
+  go in log entries. Entering 0 closes a sowing where nothing came up.
+
+- **Sow now asks how many seeds were sown** on a pre-sowing batch. A pre-sowing batch created before
+  this release, with its seed count typed into *Starting quantity*, carries that number over.
+
+- Seed batches that already have a count are unchanged.
+
 - **Fixed: production builds canceled after a deploy preview.** Each site's `ignore` command
   compared the commit being built with the last commit that site built in any context, deploy
   previews included. A pull request's preview already contains its changes, so the merge commit
