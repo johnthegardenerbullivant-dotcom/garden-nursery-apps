@@ -186,12 +186,15 @@ top-level `sownDate`. Such a batch starts at **`pre-sowing`**, a stage that only
 batches that are in it or have been through it — the dashboard, batch list and stats pipelines leave
 it out otherwise, so every other batch keeps five steps.
 
-- **Steps run in order from `startDate`.** A step with no minimum `days` is a one-off done on the
-  day (cleaning, soaking). A step with days stays active until its `endDate` is written — by *Start
-  next step*, or by sowing when it is the last.
+- **Saving the batch saves a plan; nothing starts by itself.** Each step is marked by hand, in order,
+  with its own `startDate`/`endDate`. A step with no minimum `days` is a one-off (cleaning, scarifying)
+  and *Mark done* sets both dates to the day. A timed step is *Start*ed and runs until the next step
+  is marked, *Finish* is pressed, or the seed is sown. A marked step's dates can be corrected, and the
+  most recent one undone; `stepDateBounds()` keeps them in order.
 - **Nothing about a reminder is stored.** Next check, sow-from, sow-by and the card's state are all
   derived by `pretreatmentStatus(batch, today)`, so extending a step or sowing early cannot leave a
-  stale reminder. Any log entry on a pre-sowing batch counts as a check.
+  stale reminder. Checks fall due only while a timed step is running, and a plan not yet started
+  never asks for attention. Any log entry on a pre-sowing batch counts as a check.
 - **Sowing** writes `sownDate`, closes the active step and moves the batch to `propagating` —
   from the card, from a log entry that advances the stage, or from a log edit. Deleting the entry
   that sowed a batch puts it back to `pre-sowing`: the log-delete fallback is `initialStage()`,

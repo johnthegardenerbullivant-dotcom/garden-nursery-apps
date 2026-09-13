@@ -21,7 +21,7 @@ Every collection listed here has a matching `match` block in
 | `irrigationLogs` | Garden | watering events per zone, queryable by zone and by date range |
 | `blogPosts` | Garden | `title`, `postDate` (YYYY-MM-DD), `contentDelta` (Quill JSON string), `contentHtml`, `tags[]`, `plantRefs[]` (`{plantId, name}`), `published` (bool), `createdAt`, `updatedAt` |
 | `deceasedPlants` | Garden | `plantId`, `plantName`, `commonName`, `areaId`, `areaName`, `quantity`, `cause`, `notes`, `diedDate`, `createdAt` — one row per death event, per area |
-| `nursery_batches` | Nursery | `plantName`/`plantId`, botanical fields, `method`, `stage`, `purpose`, `startDate`, `startQty`, `currentQty`, `qtyAdjustment`, `outcome`, `completedAt`, `locationId`, `sourceParentBatchId`, `pretreatment` (seed only: `steps[]` of `{type, days, maxDays, notes, endDate}`, `checkEveryDays`, `sowNotBefore`, `lastCheckDate`), `sownDate`, `createdAt`, `updatedAt` |
+| `nursery_batches` | Nursery | `plantName`/`plantId`, botanical fields, `method`, `stage`, `purpose`, `startDate`, `startQty`, `currentQty`, `qtyAdjustment`, `outcome`, `completedAt`, `locationId`, `sourceParentBatchId`, `pretreatment` (seed only: `steps[]` of `{type, days, maxDays, notes, startDate, endDate}`, `checkEveryDays`, `sowNotBefore`, `lastCheckDate`), `sownDate`, `createdAt`, `updatedAt` |
 | `nursery_logs` | Nursery | `batchId`, `date`, `note`, `lossCount`, `lossReason`, `createdAt` |
 | `nursery_outcomes` | Nursery | `batchId`, `date`, `type` (`planted-out`\|`given-away`\|`lost`\|`retired`), `quantity`, `areaId`/`areaName` or `recipientName`, `notes` |
 | `nursery_locations` | Nursery | `name`, `type`, `createdAt` — propagation locations (bench, cold frame, …) |

@@ -34,11 +34,17 @@ Every entry below therefore carries an **Action required** line. `none` means sy
   treatment stands: day N of the current step, when the next check is due, and the sow-from and
   sow-by dates.
 
-- **Checks, next steps and sowing.** *Checked — all fine* logs a check and restarts the check clock
-  (every 14 days by default; any log entry counts as a check too). *Start next step* moves a
-  warm-then-cold sequence on. *Sow now* records the sowing date and moves the batch to Propagating —
-  early if the seed has started germinating in the bag. *Don't sow before* holds a finished
-  treatment until a chosen date, so 90 days in the fridge from September waits for January.
+- **Plan first, mark steps as you do them.** Saving the batch saves the plan; nothing starts by
+  itself. On the batch page each step has its own button — *Mark done* for a one-off like cleaning,
+  *Start* for a timed step like the day the packet goes in the fridge — with a date that defaults to
+  today, so steps done on different days keep their real dates. A marked step's date can be
+  corrected, and the latest one undone.
+
+- **Checks and sowing.** While a timed step is running, *Checked — all fine* logs a check and
+  restarts the check clock (every 14 days by default; any log entry counts as a check too). A plan
+  not yet started never asks for attention. *Sow now* records the sowing date and moves the batch to
+  Propagating — early if the seed has started germinating in the bag. *Don't sow before* holds a
+  finished treatment until a chosen date, so 90 days in the fridge from September waits for January.
 
 - **Reminders are worked out, not stored.** The dashboard's *Needs a check-in* list now uses a
   pre-sowing batch's own dates — a check falling due, a step or sowing falling due, a maximum passed

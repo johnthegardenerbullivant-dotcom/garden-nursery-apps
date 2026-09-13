@@ -8,19 +8,21 @@
 //  A seed batch may carry `pretreatment`:
 //
 //    pretreatment: {
-//      steps: [{ type, days, maxDays, notes, endDate }],
+//      steps: [{ type, days, maxDays, notes, startDate, endDate }],
 //      checkEveryDays: 14,
 //      sowNotBefore:   'YYYY-MM-DD' | null,
 //      lastCheckDate:  'YYYY-MM-DD' | null,
 //    }
 //    sownDate: 'YYYY-MM-DD' | null        (top level on the batch)
 //
-//  Steps run in order from the batch's startDate. A step with no minimum
-//  `days` is a one-off done on the day (cleaning, soaking) and is never
-//  "active". A step with days stays active until its endDate is recorded —
-//  by "Start next step", or by sowing if it is the last. Nothing about a
-//  reminder is stored: every date below is derived, so extending a step or
-//  sowing early can never leave a stale reminder behind.
+//  Saving the batch saves a PLAN: nothing has started. Each step is marked
+//  by hand, in order, on the day it is done —
+//    • a one-off step (no minimum `days`: cleaning, scarifying, soaking) is
+//      "Mark done": startDate = endDate = that day
+//    • a timed step (stratification) is "Start": startDate set, and it runs
+//      until the next step is marked, "Finish" is pressed, or the seed is sown
+//  Nothing about a reminder is stored. Every date below is derived, so a
+//  step started late, finished early or sown early leaves nothing stale.
 // =============================================================
 
 export const PRETREATMENT_TYPES = {
@@ -53,9 +55,15 @@ export function daysBetween(fromStr, toStr) {
 }
 
 const maxDate = (a, b) => (!a ? b : !b ? a : (a > b ? a : b));
+const minDate = (a, b) => (!a ? b : !b ? a : (a < b ? a : b));
 
 export function hasPretreatment(batch) {
     return !!(batch?.pretreatment?.steps?.length);
+}
+
+/** A step with a minimum number of days runs over time; one without is done on the day. */
+export function isTimed(step) {
+    return step?.days > 0;
 }
 
 /** The stage a batch starts in, or falls back to when stage logs are deleted. */
@@ -83,96 +91,119 @@ export function stepDurationText(step) {
  *
  * {
  *   steps: [{ ...step, index, start, end, minEnd, maxEnd, state }]   state: done | active | pending
- *   activeIndex    index of the active step, or -1
- *   isLastActive   the active step is the last step with a duration (sowing comes next)
- *   nextIndex      the step "Start next step" would begin, or -1
- *   dayOfStep      days into the active step
- *   treatmentEnd   when the treatment ends at the earliest (projected)
- *   sowFrom        max(treatmentEnd, sowNotBefore)
- *   sowBy          the last step's maximum, if it has one
- *   nextCheck      date the next check falls due
- *   checkDue       today >= nextCheck
- *   state          in-progress | step-due | waiting | ready-to-sow | overdue
+ *   activeIndex   the timed step now running, or -1
+ *   nextIndex     the first step not yet done or started, or -1
+ *   started       any step has been marked
+ *   firstStart    the date the first step was marked
+ *   lastDate      the latest date on any step — nothing new can be marked before it
+ *   pendingTimed  a timed step has still to be started
+ *   dayOfStep     days into the active step
+ *   sowFrom       the earliest sowing date, or null while a timed step has not started
+ *   sowFromDays / sowFromAfter   "N days after <step> starts", when sowFrom is null for that reason
+ *   sowBy         the running last timed step's maximum, if it has one
+ *   nextCheck     when the next check falls due — only while a timed step is running
+ *   checkDue      today >= nextCheck
+ *   state         not-started | in-progress | step-due | between-steps | waiting | ready-to-sow | overdue
  * }
  */
 export function pretreatmentStatus(batch, today) {
     if (!hasPretreatment(batch)) return null;
     const pt = batch.pretreatment;
 
-    let cursor      = batch.startDate || today;
-    let activeIndex = -1;
     const steps = pt.steps.map((s, index) => {
-        const start  = cursor;
-        const days   = s.days > 0 ? s.days : 0;
-        const minEnd = addDays(start, days);
-        const maxEnd = s.maxDays > 0 ? addDays(start, s.maxDays) : null;
-        let state, end;
-        if (activeIndex !== -1) {
-            state = 'pending';
-            end   = null;
-            cursor = minEnd;
-        } else if (s.endDate) {
-            state = 'done';
-            end   = s.endDate;
-            cursor = end;
-        } else if (days === 0) {
-            state = 'done';
-            end   = start;
-            cursor = end;
-        } else {
-            state = 'active';
-            end   = null;
-            activeIndex = index;
-            // If the minimum has already passed, what follows starts today at the earliest.
-            cursor = maxDate(minEnd, today);
-        }
+        let start = s.startDate || s.endDate || null;
+        let end   = s.endDate || null;
+        if (start && !end && !isTimed(s)) end = start;      // a one-off is done the day it is marked
+        const state  = end ? 'done' : start ? 'active' : 'pending';
+        const minEnd = start && isTimed(s) ? addDays(start, s.days) : null;
+        const maxEnd = start && s.maxDays > 0 ? addDays(start, s.maxDays) : null;
         return { ...s, index, start, end, minEnd, maxEnd, state };
     });
 
-    const active       = activeIndex !== -1 ? steps[activeIndex] : null;
-    const laterTimed   = active ? steps.slice(activeIndex + 1).some(s => s.days > 0) : false;
-    const isLastActive = !!active && !laterTimed;
-    const nextIndex    = active && activeIndex + 1 < steps.length ? activeIndex + 1 : -1;
+    const activeIndex = steps.findIndex(s => s.state === 'active');
+    const active      = activeIndex !== -1 ? steps[activeIndex] : null;
+    const nextIndex   = steps.findIndex(s => s.state === 'pending');
+    const started     = steps.some(s => s.start);
+    const firstStart  = steps.reduce((d, s) => minDate(d, s.start), null);
+    const lastDate    = steps.reduce((d, s) => maxDate(d, maxDate(s.start, s.end)), null);
+    const pendingSteps = steps.filter(s => s.state === 'pending' && isTimed(s));
+    const pendingTimed = pendingSteps.length > 0;
 
-    const treatmentEnd = cursor;
-    const sowFrom      = maxDate(treatmentEnd, pt.sowNotBefore || null);
-    const lastTimed    = [...steps].reverse().find(s => s.days > 0 || s.maxDays > 0);
-    const sowBy        = lastTimed?.maxEnd || null;
+    // Sowing can only be dated once every timed step has at least started.
+    let sowFrom = null, sowFromDays = null, sowFromAfter = null;
+    if (pendingTimed) {
+        sowFromDays  = pendingSteps.reduce((n, s) => n + s.days, 0);
+        sowFromAfter = stepLabel(pendingSteps[0]);
+    } else {
+        const lastTimedDone = [...steps].reverse().find(s => isTimed(s) && s.end);
+        const base = active ? active.minEnd
+                   : lastTimedDone ? lastTimedDone.end
+                   : started ? lastDate : null;
+        sowFrom = maxDate(base, pt.sowNotBefore || null);
+    }
+    const sowBy = active && !pendingTimed ? active.maxEnd : null;
 
-    // The check clock restarts on every check and whenever a step begins.
-    const clockFrom = maxDate(pt.lastCheckDate || null, active ? active.start : treatmentEnd);
-    const nextCheck = addDays(clockFrom, pt.checkEveryDays > 0 ? pt.checkEveryDays : DEFAULT_CHECK_EVERY_DAYS);
+    const nextCheck = active
+        ? addDays(maxDate(pt.lastCheckDate || null, active.start), pt.checkEveryDays > 0 ? pt.checkEveryDays : DEFAULT_CHECK_EVERY_DAYS)
+        : null;
 
     let state;
-    if (active && active.maxEnd && today > active.maxEnd) state = 'overdue';
-    else if (active && !isLastActive)                    state = today >= active.minEnd ? 'step-due' : 'in-progress';
-    else if (today >= sowFrom)                           state = 'ready-to-sow';
-    else if (!active || today >= active.minEnd)          state = 'waiting';
-    else                                                 state = 'in-progress';
+    if (!started)                                        state = 'not-started';
+    else if (active && active.maxEnd && today > active.maxEnd) state = 'overdue';
+    else if (active && today < active.minEnd)            state = 'in-progress';
+    else if (pendingTimed)                               state = active ? 'step-due' : 'between-steps';
+    else if (!sowFrom || today >= sowFrom)               state = 'ready-to-sow';
+    else                                                 state = 'waiting';
 
     return {
         steps,
         activeIndex,
-        isLastActive,
         nextIndex,
+        started,
+        firstStart,
+        lastDate,
+        pendingTimed,
         dayOfStep: active ? Math.max(0, daysBetween(active.start, today)) : null,
-        treatmentEnd,
         sowFrom,
+        sowFromDays,
+        sowFromAfter,
         sowBy,
         nextCheck,
-        checkDue: today >= nextCheck,
+        checkDue: !!nextCheck && today >= nextCheck,
         state,
     };
 }
 
-/** True when a pre-sowing batch wants attention today. */
+/**
+ * True when a pre-sowing batch wants attention today. A plan that has not
+ * been started, or a gap between steps, never asks — only a running timed
+ * step can fall due.
+ */
 export function pretreatmentNeedsAttention(batch, today) {
     if (batch?.stage !== 'pre-sowing') return false;
     const st = pretreatmentStatus(batch, today);
-    return !!st && (st.checkDue || (st.state !== 'in-progress' && st.state !== 'waiting'));
+    return !!st && (st.checkDue || ['step-due', 'ready-to-sow', 'overdue'].includes(st.state));
+}
+
+/**
+ * The dates a step's own dates must stay between, so the steps stay in order:
+ * no earlier than anything on an earlier step, no later than the start of a later one.
+ */
+export function stepDateBounds(st, index) {
+    let min = null, max = null;
+    for (const s of st.steps) {
+        if (s.index < index) min = maxDate(min, maxDate(s.start, s.end));
+        if (s.index > index) max = minDate(max, s.start);
+    }
+    return { min, max };
 }
 
 // ---------- Batch updates (partial documents for updateNurseryBatch) ----------
+
+function updateSteps(batch, fn, extra = {}) {
+    const pt = batch.pretreatment;
+    return { pretreatment: { ...pt, ...extra, steps: pt.steps.map(fn) } };
+}
 
 /** Record a check on `date`. Never moves the clock backwards. */
 export function checkUpdates(batch, date) {
@@ -180,19 +211,42 @@ export function checkUpdates(batch, date) {
     return { pretreatment: { ...pt, lastCheckDate: maxDate(pt.lastCheckDate || null, date) } };
 }
 
-/** End the active step on `date`; the next step begins the same day. */
-export function nextStepUpdates(batch, date) {
+/**
+ * Mark step `index` on `date`: a one-off is done, a timed step starts.
+ * A timed step still running before it ends the same day.
+ */
+export function advanceStepUpdates(batch, index, date) {
     const st = pretreatmentStatus(batch, date);
-    const pt = batch.pretreatment;
-    const steps = pt.steps.map((s, i) => (i === st?.activeIndex ? { ...s, endDate: date } : s));
-    return { pretreatment: { ...pt, steps, lastCheckDate: date } };
+    return updateSteps(batch, (s, i) => {
+        if (i === index)          return { ...s, startDate: date, endDate: isTimed(s) ? null : date };
+        if (i === st.activeIndex) return { ...s, endDate: date };
+        return s;
+    }, { lastCheckDate: date });
 }
 
-/** Sow on `date`: close the active step, record the sowing, move to Propagating. */
-export function sowUpdates(batch, date) {
-    const pt = batch.pretreatment;
-    if (!pt) return { stage: 'propagating', sownDate: date };
+/** End the running timed step on `date` without starting another. */
+export function finishStepUpdates(batch, date) {
     const st = pretreatmentStatus(batch, date);
-    const steps = pt.steps.map((s, i) => (i === st?.activeIndex && !s.endDate ? { ...s, endDate: date } : s));
-    return { stage: 'propagating', sownDate: date, pretreatment: { ...pt, steps } };
+    return updateSteps(batch, (s, i) => (i === st.activeIndex ? { ...s, endDate: date } : s));
+}
+
+/** Correct a marked step's dates. */
+export function setStepDatesUpdates(batch, index, { startDate, endDate }) {
+    return updateSteps(batch, (s, i) => (i === index ? { ...s, startDate, endDate } : s));
+}
+
+/** Put a step back to not done. */
+export function undoStepUpdates(batch, index) {
+    return updateSteps(batch, (s, i) => (i === index ? { ...s, startDate: null, endDate: null } : s));
+}
+
+/** Sow on `date`: end the running step, record the sowing, move to Propagating. */
+export function sowUpdates(batch, date) {
+    if (!batch.pretreatment) return { stage: 'propagating', sownDate: date };
+    const st = pretreatmentStatus(batch, date);
+    return {
+        stage: 'propagating',
+        sownDate: date,
+        ...updateSteps(batch, (s, i) => (i === st?.activeIndex ? { ...s, endDate: date } : s)),
+    };
 }
