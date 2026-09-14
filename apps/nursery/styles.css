@@ -1569,6 +1569,22 @@ textarea::placeholder {
     color: var(--grey-500);
 }
 
+/* Record outcome — which Garden plant a plant-out adds to */
+.garden-plant-choice-hint { margin: 0 0 4px; }
+.garden-plant-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+.garden-plant-option input { margin-top: 3px; flex-shrink: 0; }
+.garden-plant-option-common {
+    color: var(--grey-500);
+    font-size: 0.82rem;
+}
+
 /* ============================================================
    Log entry — location change chip
    ============================================================ */

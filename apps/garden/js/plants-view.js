@@ -8,7 +8,7 @@ import {
     getInstances, getInstancesForPlant, addInstance, updateInstance, deleteInstance,
     getPhotosForPlant, uploadPhoto, deletePhoto, updatePhotoOrders, getPlantIdsWithPhotos,
     getDeceasedPlants, recordPlantDeath,
-    getNurseryLocations, transferToNursery,
+    getNurseryLocations, transferToNursery, countNurseryBatchesForPlant,
     formatBotanicalName, escHtml, ensureTagCode
 } from './db.js';
 import { showModal, hideModal, showToast, setLoading, navigate, goBack, initPhotoCarousel, datePicker, initDatePickers, initPhotoDragSort } from './ui-utils.js';
@@ -285,7 +285,15 @@ export async function renderPlantDetail(container, headerActionEl, backBtn, plan
 
     // Delete plant (admin only)
     container.querySelector('#delete-plant-btn')?.addEventListener('click', async () => {
-        if (!confirm(`Delete "${formatBotanicalName(plant).replace(/<[^>]+>/g,'')}"? This cannot be undone.`)) return;
+        // Say how many Nursery batches link to this plant. They survive the delete
+        // with their own name and details; only the link stops working. If the
+        // count can't be read, ask without it rather than block the delete.
+        let linked = 0;
+        try { linked = await countNurseryBatchesForPlant(plantId); } catch (_) { /* ask without the count */ }
+        const batchNote = linked
+            ? `\n\n${linked} nursery batch${linked === 1 ? ' links' : 'es link'} to this plant. ${linked === 1 ? 'It keeps' : 'They keep'} the name and details stored on the batch, but the link to this plant will stop working.`
+            : '';
+        if (!confirm(`Delete "${formatBotanicalName(plant).replace(/<[^>]+>/g,'')}"? This cannot be undone.${batchNote}`)) return;
         try {
             await deletePlant(plantId);
             showToast('Plant deleted', 'success');

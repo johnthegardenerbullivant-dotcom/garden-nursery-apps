@@ -5,12 +5,13 @@
 import {
     getGardenAreas, getOutcomesForBatch,
     addNurseryOutcome, updateNurseryOutcome, deleteNurseryOutcome,
-    plantOutToGarden, updateNurseryBatch, formatBatchQty,
-    escHtml, fmtDate, todayStr, LOSS_REASON_LABELS
+    plantOutToGarden, updateNurseryBatch, formatBatchQty, getGardenPlants,
+    formatBotanicalName, escHtml, fmtDate, todayStr, LOSS_REASON_LABELS
 } from './db.js';
 import { showModal, hideModal, showToast, initDatePickers, datePicker, isValidDateStr } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
 import { isUncounted } from './germination.js';
+import { matchGardenPlants } from './plant-match.js';
 
 // =============================================
 //  GARDEN AREAS CACHE
@@ -207,6 +208,10 @@ function buildOutcomeFormHTML(batch, existing) {
                     </select>
                     <p class="form-hint" id="areas-loading-hint">Loading areas…</p>
                 </div>
+                ${isEdit ? '' : `
+                <div class="form-group" id="garden-plant-choice">
+                    <p class="form-hint">Checking Garden for this plant…</p>
+                </div>`}
             </div>
 
             <!-- Given away -->
@@ -278,6 +283,47 @@ function wireOutcomeTypeUI(initType) {
     return () => document.getElementById('outcome-type-hidden')?.value || selectedType;
 }
 
+// Says which Garden plant a plant-out will add to. A batch linked to a plant
+// that still exists adds to that one. Otherwise any Garden plants that are the
+// same plant are offered, so a second planting doesn't create a second record,
+// with "Create a new Garden plant" alongside; with no match a new one is created.
+// Garden's plants are read fresh, not cached, because the answer depends on what
+// Garden holds now. If the read fails the section goes, and plantOutToGarden()
+// decides from the batch's link as it always has.
+async function wireGardenPlantChoice(batch) {
+    const box = document.getElementById('garden-plant-choice');
+    if (!box) return;
+    let plants;
+    try { plants = await getGardenPlants(); }
+    catch (e) { box.remove(); return; }
+    if (!box.isConnected) return;   // the form was closed meanwhile
+
+    const nameOf = p => formatBotanicalName(p) || p.commonName || 'Unnamed plant';
+    const linked = batch.plantId ? plants.find(p => p.id === batch.plantId) : null;
+    if (linked) {
+        box.innerHTML = `<p class="form-hint">Adds to the linked Garden plant, <strong>${escHtml(nameOf(linked))}</strong>.</p>`;
+        return;
+    }
+    const matches = matchGardenPlants(batch, plants);
+    if (matches.length === 0) {
+        box.innerHTML = `<p class="form-hint">A new Garden plant will be created from this batch's details.</p>`;
+        return;
+    }
+    box.innerHTML = `
+        <label class="form-label">Garden plant</label>
+        <p class="form-hint garden-plant-choice-hint">${matches.length === 1 ? 'This plant is' : 'These plants are'} already in Garden.</p>
+        ${matches.map((p, i) => `
+        <label class="garden-plant-option">
+            <input type="radio" name="garden-plant-choice" value="${escHtml(p.id)}" ${i === 0 ? 'checked' : ''}>
+            <span>Add to <strong>${escHtml(nameOf(p))}</strong>${p.commonName && p.commonName !== nameOf(p)
+                ? ` <span class="garden-plant-option-common">${escHtml(p.commonName)}</span>` : ''}</span>
+        </label>`).join('')}
+        <label class="garden-plant-option">
+            <input type="radio" name="garden-plant-choice" value="">
+            <span>Create a new Garden plant</span>
+        </label>`;
+}
+
 function wireAreaSelect(initAreaId) {
     getGardenAreasOnce().then(areas => {
         const sel  = document.getElementById('outcome-area');
@@ -311,6 +357,9 @@ async function showOutcomeForm(batch, onSaved) {
 
     const getSelectedType = wireOutcomeTypeUI(initType);
     wireAreaSelect(null);
+    const gardenChoiceReady = batch.purpose === 'stock-plant'
+        ? Promise.resolve()
+        : wireGardenPlantChoice(batch).catch(() => {});
     let gardenAreas = await getGardenAreasOnce().catch(() => []);
 
     document.getElementById('outcome-cancel-btn')?.addEventListener('click', hideModal);
@@ -342,7 +391,12 @@ async function showOutcomeForm(batch, onSaved) {
                 }
                 const areaName = gardenAreas.find(a => a.id === areaId)?.name || '';
                 outcomeData.areaId = areaId; outcomeData.areaName = areaName;
-                resolvedPlantId = await plantOutToGarden(batch, areaId, areaName, qty, date, notes);
+                // Wait for the Garden check, so a quick Save gets the same default the
+                // form shows. No choice on screen leaves the decision to the batch's link.
+                await gardenChoiceReady;
+                const choice = document.querySelector('input[name="garden-plant-choice"]:checked');
+                const gardenPlantId = choice ? (choice.value || null) : undefined;
+                resolvedPlantId = await plantOutToGarden(batch, areaId, areaName, qty, date, notes, { gardenPlantId });
             } else if (selectedType === 'given-away') {
                 outcomeData.recipientName = document.getElementById('outcome-recipient')?.value.trim() || '';
                 await addNurseryOutcome(outcomeData);
@@ -355,8 +409,8 @@ async function showOutcomeForm(batch, onSaved) {
 
             const newQty = Math.max(0, (batch.currentQty ?? batch.startQty ?? 0) - qty);
             const batchUpdates = { currentQty: newQty };
-            // Link the batch to the Garden plant it went to — newly created, or
-            // replacing a link to one that had been deleted
+            // Link the batch to the Garden plant it went to — chosen, newly
+            // created, or replacing a link to one that had been deleted
             if (resolvedPlantId && resolvedPlantId !== batch.plantId) {
                 batchUpdates.plantId = resolvedPlantId;
                 batch.plantId = resolvedPlantId;

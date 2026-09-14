@@ -65,12 +65,12 @@ apps/nursery/
 ├── functions/               ← 2 Netlify serverless functions, both byte-identical
 │   ├── scan-label.js        ←   to Garden's copies
 │   └── lookup-plant.js      ←
-└── js/                      ← 24 ES modules
+└── js/                      ← 25 ES modules
 ```
 
 ---
 
-## JS module map (24 modules)
+## JS module map (25 modules)
 
 ### Core
 
@@ -105,6 +105,7 @@ so `main.js` has one import site while the implementation lives in focused modul
 | `pretreatment.js` | Pre-sowing treatment logic: step types, date arithmetic, status, and the partial updates for check / next step / sow. **No imports**, so Node can load it to test the dates. | `PRETREATMENT_TYPES`, `pretreatmentStatus`, `pretreatmentNeedsAttention`, `stepDateBounds`, `initialStage`, `checkUpdates`, `advanceStepUpdates`, `finishStepUpdates`, `setStepDatesUpdates`, `undoStepUpdates`, `sowUpdates` |
 | `batch-germination.js` | The Record germination / Update seedling count dialog | `showGerminationForm` |
 | `germination.js` | Seed counts and germination: whether a seed batch has a plant count yet, seed counts, germination rate, and the partial updates for counting and sowing. **No imports**, so Node can load it. | `isUncounted`, `seedsOf`, `germinationRate`, `germinationText`, `uncountedQtyText`, `germinationUpdates`, `sownSeedUpdates` |
+| `plant-match.js` | Which Garden plants are the same plant as a batch, for plant-out: every botanical part equal, ignoring case, quote marks, the hybrid × and authority; with no genus, name against common name. **No imports**, so Node can load it. | `matchGardenPlants` |
 
 ### Other views
 
@@ -132,7 +133,7 @@ so `main.js` has one import site while the implementation lives in focused modul
   `deleteNurseryOutcome`
 - **Quantity maths:** `formatBatchQty`, `derivedBatchQty`, `getDerivedBatchQty`,
   `recomputeBatchState`
-- **Cross-app:** `plantOutToGarden`, `getGardenPlants`, `getGardenAreas`, `gardenPlantExists`
+- **Cross-app:** `plantOutToGarden` (optional `{ gardenPlantId }`), `getGardenPlants`, `getGardenAreas`, `gardenPlantExists`
 - **Photos:** `uploadNurseryPhoto`, `deleteNurseryPhoto`
 - **Wishlist:** `getNurseryWishlist`, `addNurseryWishlistItem`, `updateNurseryWishlistItem`,
   `deleteNurseryWishlistItem`
@@ -228,6 +229,14 @@ purchase) **or its `plantId` points at a plant Garden has since deleted**, and a
 `instances` row linking plant to area. It returns the resolved `plantId`, and the caller stores it
 back on the batch whenever it differs. Editing this function changes Garden's data — treat it as
 cross-app surface area.
+
+**Plant-out adds to an existing Garden plant where it can.** A Garden plant is the species or
+cultivar and an `instances` row is that plant in an area, so a second planting of the same plant is
+a new instance, not a new plant. The outcome form (`wireGardenPlantChoice()` in `batch-outcomes.js`)
+reads Garden's plants fresh. A live link just says which plant it adds to; otherwise
+`matchGardenPlants()` offers any same plants, the first selected, beside *Create a new Garden
+plant*. The choice reaches `plantOutToGarden()` as `{ gardenPlantId }`: an ID adds to that plant,
+`null` creates one, and leaving it out lets the batch's link decide.
 
 **A batch holds its own copy of the plant; `plantId` is only a pointer.** Garden deletes plants
 without looking at nursery batches, so a link can go dead at any time. Linking in the batch form
