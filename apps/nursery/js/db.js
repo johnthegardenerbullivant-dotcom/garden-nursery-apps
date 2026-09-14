@@ -420,12 +420,14 @@ export async function getChildBatches(parentBatchId) {
     return results.sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));
 }
 
-// When planting out, write a Garden Management plant record (if needed) and instance
-export async function plantOutToGarden(batchData, areaId, areaName, quantity, date, notes) {
+// When planting out, write a Garden Management plant record (if needed) and instance.
+// `gardenPlantId` overrides the batch's link: a plant ID adds to that plant, null
+// creates a new one. Left out, the batch's own link decides.
+export async function plantOutToGarden(batchData, areaId, areaName, quantity, date, notes, { gardenPlantId } = {}) {
     // A link to a Garden plant that has since been deleted counts as no link.
     // Otherwise the instance below would point at nothing and never show in
     // Garden. Checked before anything is written, so a failed read writes nothing.
-    let plantId = batchData.plantId || null;
+    let plantId = gardenPlantId !== undefined ? gardenPlantId : (batchData.plantId || null);
     if (plantId && !(await gardenPlantExists(plantId))) plantId = null;
 
     // Write nursery outcome

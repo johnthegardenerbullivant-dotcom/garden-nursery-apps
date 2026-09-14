@@ -180,6 +180,16 @@ export async function deletePlant(id) {
     await deleteDoc(doc(db, 'plants', id));
 }
 
+/** How many Nursery batches link to a plant, for the delete warning. Deleting
+ *  the plant leaves them alone: each keeps the name and details stored on it,
+ *  and Nursery treats the dead link as no link. */
+export async function countNurseryBatchesForPlant(plantId) {
+    const snap = await getDocs(
+        query(collection(db, 'nursery_batches'), where('plantId', '==', plantId))
+    );
+    return snap.size;
+}
+
 // =============================================
 //  AREAS
 // =============================================

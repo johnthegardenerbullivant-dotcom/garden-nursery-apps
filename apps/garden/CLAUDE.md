@@ -74,7 +74,7 @@ navigation. It ships with the site but nothing in `js/` depends on it.
 | File | Responsibility | Key exports |
 |---|---|---|
 | `main.js` | Entry point: router, auth state listener, nav wiring | *(no exports — entry point)* |
-| `db.js` | Every Firestore + Storage read/write. ~1030 lines, the biggest module. | `initFirebase`, `getPlants`/`addPlant`/`updatePlant`/`deletePlant`, `getAreas`/`addArea`/…, `getInstances*`/`addInstance`/…, `getDeceasedPlants`, `recordPlantDeath`, `transferToNursery`, `getNurseryLocations`, `getTasks`/`addTask`/…, `getTaskAssignments*`/…, photo helpers (`uploadPhoto`, `getPhotosForPlant`, `updatePhotoOrders`, `uploadAreaPhoto`, …), `getIrrigationZones`/`addIrrigationZone`/…, `getIrrigationLogs*`/…, `getSuggestions`/…, `nextOccurrenceDate`, `firstOccurrenceFromToday`, `createNextRecurringOccurrence`, `getBlogPosts`/`saveBlogPost`/`uploadBlogPhoto`/…, `exportAllData`, `importAllData`, `clearAllData`, `getDataCounts`, `formatBotanicalName`, `hybridTypeOf`, `getUsers`, `updateUserRole`, `setUserBlocked`, `getPendingUserCount`, `escHtml`, `isTagCode`, `getPlantByTagCode`, `ensureTagCode` |
+| `db.js` | Every Firestore + Storage read/write. ~1030 lines, the biggest module. | `initFirebase`, `getPlants`/`addPlant`/`updatePlant`/`deletePlant`, `getAreas`/`addArea`/…, `getInstances*`/`addInstance`/…, `getDeceasedPlants`, `recordPlantDeath`, `transferToNursery`, `getNurseryLocations`, `countNurseryBatchesForPlant`, `getTasks`/`addTask`/…, `getTaskAssignments*`/…, photo helpers (`uploadPhoto`, `getPhotosForPlant`, `updatePhotoOrders`, `uploadAreaPhoto`, …), `getIrrigationZones`/`addIrrigationZone`/…, `getIrrigationLogs*`/…, `getSuggestions`/…, `nextOccurrenceDate`, `firstOccurrenceFromToday`, `createNextRecurringOccurrence`, `getBlogPosts`/`saveBlogPost`/`uploadBlogPhoto`/…, `exportAllData`, `importAllData`, `clearAllData`, `getDataCounts`, `formatBotanicalName`, `hybridTypeOf`, `getUsers`, `updateUserRole`, `setUserBlocked`, `getPendingUserCount`, `escHtml`, `isTagCode`, `getPlantByTagCode`, `ensureTagCode` |
 | `auth.js` | Auth state, role cache, sign-in helpers. **Byte-identical to Nursery's — see `tools/check-drift.mjs`.** | `initAuth`, `getAuthInstance`, `getCurrentUser`, `getCurrentRole`, `isAtLeast`, `loadRole`, `setCurrentUser`, `setRole`, `signInWithGoogle`, `signInWithEmail`, `signInAsGuest`, `signOutUser` |
 | `ui-utils.js` | Modal, toast, carousel, drag-sort, date picker | `navigate`, `goBack`, `showModal`, `hideModal`, `showToast`, `initPhotoCarousel`, `initPhotoDragSort`, `datePicker`, `initDatePickers` |
 | `auth-view.js` | Login / access-denied overlay | `showLoginOverlay`, `hideLoginOverlay`, `showAccessDenied` |
@@ -114,6 +114,8 @@ settings recorded there for the 30-second function timeout granted 2026-08-18.
 **Transfer to Nursery.** `transferToNursery()` in `db.js` sends a Garden plant to Nursery as a new
 batch, and `getNurseryLocations()` reads Nursery's `nursery_locations` so the form can offer a
 destination. This is the Garden→Nursery direction; Nursery's `plantOutToGarden()` is the return leg.
+Deleting a plant first asks `countNurseryBatchesForPlant()`, so the confirm can say how many Nursery
+batches link to it. The batches are left alone: each keeps its own name and details.
 
 **Botanical naming.** `formatBotanicalName()` and `hybridTypeOf()` implement the hybrid nomenclature
 rules. The `plants` doc carries the full set — `genus`, `species`, `subspecies`, `variety`,

@@ -61,6 +61,14 @@ deploy of `main` for that site in Netlify once.
   plant and never appeared in Garden; it now creates a new Garden plant from the batch's own details
   and links the batch to it.
 
+- **Planting out finds the plant already in Garden.** When a batch isn't linked to a Garden plant,
+  or its plant has been deleted, the plant-out form looks for Garden plants with the same botanical
+  name and offers to add to one of them rather than create a second record of it. *Create a new
+  Garden plant* is still there. A linked batch says which Garden plant it will add to.
+
+- **Deleting a Garden plant says how many nursery batches link to it.** They keep the name and
+  details stored on the batch; only the link stops working.
+
 ## 2026-09-12
 
 **Action required: none.** No new collection, no rules change, no environment variable.
