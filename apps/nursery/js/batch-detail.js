@@ -6,7 +6,7 @@ import {
     getNurseryBatch, getNurseryLocations, deleteNurseryBatch,
     getLogsForBatch, deleteNurseryLog, deleteNurseryPhoto,
     getChildBatches, updateNurseryBatch, recomputeBatchState,
-    METHOD_LABELS, STAGE_LABELS, STAGE_ORDER, LOSS_REASON_LABELS,
+    METHOD_LABELS, STAGE_LABELS, STAGE_ORDER, LOSS_REASON_LABELS, stageLabel,
     formatBatchQty, formatBotanicalName, escHtml, fmtDate, gardenPlantExists
 } from './db.js';
 import { goBack, navigate, showToast } from './ui-utils.js';
@@ -19,6 +19,8 @@ import { loadAndRenderOutcomes, showOutcomeForm } from './batch-outcomes.js';
 import { showBatchForm, buildSourceLabel, invalidatePlantsCache, invalidateStockCache } from './batch-form.js';
 import { pretreatmentCardHTML, pretreatmentHistoryHTML, initPretreatmentActions } from './batch-pretreatment.js';
 import { hasPretreatment, initialStage } from './pretreatment.js';
+import { isSeedBatch, isUncounted, germinationText } from './germination.js';
+import { showGerminationForm } from './batch-germination.js';
 
 // =============================================
 //  BATCH DETAIL
@@ -41,7 +43,9 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
     // Self-heal: a batch that reached 0 left by any means (e.g. losses logged
     // one by one before this fix existed) but was never marked complete gets
     // finalised now. Guarded so it runs at most once, then re-renders.
-    if (isAtLeast('editor') && (batch.currentQty ?? batch.startQty ?? 0) <= 0 && batch.stage !== 'completed') {
+    // A seed batch not yet counted has no plants to have run out of — skip it,
+    // or this would re-render forever (recomputeBatchState leaves it alone).
+    if (isAtLeast('editor') && !isUncounted(batch) && (batch.currentQty ?? batch.startQty ?? 0) <= 0 && batch.stage !== 'completed') {
         try {
             await recomputeBatchState(id);
             return renderBatchDetail(container, headerActionEl, backBtn, id);
@@ -77,7 +81,7 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
                 ${activeStages.map((s, i) => `
                     <div class="stage-step ${i < currentStageIdx ? 'done' : ''} ${s === batch.stage ? 'current' : ''}">
                         <div class="stage-step-dot"></div>
-                        <span class="stage-step-label">${STAGE_LABELS[s]}</span>
+                        <span class="stage-step-label">${stageLabel(s, batch.method)}</span>
                     </div>
                     ${i < activeStages.length - 1 ? '<div class="stage-connector"></div>' : ''}
                 `).join('')}
@@ -89,16 +93,27 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
                 ${isAtLeast('editor') ? `<button class="btn btn-primary btn-sm" id="take-cuttings-btn" style="width:100%;">✂️ Take cuttings / divisions from this plant</button>` : ''}
             </div>` : '';
 
+    // Seed: counting seedlings is how a sown batch moves on to Germinated, and
+    // the count can be updated as more come up.
+    const showCount = !isStockPlant && isSeedBatch(batch) && !isPreSowing && batch.stage !== 'completed'
+        && (isUncounted(batch) || batch.stage === 'propagating' || batch.stage === 'rooted');
+    const countReplacesAdvance = showCount && batch.stage === 'propagating';
+    const countBtnHtml = showCount ? `
+                <button class="btn ${isUncounted(batch) || countReplacesAdvance ? 'btn-primary' : 'btn-secondary'} btn-sm" id="record-germination-btn">
+                    🌱 ${isUncounted(batch) ? 'Record germination' : 'Update seedling count'}
+                </button>` : '';
+
     // A batch in treatment moves on with the card's Sow now button instead.
     const pretreatmentHtml = isTreating ? pretreatmentCardHTML(batch, isAtLeast('editor')) : '';
     const pretreatmentHistory = !isPreSowing && hasPretreatment(batch) ? pretreatmentHistoryHTML(batch) : '';
 
     const advanceBarHtml = (!isStockPlant && !isTreating && isAtLeast('editor') && batch.stage !== 'completed') ? `
             <div class="stage-advance-bar">
-                ${nextStage ? `
-                <button class="btn btn-primary btn-sm" id="advance-stage-btn">
-                    → Advance to ${STAGE_LABELS[nextStage]}
-                </button>` : `
+                ${countBtnHtml}
+                ${nextStage ? (countReplacesAdvance ? '' : `
+                <button class="btn ${isUncounted(batch) ? 'btn-secondary' : 'btn-primary'} btn-sm" id="advance-stage-btn">
+                    → Advance to ${stageLabel(nextStage, batch.method)}
+                </button>`) : `
                 <button class="btn btn-primary btn-sm" id="record-outcome-btn">
                     🏡 Record Outcome
                 </button>
@@ -125,7 +140,7 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
                 ${batch.hybrid && !computedBotanical ? `<p class="detail-botanical">× Hybrid</p>` : ''}
                 <div class="detail-meta-row">
                     <span class="method-badge">${escHtml(METHOD_LABELS[batch.method] || batch.method || '—')}</span>
-                    <span class="stage-badge stage-${escHtml(batch.stage || 'propagating')} detail-stage-badge">${STAGE_LABELS[batch.stage] || batch.stage || '—'}</span>
+                    <span class="stage-badge stage-${escHtml(batch.stage || 'propagating')} detail-stage-badge">${escHtml(stageLabel(batch.stage, batch.method))}</span>
                 </div>
                 ${batch.plantId && GARDEN_URL ? `<a class="view-in-garden-link" id="view-in-garden-link" href="${escHtml(GARDEN_URL)}/#plant-detail/${escHtml(batch.plantId)}" target="_blank" rel="noopener">🌿 View in garden →</a>` : ''}
             </div>
@@ -148,6 +163,11 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
                     <span class="detail-label">Quantity</span>
                     <span class="detail-value detail-qty-value">${formatBatchQty(batch)}</span>
                 </div>
+                ${isSeedBatch(batch) && !isUncounted(batch) && (batch.seedCount > 0 || batch.germinatedDate) ? `
+                <div class="detail-field">
+                    <span class="detail-label">Germination</span>
+                    <span class="detail-value">${germinationText(batch)}${batch.germinatedDate ? ` · ${fmtDate(batch.germinatedDate)}` : ''}</span>
+                </div>` : ''}
                 ${batch.medium ? `
                 <div class="detail-field">
                     <span class="detail-label">Medium</span>
@@ -224,7 +244,7 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
             <!-- Outcomes -->
             <div class="section-header-row" style="margin-top:24px;">
                 <h3 class="section-heading">Outcomes</h3>
-                ${isAtLeast('editor') && batch.stage !== 'completed' ? `<button class="btn btn-sm btn-secondary" id="record-outcome-btn2">+ Record outcome</button>` : ''}
+                ${isAtLeast('editor') && batch.stage !== 'completed' && !isUncounted(batch) ? `<button class="btn btn-sm btn-secondary" id="record-outcome-btn2">+ Record outcome</button>` : ''}
             </div>
             <div id="outcomes-section">
                 <div class="loading-state" style="padding:12px 0;">
@@ -305,7 +325,7 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
                 <div class="batch-row card-item" data-id="${escHtml(c.id)}" style="cursor:pointer;">
                     <div class="batch-row-main">
                         <span class="batch-row-name">${escHtml(formatBotanicalName(c) || c.plantName || 'Unnamed')}</span>
-                        <span class="stage-badge stage-${escHtml(c.stage || 'propagating')}">${STAGE_LABELS[c.stage] || '—'}</span>
+                        <span class="stage-badge stage-${escHtml(c.stage || 'propagating')}">${escHtml(stageLabel(c.stage, c.method))}</span>
                     </div>
                     <div class="batch-row-meta">
                         <span class="method-badge">${METHOD_LABELS[c.method] || c.method || '—'}</span>
@@ -329,7 +349,7 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
         if (!nextStage) return;
         try {
             await updateNurseryBatch(id, { stage: nextStage });
-            showToast(`Moved to ${STAGE_LABELS[nextStage]}`, 'success');
+            showToast(`Moved to ${stageLabel(nextStage, batch.method)}`, 'success');
             reload();
         } catch (e) { console.error(e); showToast('Could not update stage', 'error'); }
     });
@@ -352,6 +372,11 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
 
     // Pre-sowing card: Checked / Start next step / Sow now
     if (isTreating && isAtLeast('editor')) initPretreatmentActions(container, batch, reload);
+
+    // Seed: record germination / update the seedling count
+    container.querySelector('#record-germination-btn')?.addEventListener('click', () => {
+        showGerminationForm(batch, reload);
+    });
 
     // The linked Garden plant may have been deleted since. Swap the dead link for
     // a note; the batch's own details are unaffected. A failed read keeps the link.
@@ -475,7 +500,7 @@ function logEntryCard(log, batch) {
     const stageHtml = log.stageTo ? `
         <div class="log-stage-change">
             <span class="log-stage-arrow">→</span>
-            <span class="stage-badge stage-${escHtml(log.stageTo)}">${STAGE_LABELS[log.stageTo] || log.stageTo}</span>
+            <span class="stage-badge stage-${escHtml(log.stageTo)}">${escHtml(stageLabel(log.stageTo, batch.method))}</span>
         </div>` : '';
 
     const locationHtml = log.locationName ? `

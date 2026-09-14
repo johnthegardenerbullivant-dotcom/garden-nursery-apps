@@ -6,11 +6,12 @@ import {
     getNurseryBatch, updateNurseryBatch, updateNurseryLog,
     uploadNurseryPhoto, deleteNurseryPhoto,
     getNurseryLocations, recomputeBatchState,
-    STAGE_LABELS, STAGE_ORDER, LOSS_REASON_LABELS, escHtml, todayStr
+    STAGE_LABELS, STAGE_ORDER, LOSS_REASON_LABELS, escHtml, todayStr, stageLabel
 } from './db.js';
 import { showModal, hideModal, showToast, initPhotoDragSort, initDatePickers, datePicker, isValidDateStr } from './ui-utils.js';
 import { openNurseryPhotoLightbox } from './batch-photos.js';
 import { sowUpdates } from './pretreatment.js';
+import { sownSeedUpdates } from './germination.js';
 
 // =============================================
 //  EDIT LOG ENTRY
@@ -64,10 +65,10 @@ async function showEditLogForm(log, batch, onSaved) {
                 <label class="form-label" for="edit-log-stage">Batch stage</label>
                 <select class="form-input" id="edit-log-stage">
                     ${STAGE_ORDER.map(s =>
-                        `<option value="${s}" ${freshBatch.stage === s ? 'selected' : ''}>${STAGE_LABELS[s]}</option>`
+                        `<option value="${s}" ${freshBatch.stage === s ? 'selected' : ''}>${stageLabel(s, freshBatch.method)}</option>`
                     ).join('')}
                 </select>
-                <p class="form-hint">Change this to correct a stage that was moved forward or back in error. Currently: <strong>${STAGE_LABELS[freshBatch.stage] || freshBatch.stage}</strong>.</p>
+                <p class="form-hint">Change this to correct a stage that was moved forward or back in error. Currently: <strong>${stageLabel(freshBatch.stage, freshBatch.method)}</strong>.</p>
             </div>
 
             ${locations.length ? `
@@ -141,7 +142,7 @@ async function showEditLogForm(log, batch, onSaved) {
             // Keep the sowing record in step when a correction crosses Pre-sowing.
             if (freshBatch.stage === 'pre-sowing' && newStage !== 'pre-sowing'
                 && freshBatch.pretreatment && !freshBatch.sownDate) {
-                batchUpdates = { ...sowUpdates(freshBatch, date), stage: newStage };
+                batchUpdates = { ...sowUpdates(freshBatch, date), ...sownSeedUpdates(freshBatch, null), stage: newStage };
             } else if (newStage === 'pre-sowing' && freshBatch.stage !== 'pre-sowing') {
                 batchUpdates.sownDate = null;
             }

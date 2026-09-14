@@ -65,12 +65,12 @@ apps/nursery/
 ├── functions/               ← 2 Netlify serverless functions, both byte-identical
 │   ├── scan-label.js        ←   to Garden's copies
 │   └── lookup-plant.js      ←
-└── js/                      ← 22 ES modules
+└── js/                      ← 24 ES modules
 ```
 
 ---
 
-## JS module map (22 modules)
+## JS module map (24 modules)
 
 ### Core
 
@@ -101,8 +101,10 @@ so `main.js` has one import site while the implementation lives in focused modul
 | `batch-log-edit.js` | Edit an existing log entry | `showEditLogForm` |
 | `batch-outcomes.js` | Record and render outcomes: planted-out / given-away / lost / retired | `loadAndRenderOutcomes`, `showOutcomeForm` |
 | `batch-photos.js` | Batch photo grid and lightbox | `openNurseryPhotoLightbox`, `loadAndRenderBatchPhotos` |
-| `batch-pretreatment.js` | Pre-sowing treatment UI: the batch-form section, the detail card, and its Checked / Start next step / Sow now actions | `pretreatmentFormHTML`, `initPretreatmentForm`, `readPretreatmentForm`, `pretreatmentCardHTML`, `pretreatmentHistoryHTML`, `initPretreatmentActions` |
-| `pretreatment.js` | Pre-sowing treatment logic: step types, date arithmetic, status, and the partial updates for check / next step / sow. **No imports**, so Node can load it to test the dates. | `PRETREATMENT_TYPES`, `pretreatmentStatus`, `pretreatmentNeedsAttention`, `initialStage`, `checkUpdates`, `nextStepUpdates`, `sowUpdates` |
+| `batch-pretreatment.js` | Pre-sowing treatment UI: the batch-form section, the detail card, and its Mark done / Start / Finish / ✎ / Checked / Sow now actions | `pretreatmentFormHTML`, `initPretreatmentForm`, `readPretreatmentForm`, `pretreatmentCardHTML`, `pretreatmentHistoryHTML`, `initPretreatmentActions` |
+| `pretreatment.js` | Pre-sowing treatment logic: step types, date arithmetic, status, and the partial updates for check / next step / sow. **No imports**, so Node can load it to test the dates. | `PRETREATMENT_TYPES`, `pretreatmentStatus`, `pretreatmentNeedsAttention`, `stepDateBounds`, `initialStage`, `checkUpdates`, `advanceStepUpdates`, `finishStepUpdates`, `setStepDatesUpdates`, `undoStepUpdates`, `sowUpdates` |
+| `batch-germination.js` | The Record germination / Update seedling count dialog | `showGerminationForm` |
+| `germination.js` | Seed counts and germination: whether a seed batch has a plant count yet, seed counts, germination rate, and the partial updates for counting and sowing. **No imports**, so Node can load it. | `isUncounted`, `seedsOf`, `germinationRate`, `germinationText`, `uncountedQtyText`, `germinationUpdates`, `sownSeedUpdates` |
 
 ### Other views
 
@@ -164,6 +166,22 @@ adjustment — it also handles completion:
 - back **above 0** while completed → reopened to `stage: 'ready'`, `completedAt`/`outcome` cleared
 
 Stage is otherwise left alone.
+
+**Seed batches start uncounted.** Seed is often too fine to count, so a seed batch has `startQty:
+null` until germination is recorded, and `seedCount` (seeds sown) is optional. `isUncounted()` in
+`germination.js` is true for such a batch, and for any batch at `pre-sowing`. While it is:
+
+- `formatBatchQty()` shows the seeds instead (*40 seeds sown · not counted*)
+- `recomputeBatchState()` returns without touching the batch — an empty `startQty` would otherwise
+  complete it as lost, and batch-detail's self-heal would re-render forever
+- outcomes are refused, and log entries hide *Plants removed*
+
+**Record germination** (`batch-germination.js`) sets `startQty` to the tray count **plus** everything
+already lost, thinned or moved on, so `currentQty` equals the count and the germination rate
+(`startQty / seedCount`) stays honest. Recording it again as more come up replaces the count and
+resets `qtyAdjustment`. A count of 0 leaves the stage alone and lets the recompute close the batch as
+lost. For seed, the `rooted` stage reads **Germinated**: use `stageLabel(stage, method)` wherever one
+batch's stage is shown, and `STAGE_LABELS` only where batches of every method are totalled.
 
 ### Stages, methods, outcomes
 

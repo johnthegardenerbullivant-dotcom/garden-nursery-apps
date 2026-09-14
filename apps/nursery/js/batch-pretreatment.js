@@ -12,6 +12,7 @@ import {
     pretreatmentStatus, stepLabel, stepDurationText, stepDateBounds, daysBetween, isTimed,
     checkUpdates, advanceStepUpdates, finishStepUpdates, setStepDatesUpdates, undoStepUpdates, sowUpdates
 } from './pretreatment.js';
+import { seedsOf, sownSeedUpdates } from './germination.js';
 
 // =============================================
 //  BATCH FORM SECTION
@@ -324,7 +325,7 @@ function logFor(batch, date, observation, stageTo = null) {
         stageTo,
         locationId:   null,
         locationName: null,
-        currentQty:   batch.currentQty ?? batch.startQty ?? 0,
+        currentQty:   batch.currentQty ?? batch.startQty ?? null,
         photos:       [],
     });
 }
@@ -346,7 +347,7 @@ function wireModalSubmit(formId, saveId, handler) {
 }
 
 /** Modal with a date and an optional note; resolves via onSubmit(date, note). */
-function showDateNoteModal({ title, intro, submitLabel, minDate, onSubmit }) {
+function showDateNoteModal({ title, intro, submitLabel, minDate, extraHTML = '', onSubmit }) {
     showModal(title, `
         <form id="pt-action-form" novalidate>
             ${intro ? `<p class="form-hint" style="margin-top:0;">${intro}</p>` : ''}
@@ -354,6 +355,7 @@ function showDateNoteModal({ title, intro, submitLabel, minDate, onSubmit }) {
                 <label class="form-label" for="pt-action-date">Date <span class="required">*</span></label>
                 ${datePicker('pt-action-date', 'date', todayStr())}
             </div>
+            ${extraHTML}
             <div class="form-group">
                 <label class="form-label" for="pt-action-note">Note (optional)</label>
                 <textarea class="form-input" id="pt-action-note" rows="2"></textarea>
@@ -368,7 +370,7 @@ function showDateNoteModal({ title, intro, submitLabel, minDate, onSubmit }) {
         const date = document.getElementById('pt-action-date')?.value.trim() || '';
         if (!isValidDateStr(date))     { showToast('Please enter a valid date as YYYY-MM-DD', 'error'); return false; }
         if (minDate && date < minDate) { showToast(`The date can't be before ${fmtDate(minDate)}`, 'error'); return false; }
-        await onSubmit(date, document.getElementById('pt-action-note')?.value.trim() || '');
+        return onSubmit(date, document.getElementById('pt-action-note')?.value.trim() || '');
     });
 }
 
@@ -502,11 +504,23 @@ export function initPretreatmentActions(container, batch, reload) {
             intro,
             submitLabel: '🌱 Sow',
             minDate:     st.lastDate || batch.startDate,
+            extraHTML: `
+            <div class="form-group">
+                <label class="form-label" for="pt-seed-count">Seeds sown (optional)</label>
+                <input class="form-input" type="number" id="pt-seed-count" min="1" value="${seedsOf(batch) ?? ''}" placeholder="Not counted">
+                <p class="form-hint">Leave blank for fine seed that's scattered — you'll count seedlings when they come up.</p>
+            </div>`,
             onSubmit: async (date, note) => {
-                const text = st.firstStart
+                const raw   = document.getElementById('pt-seed-count')?.value.trim() || '';
+                const seeds = raw ? Number(raw) : null;
+                if (raw && !(Number.isInteger(seeds) && seeds > 0)) {
+                    showToast('Seeds sown must be a whole number, or blank', 'error');
+                    return false;
+                }
+                const text = (st.firstStart
                     ? `Sown after ${daysBetween(st.firstStart, date)} days of pre-sowing treatment.`
-                    : 'Sown.';
-                await updateNurseryBatch(batch.id, sowUpdates(batch, date));
+                    : 'Sown.') + (seeds ? ` ${seeds} seeds.` : '');
+                await updateNurseryBatch(batch.id, { ...sowUpdates(batch, date), ...sownSeedUpdates(batch, seeds) });
                 await logFor(batch, date, withNote(text, note), 'propagating');
                 showToast('Sown — moved to Propagating', 'success');
                 await reload();
