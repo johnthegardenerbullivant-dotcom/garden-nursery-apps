@@ -130,7 +130,7 @@ so `main.js` has one import site while the implementation lives in focused modul
   `deleteNurseryOutcome`
 - **Quantity maths:** `formatBatchQty`, `derivedBatchQty`, `getDerivedBatchQty`,
   `recomputeBatchState`
-- **Cross-app:** `plantOutToGarden`, `getGardenPlants`, `getGardenAreas`
+- **Cross-app:** `plantOutToGarden`, `getGardenPlants`, `getGardenAreas`, `gardenPlantExists`
 - **Photos:** `uploadNurseryPhoto`, `deleteNurseryPhoto`
 - **Wishlist:** `getNurseryWishlist`, `addNurseryWishlistItem`, `updateNurseryWishlistItem`,
   `deleteNurseryWishlistItem`
@@ -206,9 +206,18 @@ it out otherwise, so every other batch keeps five steps.
 
 `plantOutToGarden()` writes a `nursery_outcomes` row, then reaches into **Garden's** collections: it
 creates a `plants` document if the batch has no `plantId` yet (e.g. the batch came from a gift or
-purchase), and always writes an `instances` row linking plant to area. It returns the resolved
-`plantId` so the caller can store it back on the batch. Editing this function changes Garden's data
-— treat it as cross-app surface area.
+purchase) **or its `plantId` points at a plant Garden has since deleted**, and always writes an
+`instances` row linking plant to area. It returns the resolved `plantId`, and the caller stores it
+back on the batch whenever it differs. Editing this function changes Garden's data — treat it as
+cross-app surface area.
+
+**A batch holds its own copy of the plant; `plantId` is only a pointer.** Garden deletes plants
+without looking at nursery batches, so a link can go dead at any time. Linking in the batch form
+copies the Garden plant's name and details into the batch's own fields (Garden's `notes`,
+`careReminders`, `height`, `width` become the batch's `description`, `careNotes`, `ultimateHeight`,
+`ultimateWidth`), and saving always writes those fields rather than re-reading the Garden plant.
+`gardenPlantExists()` is how the detail view, the form and plant-out spot a dead link; each treats a
+failed read as "couldn't check", never as "gone".
 
 The reverse leg is `transferToNursery()` in **Garden's** `db.js`, which writes a `nursery_batches`
 document straight into this app's collections. Neither direction is a network call between the two
@@ -221,7 +230,8 @@ Two places link out to the companion Garden **site** (as opposed to writing to i
 read `GARDEN_URL` from the generated `app-config.js`:
 
 - `admin-view.js` — the "Open Garden Management" button in the Admin panel
-- `batch-detail.js` — the "🌿 View in garden" link on a batch with a `plantId`
+- `batch-detail.js` — the "🌿 View in garden" link on a batch with a `plantId`, replaced by a
+  "Garden record removed" note when that plant no longer exists
 
 Both render only when `GARDEN_URL` is a non-empty string, so a Nursery-only installation shows no
 links to a Garden site that does not exist. Never hard-code the URL back in: it is the one piece of

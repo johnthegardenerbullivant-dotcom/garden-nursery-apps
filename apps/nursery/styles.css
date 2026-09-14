@@ -1563,6 +1563,11 @@ textarea::placeholder {
     font-weight: 500;
 }
 .view-in-garden-link:hover { text-decoration: underline; }
+.garden-link-removed {
+    margin: 8px 0 0;
+    font-size: 0.82rem;
+    color: var(--grey-500);
+}
 
 /* ============================================================
    Log entry — location change chip

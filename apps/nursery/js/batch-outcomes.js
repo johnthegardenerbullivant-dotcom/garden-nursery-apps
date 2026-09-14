@@ -349,8 +349,9 @@ async function showOutcomeForm(batch, onSaved) {
 
             const newQty = Math.max(0, (batch.currentQty ?? batch.startQty ?? 0) - qty);
             const batchUpdates = { currentQty: newQty };
-            // If a new Garden plant was created, link its ID back to this batch for future reference
-            if (resolvedPlantId && !batch.plantId) {
+            // Link the batch to the Garden plant it went to — newly created, or
+            // replacing a link to one that had been deleted
+            if (resolvedPlantId && resolvedPlantId !== batch.plantId) {
                 batchUpdates.plantId = resolvedPlantId;
                 batch.plantId = resolvedPlantId;
             }

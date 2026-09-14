@@ -7,7 +7,7 @@ import {
     getLogsForBatch, deleteNurseryLog, deleteNurseryPhoto,
     getChildBatches, updateNurseryBatch, recomputeBatchState,
     METHOD_LABELS, STAGE_LABELS, STAGE_ORDER, LOSS_REASON_LABELS,
-    formatBatchQty, formatBotanicalName, escHtml, fmtDate
+    formatBatchQty, formatBotanicalName, escHtml, fmtDate, gardenPlantExists
 } from './db.js';
 import { goBack, navigate, showToast } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
@@ -127,7 +127,7 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
                     <span class="method-badge">${escHtml(METHOD_LABELS[batch.method] || batch.method || '—')}</span>
                     <span class="stage-badge stage-${escHtml(batch.stage || 'propagating')} detail-stage-badge">${STAGE_LABELS[batch.stage] || batch.stage || '—'}</span>
                 </div>
-                ${batch.plantId && GARDEN_URL ? `<a class="view-in-garden-link" href="${escHtml(GARDEN_URL)}/#plant-detail/${escHtml(batch.plantId)}" target="_blank" rel="noopener">🌿 View in garden →</a>` : ''}
+                ${batch.plantId && GARDEN_URL ? `<a class="view-in-garden-link" id="view-in-garden-link" href="${escHtml(GARDEN_URL)}/#plant-detail/${escHtml(batch.plantId)}" target="_blank" rel="noopener">🌿 View in garden →</a>` : ''}
             </div>
 
             <!-- Stage progress (hidden for stock plants) -->
@@ -352,6 +352,17 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
 
     // Pre-sowing card: Checked / Start next step / Sow now
     if (isTreating && isAtLeast('editor')) initPretreatmentActions(container, batch, reload);
+
+    // The linked Garden plant may have been deleted since. Swap the dead link for
+    // a note; the batch's own details are unaffected. A failed read keeps the link.
+    if (batch.plantId && GARDEN_URL) {
+        gardenPlantExists(batch.plantId).then(exists => {
+            const link = container.querySelector('#view-in-garden-link');
+            if (!exists && link) {
+                link.outerHTML = `<p class="garden-link-removed">Garden record removed — this batch keeps its own details.</p>`;
+            }
+        }).catch(() => {});
+    }
 
     // Load outcomes + logs + photos (async, after DOM is ready)
     loadAndRenderOutcomes(container, batch);

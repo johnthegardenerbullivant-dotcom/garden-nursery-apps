@@ -35,6 +35,18 @@ deploy of `main` for that site in Netlify once.
   change"). The command now also compares the commit with its first parent, and a build is skipped
   only when both comparisons are empty.
 
+- **Fixed: a nursery batch linked to a Garden plant now keeps that plant's details.** Picking a
+  Garden plant in the batch form copied its name but not its description, care notes, height or
+  spread, because it read them under the wrong field names. Linking now copies all of them, and the
+  name fields stay visible so you can see what the batch holds.
+- **Fixed: Unlink no longer wipes the plant name.** It removes only the link; the batch keeps its
+  name and details.
+- **Fixed: links to deleted Garden plants.** A batch whose Garden plant has been deleted shows
+  "Garden record removed" instead of a broken *View in garden* link, and editing it offers to drop
+  the link. Planting such a batch out used to create a Garden planting that pointed at the deleted
+  plant and never appeared in Garden; it now creates a new Garden plant from the batch's own details
+  and links the batch to it.
+
 ## 2026-09-12
 
 **Action required: none.** No new collection, no rules change, no environment variable.
