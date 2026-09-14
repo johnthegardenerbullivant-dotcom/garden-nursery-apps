@@ -4,7 +4,7 @@
 
 import {
     getNurseryLocations, addNurseryLocation, updateNurseryLocation, deleteNurseryLocation,
-    exportNurseryData, escHtml,
+    exportNurseryData, escHtml, linkify,
     getNurseryWishlist, addNurseryWishlistItem, updateNurseryWishlistItem, deleteNurseryWishlistItem,
     getUsers, updateUserRole, setUserBlocked
 } from './db.js';
@@ -405,7 +405,7 @@ function locationCard(loc) {
                 <div>
                     <div class="admin-card-title">${escHtml(loc.name)}</div>
                     <div class="admin-card-subtitle">${typeLabel}</div>
-                    ${loc.description ? `<div class="admin-card-desc">${escHtml(loc.description)}</div>` : ''}
+                    ${loc.description ? `<div class="admin-card-desc">${linkify(loc.description)}</div>` : ''}
                 </div>
                 <div class="admin-card-actions">
                     <button class="btn-icon location-edit-btn" title="Edit">
@@ -612,7 +612,7 @@ function wishCard(item) {
                         </button>
                     </div>
                     <div style="font-size:0.78rem;color:${pc.colour};margin-bottom:${item.description ? '4px' : '0'};">${pc.label}</div>
-                    ${item.description ? `<div class="admin-card-desc" style="color:var(--grey-600);font-size:0.85rem;">${escHtml(item.description)}</div>` : ''}
+                    ${item.description ? `<div class="admin-card-desc" style="color:var(--grey-600);font-size:0.85rem;">${linkify(item.description)}</div>` : ''}
                 </div>
                 <div class="admin-card-actions">
                     <button class="btn-icon wish-edit-btn" title="Edit">

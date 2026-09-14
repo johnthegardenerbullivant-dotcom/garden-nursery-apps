@@ -6,7 +6,7 @@ import {
     getNurseryPlans, addNurseryPlan, updateNurseryPlan, deleteNurseryPlan,
     getGardenPlants, getGardenAreas,
     PLAN_METHOD_LABELS, PLAN_TIMING_OPTIONS, PLAN_STATUS_LABELS,
-    escHtml
+    escHtml, linkify
 } from './db.js';
 import { showModal, hideModal, showToast, navigate } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
@@ -142,7 +142,7 @@ export async function renderPlansView(container, headerActionEl, backBtn) {
         // Card click -> edit; action buttons
         container.querySelectorAll('.plan-card').forEach(card => {
             card.addEventListener('click', e => {
-                if (e.target.closest('button')) return;
+                if (e.target.closest('button, a')) return;   // a link in the notes opens itself
                 const id = card.dataset.id;
                 const plan = plans.find(p => p.id === id);
                 if (plan) showPlanForm(plan, plans, () => {
@@ -247,7 +247,7 @@ function planCard(plan) {
                         ${timingLabels ? `<span title="Timing">🗓️ ${escHtml(timingLabels)}</span>` : ''}
                     </div>
                     ${sourceText ? `<div style="font-size:0.82rem;color:var(--green-700);margin-bottom:${plan.notes?'6px':'0'};">📍 ${escHtml(sourceText)}</div>` : ''}
-                    ${plan.notes ? `<div style="font-size:0.82rem;color:var(--grey-600);font-style:italic;">${escHtml(plan.notes)}</div>` : ''}
+                    ${plan.notes ? `<div style="font-size:0.82rem;color:var(--grey-600);font-style:italic;">${linkify(plan.notes)}</div>` : ''}
                 </div>
                 <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
                     ${isAtLeast('editor') ? `

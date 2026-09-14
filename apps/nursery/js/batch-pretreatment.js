@@ -5,7 +5,7 @@
 //  which holds no UI and can be tested in Node.
 // =============================================================
 
-import { addNurseryLog, updateNurseryBatch, escHtml, fmtDate, todayStr } from './db.js';
+import { addNurseryLog, updateNurseryBatch, escHtml, linkify, fmtDate, todayStr } from './db.js';
 import { showModal, hideModal, showToast, datePicker, initDatePickers, isValidDateStr } from './ui-utils.js';
 import {
     PRETREATMENT_TYPES, DEFAULT_CHECK_EVERY_DAYS,
@@ -250,7 +250,7 @@ export function pretreatmentCardHTML(batch, canEdit) {
                     <div class="pretreat-step-body">
                         <span class="pretreat-step-name">${icon} ${escHtml(stepLabel(s))}${dur ? ` <span class="pretreat-step-dur">${dur}</span>` : ''}</span>
                         ${stepDatesText(st, s) ? `<span class="pretreat-step-dates">${stepDatesText(st, s)}</span>` : ''}
-                        ${s.notes ? `<span class="pretreat-step-notes">${escHtml(s.notes)}</span>` : ''}
+                        ${s.notes ? `<span class="pretreat-step-notes">${linkify(s.notes)}</span>` : ''}
                     </div>
                     ${actions ? `<div class="pretreat-step-actions">${actions}</div>` : ''}
                 </li>`;

@@ -6,7 +6,7 @@ import {
     getGardenAreas, getOutcomesForBatch,
     addNurseryOutcome, updateNurseryOutcome, deleteNurseryOutcome,
     plantOutToGarden, updateNurseryBatch, formatBatchQty, getGardenPlants,
-    formatBotanicalName, escHtml, fmtDate, todayStr, LOSS_REASON_LABELS
+    formatBotanicalName, escHtml, linkify, fmtDate, todayStr, LOSS_REASON_LABELS
 } from './db.js';
 import { showModal, hideModal, showToast, initDatePickers, datePicker, isValidDateStr } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
@@ -145,7 +145,7 @@ function outcomeCard(o) {
                 </div>
                 <div class="outcome-card-actions">${editBtn}${deleteBtn}</div>
             </div>
-            ${o.notes ? `<div class="outcome-notes">${escHtml(o.notes)}</div>` : ''}
+            ${o.notes ? `<div class="outcome-notes">${linkify(o.notes)}</div>` : ''}
         </div>
     `;
 }

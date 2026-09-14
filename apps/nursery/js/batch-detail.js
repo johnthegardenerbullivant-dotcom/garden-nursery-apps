@@ -7,7 +7,7 @@ import {
     getLogsForBatch, deleteNurseryLog, deleteNurseryPhoto,
     getChildBatches, updateNurseryBatch, recomputeBatchState,
     METHOD_LABELS, STAGE_LABELS, STAGE_ORDER, LOSS_REASON_LABELS, stageLabel,
-    formatBatchQty, formatBotanicalName, escHtml, fmtDate, gardenPlantExists
+    formatBatchQty, formatBotanicalName, escHtml, linkify, fmtDate, gardenPlantExists
 } from './db.js';
 import { goBack, navigate, showToast } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
@@ -215,7 +215,7 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
             ${batch.notes ? `
             <div class="detail-notes">
                 <h3 class="detail-notes-label">Initial notes</h3>
-                <p>${escHtml(batch.notes)}</p>
+                <p>${linkify(batch.notes)}</p>
             </div>` : ''}
 
             <!-- Plant information -->
@@ -224,12 +224,12 @@ export async function renderBatchDetail(container, headerActionEl, backBtn, id) 
                 ${batch.description ? `
                 <div class="detail-plant-info-block">
                     <h3 class="detail-notes-label">About this plant</h3>
-                    <p>${escHtml(batch.description)}</p>
+                    <p>${linkify(batch.description)}</p>
                 </div>` : ''}
                 ${batch.careNotes ? `
                 <div class="detail-plant-info-block">
                     <h3 class="detail-notes-label">Care notes</h3>
-                    <p>${escHtml(batch.careNotes)}</p>
+                    <p>${linkify(batch.careNotes)}</p>
                 </div>` : ''}
             </div>` : ''}
 
@@ -534,7 +534,7 @@ function logEntryCard(log, batch) {
                 <div class="log-entry-actions">${editBtn}${deleteBtn}</div>
             </div>
             ${lossHtml}
-            ${log.observation ? `<p class="log-entry-obs">${escHtml(log.observation)}</p>` : ''}
+            ${log.observation ? `<p class="log-entry-obs">${linkify(log.observation)}</p>` : ''}
             ${photosHtml}
         </div>
     `;

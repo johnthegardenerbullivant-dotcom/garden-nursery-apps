@@ -139,7 +139,8 @@ so `main.js` has one import site while the implementation lives in focused modul
   `deleteNurseryWishlistItem`
 - **Plans:** `getNurseryPlans`, `addNurseryPlan`, `updateNurseryPlan`, `deleteNurseryPlan`
 - **Users:** `getUsers`, `updateUserRole`, `setUserBlocked`, `getPendingUserCount`
-- **Helpers:** `initFirebase`, `escHtml`, `fmtDate`, `todayStr`, `hybridTypeOf`,
+- **Helpers:** `initFirebase`, `escHtml`, `linkify` (escHtml plus clickable http/https URLs, for
+  free-text fields; same function as Garden's), `fmtDate`, `todayStr`, `hybridTypeOf`,
   `formatBotanicalName`, `exportNurseryData`
 - **Constants:** `METHOD_LABELS`, `STAGE_LABELS`, `STAGE_ORDER`, `LOSS_REASON_LABELS`,
   `PLAN_METHOD_LABELS`, `PLAN_TIMING_OPTIONS`, `PLAN_STATUS_LABELS`

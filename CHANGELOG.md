@@ -27,11 +27,14 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 
 **Action required: none**
 
-- **Web addresses are now clickable in Garden.** A link starting `http://` or `https://` opens in a
-  new tab from a task description, a task's completion note, a plant's notes and care reminders, the
-  notes on a planting, an area's description on its detail page, and Compost Bin notes. Long
-  addresses wrap instead of running off the screen. The Areas list, Walk-round rows and printed
-  views still show plain text.
+- **Web addresses are now clickable in both apps.** A link starting `http://` or `https://` opens in
+  a new tab, and long addresses wrap instead of running off the screen.
+  - **Garden:** task descriptions and completion notes, a plant's notes and care reminders, the notes
+    on a planting, an area's description on its detail page, and Compost Bin notes. The Areas list,
+    Walk-round rows and printed views still show plain text.
+  - **Nursery:** a batch's initial notes, *About this plant* and care notes, log entry observations,
+    outcome notes, pre-sowing treatment step notes, plan notes, and the descriptions of nursery
+    locations and wishlist items in Admin.
 
 ## 2026-09-13
 
