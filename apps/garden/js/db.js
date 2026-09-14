@@ -1118,6 +1118,35 @@ export function escHtml(str) {
         .replace(/"/g, '&quot;');
 }
 
+/**
+ * escHtml, plus http(s) URLs turned into links that open in a new tab.
+ * Added 2026-09-14 for task descriptions, notes and area descriptions.
+ * The text between URLs and each URL are escaped separately, so the <a>
+ * is the only markup that can reach the page, and the pattern only
+ * matches http and https — never javascript: or data:.
+ */
+export function linkify(str) {
+    if (!str) return '';
+    const re = /\bhttps?:\/\/[^\s<>"']+/gi;
+    let out = '', last = 0, m;
+    while ((m = re.exec(str))) {
+        let url = m[0];
+        // Trailing punctuation belongs to the sentence, not the URL — except
+        // a ')' that closes a '(' inside it, as Wikipedia URLs have.
+        while (/[.,;:!?)\]]$/.test(url)) {
+            const opens  = (url.match(/\(/g) || []).length;
+            const closes = (url.match(/\)/g) || []).length;
+            if (url.endsWith(')') && opens >= closes) break;
+            url = url.slice(0, -1);
+        }
+        out += escHtml(str.slice(last, m.index))
+             + `<a class="text-link" href="${escHtml(url)}" target="_blank" rel="noopener noreferrer">${escHtml(url)}</a>`;
+        last = m.index + url.length;
+        re.lastIndex = last;
+    }
+    return out + escHtml(str.slice(last));
+}
+
 // =============================================
 //  DATE HELPERS
 //  Added 2026-08-10. These lived as six separate local copies across

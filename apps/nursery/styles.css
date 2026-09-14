@@ -1464,6 +1464,13 @@ textarea::placeholder {
     flex-shrink: 0;
     margin-left: 4px;
 }
+/* URLs in notes and descriptions, from linkify() in db.js. A long URL has
+   no spaces to break at, so without this it runs off a phone screen. */
+.text-link {
+    color: var(--green-700);
+    text-decoration: underline;
+    overflow-wrap: anywhere;
+}
 .outcome-notes {
     margin-top: 6px;
     padding-top: 6px;

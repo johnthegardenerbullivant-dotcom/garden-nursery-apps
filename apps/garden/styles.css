@@ -178,6 +178,13 @@ button.card-badge:hover {
     color: var(--grey-800);
     white-space: pre-wrap;
 }
+/* URLs in notes and descriptions, from linkify() in db.js. A long URL has
+   no spaces to break at, so without this it runs off a phone screen. */
+.text-link {
+    color: var(--green-700);
+    text-decoration: underline;
+    overflow-wrap: anywhere;
+}
 /* Keep .photo-upload-btn for modal thumbnail grids */
 .photo-upload-btn {
     aspect-ratio: 1;
