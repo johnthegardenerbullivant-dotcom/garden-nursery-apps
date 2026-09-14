@@ -422,6 +422,12 @@ export async function getChildBatches(parentBatchId) {
 
 // When planting out, write a Garden Management plant record (if needed) and instance
 export async function plantOutToGarden(batchData, areaId, areaName, quantity, date, notes) {
+    // A link to a Garden plant that has since been deleted counts as no link.
+    // Otherwise the instance below would point at nothing and never show in
+    // Garden. Checked before anything is written, so a failed read writes nothing.
+    let plantId = batchData.plantId || null;
+    if (plantId && !(await gardenPlantExists(plantId))) plantId = null;
+
     // Write nursery outcome
     await addNurseryOutcome({
         batchId:   batchData.id,
@@ -434,9 +440,8 @@ export async function plantOutToGarden(batchData, areaId, areaName, quantity, da
     });
 
     // Resolve or create the Garden Management plant record
-    let plantId = batchData.plantId || null;
     if (!plantId) {
-        // Batch has no linked Garden plant (e.g. received as gift/purchase) — create one now
+        // No linked Garden plant (a gift or purchase, or the link was dead) — create one now
         const plantRef = await addDoc(collection(db, 'plants'), {
             commonName:    batchData.commonName   || batchData.plantName || '',
             genus:         batchData.genus         || '',
@@ -475,6 +480,15 @@ export async function plantOutToGarden(batchData, areaId, areaName, quantity, da
 // =============================================
 //  GARDEN MANAGEMENT cross-reference reads
 // =============================================
+
+/** Does this Garden plant still exist? A batch's plantId can outlive the plant,
+ *  because Garden deletes plants without looking at nursery batches. Throws if
+ *  the read fails, so callers can tell "gone" from "couldn't check". */
+export async function gardenPlantExists(plantId) {
+    if (!plantId) return false;
+    const snap = await getDoc(doc(db, 'plants', plantId));
+    return snap.exists();
+}
 
 /** Read the Garden Management plants list for the plant picker */
 export async function getGardenPlants() {
