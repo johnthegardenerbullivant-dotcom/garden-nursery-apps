@@ -19,6 +19,7 @@ import {
 import imageCompression from 'https://cdn.jsdelivr.net/npm/browser-image-compression@2/dist/browser-image-compression.mjs';
 
 import { firebaseConfig } from '../firebase-config.js';
+import { isUncounted, uncountedQtyText } from './germination.js';
 
 // ---------- Initialise Firebase ----------
 let app, db, storage;
@@ -320,6 +321,7 @@ export async function deleteNurseryOutcome(id) {
  * Otherwise → "X of Y left" (e.g. "2 of 25 left").
  */
 export function formatBatchQty(batch, opts = {}) {
+    if (isUncounted(batch)) return uncountedQtyText(batch);
     const start = batch?.startQty ?? null;
     const cur   = batch?.currentQty ?? batch?.startQty ?? null;
     if (cur == null && start == null) return '—';
@@ -374,6 +376,9 @@ export async function getDerivedBatchQty(batch) {
 export async function recomputeBatchState(batchId, effectiveDate) {
     const batch = await getNurseryBatch(batchId);
     if (!batch) return null;
+    // A seed batch with no plant count yet has nothing to count down from, and
+    // must not close itself as lost because startQty is empty (germination.js).
+    if (isUncounted(batch)) return batch;
 
     const [logs, outcomes] = await Promise.all([
         getLogsForBatch(batchId),
@@ -582,6 +587,16 @@ export const STAGE_LABELS = {
 export const STAGE_ORDER = [
     'pre-sowing', 'propagating', 'rooted', 'potted-up', 'hardening-off', 'ready', 'completed'
 ];
+
+/**
+ * A stage's label for one batch. Seed germinates rather than roots, so a seed
+ * batch at 'rooted' reads "Germinated". Views that total batches of every
+ * method (dashboard pills, stats pipeline) keep STAGE_LABELS.
+ */
+export function stageLabel(stage, method) {
+    if (stage === 'rooted' && method === 'seed') return 'Germinated';
+    return STAGE_LABELS[stage] || stage || '—';
+}
 
 export const LOSS_REASON_LABELS = {
     'damping-off': 'Damping off',

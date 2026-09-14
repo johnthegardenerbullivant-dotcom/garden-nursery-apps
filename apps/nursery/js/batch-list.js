@@ -4,7 +4,7 @@
 
 import {
     getNurseryBatches, getNurseryLocations,
-    METHOD_LABELS, STAGE_LABELS, STAGE_ORDER, escHtml, fmtDate, formatBatchQty, formatBotanicalName
+    METHOD_LABELS, STAGE_LABELS, STAGE_ORDER, escHtml, fmtDate, formatBatchQty, formatBotanicalName, stageLabel
 } from './db.js';
 import { navigate } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
@@ -267,7 +267,7 @@ function batchRow(b) {
                 <span class="batch-row-name">${escHtml(formatBotanicalName(b) || b.plantName || 'Unnamed')}</span>
                 ${isStock
                     ? `<span class="stage-badge" style="background:#d97706;color:#fff;border-color:#b45309;">🪴 Stock plant</span>`
-                    : `<span class="stage-badge stage-${escHtml(b.stage || 'propagating')}">${STAGE_LABELS[b.stage] || b.stage || '—'}</span>`}
+                    : `<span class="stage-badge stage-${escHtml(b.stage || 'propagating')}">${escHtml(stageLabel(b.stage, b.method))}</span>`}
             </div>
             <div class="batch-row-meta">
                 <span class="method-badge">${escHtml(method)}</span>

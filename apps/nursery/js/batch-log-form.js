@@ -5,10 +5,11 @@
 import {
     addNurseryLog, updateNurseryBatch, uploadNurseryPhoto,
     getNurseryLocations, recomputeBatchState,
-    STAGE_LABELS, STAGE_ORDER, LOSS_REASON_LABELS, todayStr
+    STAGE_LABELS, STAGE_ORDER, LOSS_REASON_LABELS, todayStr, stageLabel
 } from './db.js';
 import { showModal, hideModal, showToast, initDatePickers, datePicker, isValidDateStr } from './ui-utils.js';
 import { hasPretreatment, checkUpdates, sowUpdates } from './pretreatment.js';
+import { isUncounted, sownSeedUpdates } from './germination.js';
 
 // =============================================
 //  LOG FORM (add a log entry)
@@ -41,7 +42,7 @@ async function showLogForm(batch, onSaved) {
                     placeholder="What did you notice? Any changes in the plants?"></textarea>
             </div>
 
-            <div class="form-row-two">
+            <div class="form-row-two" style="display:${isUncounted(batch) ? 'none' : ''};">
                 <div class="form-group">
                     <label class="form-label" for="log-losses">Plants removed</label>
                     <input class="form-input" type="number" id="log-losses" name="lossCount"
@@ -63,7 +64,7 @@ async function showLogForm(batch, onSaved) {
                 <label class="form-label" for="log-stage">Advance stage? (optional)</label>
                 <select class="form-input" id="log-stage" name="stageTo">
                     <option value="">No change</option>
-                    ${nextStages.map(s => `<option value="${s}">${STAGE_LABELS[s]}</option>`).join('')}
+                    ${nextStages.map(s => `<option value="${s}">${stageLabel(s, batch.method)}</option>`).join('')}
                 </select>
             </div>` : ''}
 
@@ -181,7 +182,7 @@ async function showLogForm(batch, onSaved) {
             let batchUpdates = {};
             if (batch.stage === 'pre-sowing' && hasPretreatment(batch)) {
                 batchUpdates = checkUpdates(batch, date);
-                if (stageTo) batchUpdates = sowUpdates({ ...batch, ...batchUpdates }, date);
+                if (stageTo) batchUpdates = { ...sowUpdates({ ...batch, ...batchUpdates }, date), ...sownSeedUpdates(batch, null) };
             }
             if (stageTo)      batchUpdates.stage      = stageTo;
             if (locationToId) batchUpdates.locationId = locationToId;

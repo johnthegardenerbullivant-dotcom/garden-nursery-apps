@@ -2,7 +2,7 @@
 //  dashboard-view.js — Nursery dashboard (home screen)
 // =============================================================
 
-import { getNurseryBatches, escHtml, fmtDate, todayStr, STAGE_LABELS, STAGE_ORDER, METHOD_LABELS, formatBatchQty, formatBotanicalName } from './db.js';
+import { getNurseryBatches, escHtml, fmtDate, todayStr, STAGE_LABELS, STAGE_ORDER, METHOD_LABELS, formatBatchQty, formatBotanicalName, stageLabel } from './db.js';
 import { pretreatmentNeedsAttention } from './pretreatment.js';
 import { navigate } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
@@ -166,7 +166,7 @@ function batchRow(b) {
         <div class="batch-row card-item" data-id="${escHtml(b.id)}">
             <div class="batch-row-main">
                 <span class="batch-row-name">${escHtml(formatBotanicalName(b) || b.plantName || 'Unnamed')}</span>
-                <span class="stage-badge stage-${escHtml(b.stage || 'propagating')}">${STAGE_LABELS[b.stage] || b.stage || '—'}</span>
+                <span class="stage-badge stage-${escHtml(b.stage || 'propagating')}">${escHtml(stageLabel(b.stage, b.method))}</span>
             </div>
             <div class="batch-row-meta">
                 <span class="method-badge">${escHtml(method)}</span>

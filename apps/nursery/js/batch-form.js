@@ -12,6 +12,7 @@ import { showModal, hideModal, showToast, initDatePickers, datePicker, isValidDa
 import { scanPanelHTML, initLabelScan } from './label-scan.js';
 import { lookupPanelHTML, initPlantLookup } from './plant-lookup.js';
 import { pretreatmentFormHTML, initPretreatmentForm, readPretreatmentForm } from './batch-pretreatment.js';
+import { isUncounted, seedsOf } from './germination.js';
 
 // Cache garden plants for the session (fetched once per form open)
 let _gardenPlantsCache = null;
@@ -86,6 +87,14 @@ async function showBatchForm(existing, locations, onSaved, prefill = null) {
     const src = existing?.source || {};
     // Effective hybrid type for the selector (legacy boolean hybrid → interspecific)
     const existingHt = existing?.hybridType || (existing?.hybrid ? 'interspecific' : '');
+    // Seed has no plant count until seedlings are counted (germination.js), so a
+    // new seed batch asks for seeds sown instead of a starting quantity.
+    const countedAtOpen = !isUncounted({
+        method:   existing?.method || 'seed',
+        stage:    existing?.stage,
+        startQty: isEdit ? existing?.startQty : null,
+    });
+    const seedAtOpen = (existing?.method || 'seed') === 'seed';
 
     showModal(isEdit ? 'Edit Batch' : 'New Propagation Batch', `
         <form id="batch-form" novalidate>
@@ -326,14 +335,23 @@ async function showBatchForm(existing, locations, onSaved, prefill = null) {
                     <label class="form-label" for="start-date">Start date <span class="required">*</span></label>
                     ${datePicker('start-date', 'startDate', existing?.startDate || todayStr())}
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="start-qty">Starting quantity <span class="required">*</span></label>
+                <div class="form-group" id="start-qty-group" style="display:${countedAtOpen ? 'block' : 'none'};">
+                    <label class="form-label" for="start-qty" id="start-qty-label">${seedAtOpen ? 'Seedlings' : 'Starting quantity'} <span class="required">*</span></label>
                     <input class="form-input" type="number" id="start-qty" name="startQty"
                            min="1" value="${existing?.startQty ?? 1}" required>
                 </div>
+                <div class="form-group" id="seed-count-group" style="display:${seedAtOpen ? 'block' : 'none'};">
+                    <label class="form-label" for="seed-count">Seeds sown (optional)</label>
+                    <input class="form-input" type="number" id="seed-count" name="seedCount"
+                           min="1" value="${seedsOf(existing) ?? ''}" placeholder="Not counted">
+                </div>
             </div>
+            <p class="form-hint" id="seed-count-hint" style="display:${seedAtOpen && !countedAtOpen ? 'block' : 'none'};margin:-6px 0 14px;">
+                Fill in seeds sown if you counted them; leave it blank for fine seed that's scattered.
+                You'll count seedlings with <strong>Record germination</strong> when they come up.
+            </p>
             ${isEdit ? `
-            <div class="form-group">
+            <div class="form-group" id="current-qty-group" style="display:${countedAtOpen ? 'block' : 'none'};">
                 <label class="form-label" for="current-qty">Number remaining</label>
                 <input class="form-input" type="number" id="current-qty" name="currentQty"
                        min="0" max="${existing?.startQty ?? 1}"
@@ -670,6 +688,16 @@ async function showBatchForm(existing, locations, onSaved, prefill = null) {
         seedYearGrp.style.display      = (methodSelect?.value === 'seed') ? 'block' : 'none';
         const ptGrp = document.getElementById('pretreatment-group');
         if (ptGrp) ptGrp.style.display = (methodSelect?.value === 'seed') ? 'block' : 'none';
+        // Quantity: seed counts seeds now and seedlings later; every other method has a count from the start.
+        const isSeedNow  = methodSelect?.value === 'seed';
+        const countedNow = !isSeedNow || countedAtOpen;
+        document.getElementById('seed-count-group').style.display = isSeedNow ? 'block' : 'none';
+        document.getElementById('seed-count-hint').style.display  = isSeedNow && !countedNow ? 'block' : 'none';
+        document.getElementById('start-qty-group').style.display  = countedNow ? 'block' : 'none';
+        const curQtyGrp = document.getElementById('current-qty-group');
+        if (curQtyGrp) curQtyGrp.style.display = countedNow ? 'block' : 'none';
+        const startQtyLabel = document.getElementById('start-qty-label');
+        if (startQtyLabel) startQtyLabel.firstChild.textContent = isSeedNow ? 'Seedlings ' : 'Starting quantity ';
         if (startingStageGrp) startingStageGrp.style.display = isAcquired ? 'block' : 'none';
         if (purposeGrp)       purposeGrp.style.display       = isAcquired ? 'block' : 'none';
         // When switching to acquired on a new batch, apply sensible defaults
@@ -742,7 +770,7 @@ async function showBatchForm(existing, locations, onSaved, prefill = null) {
         // derived figure has not loaded yet.
         let currentQty    = isEdit ? (existing.currentQty ?? startQty) : startQty;
         let qtyAdjustment = isEdit ? (existing.qtyAdjustment || 0) : 0;
-        if (isEdit) {
+        if (isEdit && document.getElementById('current-qty-group')?.style.display !== 'none') {
             const typedQty = parseInt(document.getElementById('current-qty')?.value);
             if (Number.isFinite(typedQty)) {
                 if (typedQty < 0 || typedQty > startQty) {
@@ -782,6 +810,16 @@ async function showBatchForm(existing, locations, onSaved, prefill = null) {
             stage = 'propagating';
         }
 
+        // Seed that isn't sown, or is sown but not yet counted, has no plant count at all.
+        const isSeed       = methodSelect?.value === 'seed';
+        const seedCountRaw = isSeed ? (document.getElementById('seed-count')?.value.trim() || '') : '';
+        const seedCount    = seedCountRaw ? Number(seedCountRaw) : null;
+        if (seedCountRaw && !(Number.isInteger(seedCount) && seedCount > 0)) {
+            showToast('Seeds sown must be a whole number, or blank', 'error');
+            return;
+        }
+        const uncounted = isUncounted({ method: methodSelect?.value, stage, startQty: !isSeed || countedAtOpen ? startQty : null });
+
         const data = {
             plantId:      selectedPlantId || null,
             plantName,
@@ -817,9 +855,10 @@ async function showBatchForm(existing, locations, onSaved, prefill = null) {
                 parentBatchId:  srcType === 'nursery-stock' ? srcStockId : null,
             },
             startDate,
-            startQty,
-            currentQty,
-            qtyAdjustment,
+            startQty:      uncounted ? null : startQty,
+            currentQty:    uncounted ? null : currentQty,
+            qtyAdjustment: uncounted ? 0    : qtyAdjustment,
+            seedCount:     isSeed ? seedCount : null,
             medium:     document.getElementById('medium-input')?.value.trim() || '',
             locationId: document.getElementById('location-select')?.value || null,
             notes:      document.getElementById('notes-input')?.value.trim() || '',

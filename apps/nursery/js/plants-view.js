@@ -2,7 +2,7 @@
 //  plants-view.js — Propagated plants list & history per plant
 // =============================================================
 
-import { getNurseryBatches, escHtml, fmtDate, METHOD_LABELS, STAGE_LABELS, formatBatchQty, formatBotanicalName } from './db.js';
+import { getNurseryBatches, escHtml, fmtDate, METHOD_LABELS, STAGE_LABELS, formatBatchQty, formatBotanicalName, stageLabel } from './db.js';
 import { navigate, goBack } from './ui-utils.js';
 
 export async function renderPropagatedPlants(container, headerActionEl, backBtn) {
@@ -195,7 +195,7 @@ export async function renderPlantPropHistory(container, headerActionEl, backBtn,
                     <div class="batch-row card-item" data-id="${escHtml(b.id)}">
                         <div class="batch-row-main">
                             <span class="method-badge">${escHtml(METHOD_LABELS[b.method] || b.method || '—')}</span>
-                            <span class="stage-badge stage-${escHtml(b.stage || 'propagating')}">${STAGE_LABELS[b.stage] || b.stage || '—'}</span>
+                            <span class="stage-badge stage-${escHtml(b.stage || 'propagating')}">${escHtml(stageLabel(b.stage, b.method))}</span>
                         </div>
                         <div class="batch-row-meta">
                             <span class="batch-row-date">Started ${fmtDate(b.startDate)}</span>
