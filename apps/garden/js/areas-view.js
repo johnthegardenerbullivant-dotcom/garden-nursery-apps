@@ -7,7 +7,7 @@ import {
     getInstancesInArea, getPlants,
     getPhotosForArea, uploadAreaPhoto, deletePhoto, updatePhotoOrders, getFirstPhotoForPlants,
     getTaskAssignments,
-    formatBotanicalName, escHtml, ensureTagCode
+    formatBotanicalName, escHtml, linkify, ensureTagCode
 } from './db.js';
 import { showModal, hideModal, showToast, setLoading, navigate, initPhotoCarousel, initPhotoDragSort } from './ui-utils.js';
 import { renderAreaTasksSection } from './tasks-view.js';
@@ -266,7 +266,7 @@ export async function renderAreaDetail(container, headerActionEl, backBtn, areaI
         <div class="plant-detail-header">
             <div class="plant-detail-title">${escHtml(area.name)}</div>
             <div class="plant-detail-subtitle">
-                ${area.description ? `<span>${escHtml(area.description)}&ensp;&middot;&ensp;</span>` : ''}
+                ${area.description ? `<span>${linkify(area.description)}&ensp;&middot;&ensp;</span>` : ''}
                 <span>${instances.length} plant record${instances.length !== 1 ? 's' : ''}</span>
                 <span>&ensp;&middot;&ensp;${area.walkRoundStarted ? 'Walk-round in progress'
                     : area.lastWalkRound ? `Last walk-round ${escHtml(area.lastWalkRound)}` : 'Never walked round'}</span>

@@ -5,7 +5,7 @@
 //  appear here for one area while still alive in another. Records carry name
 //  snapshots, so they stay readable even if the plant/area is later changed.
 
-import { getDeceasedPlants, deleteDeceasedRecord, escHtml, fmtDate } from './db.js';
+import { getDeceasedPlants, deleteDeceasedRecord, escHtml, linkify, fmtDate } from './db.js';
 import { setLoading, navigate, showToast } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
 
@@ -126,7 +126,8 @@ export async function renderCompostView(container, headerActionEl, backBtn) {
 
     // Row click → plant detail (if the plant still exists)
     container.querySelectorAll('.compost-row[data-plant-id]').forEach(row => {
-        row.querySelector('.compost-row-main')?.addEventListener('click', () => {
+        row.querySelector('.compost-row-main')?.addEventListener('click', e => {
+            if (e.target.closest('a')) return;   // a link in the notes opens itself
             const pid = row.dataset.plantId;
             if (pid) navigate('plant-detail', pid);
         });
@@ -157,7 +158,7 @@ function rowHtml(r) {
     const common   = r.commonName ? `<span class="compost-common">(${escHtml(r.commonName)})</span>` : '';
     const area     = r.areaName ? `<span class="irr-area-chip">${escHtml(r.areaName)}</span>` : '';
     const qty      = (r.quantity || 1) > 1 ? `<span class="compost-qty">×${r.quantity}</span>` : '';
-    const notes    = r.notes ? `<div class="compost-notes">${escHtml(r.notes)}</div>` : '';
+    const notes    = r.notes ? `<div class="compost-notes">${linkify(r.notes)}</div>` : '';
 
     return `
         <div class="compost-row" data-plant-id="${escHtml(r.plantId || '')}">

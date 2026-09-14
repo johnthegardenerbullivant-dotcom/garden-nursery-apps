@@ -9,7 +9,7 @@ import {
     getPhotosForPlant, uploadPhoto, deletePhoto, updatePhotoOrders, getPlantIdsWithPhotos,
     getDeceasedPlants, recordPlantDeath,
     getNurseryLocations, transferToNursery, countNurseryBatchesForPlant,
-    formatBotanicalName, escHtml, ensureTagCode
+    formatBotanicalName, escHtml, linkify, ensureTagCode
 } from './db.js';
 import { showModal, hideModal, showToast, setLoading, navigate, goBack, initPhotoCarousel, datePicker, initDatePickers, initPhotoDragSort } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
@@ -482,13 +482,13 @@ function buildPlantDetailHTML(plant, instances, photos) {
             ${plant.notes ? `
                 <div class="field-row">
                     <span class="field-label">Notes / Observations</span>
-                    <span class="field-value">${escHtml(plant.notes)}</span>
+                    <span class="field-value">${linkify(plant.notes)}</span>
                 </div>
             ` : ''}
             ${plant.careReminders ? `
                 <div class="field-row">
                     <span class="field-label">Care reminders</span>
-                    <span class="field-value">${escHtml(plant.careReminders)}</span>
+                    <span class="field-value">${linkify(plant.careReminders)}</span>
                 </div>
             ` : ''}
         </div>
@@ -567,7 +567,7 @@ function instanceRow(inst) {
         inst.datePlanted ? `Planted ${inst.datePlanted}` : null,
         inst.lastSeen    ? `Seen ${escHtml(inst.lastSeen)}` : null,
         inst.notFoundOn  ? `⚠ Not found ${escHtml(inst.notFoundOn)}` : null,
-        inst.notes ? escHtml(inst.notes) : null,
+        inst.notes ? linkify(inst.notes) : null,
     ].filter(Boolean);
 
     return `

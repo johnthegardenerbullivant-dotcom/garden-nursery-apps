@@ -8,7 +8,7 @@ import {
     addTaskAssignment, updateTaskAssignment, deleteTaskAssignment,
     getAreas, getInstances, getPlants,
     createNextRecurringOccurrence, firstOccurrenceFromToday,
-    formatBotanicalName, escHtml, fmtDate, todayStr, isOverdue
+    formatBotanicalName, escHtml, linkify, fmtDate, todayStr, isOverdue
 } from './db.js';
 import { showModal, hideModal, showToast, setLoading, navigate } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
@@ -621,7 +621,7 @@ export function buildTaskRow(assignment, plantMap, areaLabel = null, showStatusB
             </div>
             <div class="task-row-body">
                 ${task.description
-                    ? `<p class="task-description">${escHtml(task.description)}</p>` : ''}
+                    ? `<p class="task-description">${linkify(task.description)}</p>` : ''}
                 ${areaNames && areaNames.length > 1 ? `
                     <div class="task-plants">
                         <span class="task-plants-label">📍 Areas:</span>
@@ -638,7 +638,7 @@ export function buildTaskRow(assignment, plantMap, areaLabel = null, showStatusB
                             <span>${isSkipped ? '⏭ Skipped' : '&#10003; Completed'}
                             ${fmtDate(assignment.completedDate)}</span>` : ''}
                         ${assignment.completionNote
-                            ? `<span class="task-completion-note-text">${escHtml(assignment.completionNote)}</span>`
+                            ? `<span class="task-completion-note-text">${linkify(assignment.completionNote)}</span>`
                             : ''}
                     </div>` : ''}
                 ${isAtLeast('editor') ? `

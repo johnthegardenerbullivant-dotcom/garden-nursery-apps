@@ -23,6 +23,16 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 
 ---
 
+## 2026-09-14
+
+**Action required: none**
+
+- **Web addresses are now clickable in Garden.** A link starting `http://` or `https://` opens in a
+  new tab from a task description, a task's completion note, a plant's notes and care reminders, the
+  notes on a planting, an area's description on its detail page, and Compost Bin notes. Long
+  addresses wrap instead of running off the screen. The Areas list, Walk-round rows and printed
+  views still show plain text.
+
 ## 2026-09-13
 
 **Action required: none** — but if a change you merged never reached your live site, trigger a
