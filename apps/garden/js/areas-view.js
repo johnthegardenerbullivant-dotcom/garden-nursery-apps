@@ -722,7 +722,7 @@ function showPrintOptions(area, instances, plantMap) {
     const total = instances.length;
     const html = `
         <p style="margin-bottom:16px;color:var(--grey-600);">
-            ${total} plant record${total !== 1 ? 's' : ''} in <strong>${area.name}</strong>.<br>
+            ${total} plant record${total !== 1 ? 's' : ''} in <strong>${escHtml(area.name)}</strong>.<br>
             Choose a format:
         </p>
         <div style="display:flex;flex-direction:column;gap:10px;">
@@ -776,31 +776,35 @@ function openPrintWindow(area, instances, plantMap, mode) {
 
         // Build italic botanical name (use HTML <em> tags)
         // Intergeneric hybrids: ×Genus; interspecific: Genus × species.
+        // Every value from the database is escaped: this builds a whole HTML
+        // document, so a '<' or '&' in a note would otherwise become markup.
+        // String() because imported heights and widths are sometimes numbers.
+        const esc = v => escHtml(String(v));
         const pHt = p.hybridType || (p.hybrid ? 'interspecific' : null);
         const nameParts = [];
-        if (p.genus)      nameParts.push(pHt === 'intergeneric' ? '×' + p.genus : p.genus);
+        if (p.genus)      nameParts.push(pHt === 'intergeneric' ? '×' + esc(p.genus) : esc(p.genus));
         if (pHt === 'interspecific' && p.species) nameParts.push('×');
-        if (p.species)    nameParts.push(p.species);
-        if (p.subspecies) nameParts.push(`subsp. ${p.subspecies}`);
-        if (p.variety)    nameParts.push(`var. ${p.variety}`);
+        if (p.species)    nameParts.push(esc(p.species));
+        if (p.subspecies) nameParts.push(`subsp. ${esc(p.subspecies)}`);
+        if (p.variety)    nameParts.push(`var. ${esc(p.variety)}`);
         const botanicalItalic = nameParts.length
             ? `<em>${nameParts.join(' ')}</em>`
             : '';
-        const cultivar  = p.cultivar ? ` '${p.cultivar}'` : '';
-        const authority = p.authority ? ` <span style="font-size:0.8em;">${p.authority}</span>` : '';
+        const cultivar  = p.cultivar ? ` '${esc(p.cultivar)}'` : '';
+        const authority = p.authority ? ` <span style="font-size:0.8em;">${esc(p.authority)}</span>` : '';
         const plantCell = `${botanicalItalic}${cultivar}${authority}`
-            + (p.commonName ? `<br><span class="common">${p.commonName}</span>` : '');
+            + (p.commonName ? `<br><span class="common">${esc(p.commonName)}</span>` : '');
 
-        const qty         = inst.quantity || 1;
-        const datePlanted = inst.datePlanted || '—';
+        const qty         = esc(inst.quantity || 1);
+        const datePlanted = inst.datePlanted ? esc(inst.datePlanted) : '—';
         const rowClass    = idx % 2 === 1 ? ' class="alt"' : '';
 
         if (mode === 'summary') {
             return `<tr${rowClass}><td>${plantCell}</td><td class="c">${qty}</td><td>${datePlanted}</td></tr>`;
         } else {
-            const height = p.height || '—';
-            const width  = p.width  || '—';
-            const notes  = p.notes  || '—';
+            const height = p.height ? esc(p.height) : '—';
+            const width  = p.width  ? esc(p.width)  : '—';
+            const notes  = p.notes  ? esc(p.notes)  : '—';
             return `<tr${rowClass}><td>${plantCell}</td><td class="c">${qty}</td><td>${datePlanted}</td><td class="c">${height}</td><td class="c">${width}</td><td class="notes">${notes}</td></tr>`;
         }
     }).join('');
@@ -821,7 +825,7 @@ function openPrintWindow(area, instances, plantMap, mode) {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Plant List — ${area.name}</title>
+<title>Plant List — ${escHtml(area.name)}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, Helvetica, sans-serif; font-size: 11pt; color: #1a1a1a; padding: 24px 32px; max-width: 960px; margin: 0 auto; }
@@ -847,9 +851,9 @@ function openPrintWindow(area, instances, plantMap, mode) {
 </head>
 <body>
   <button class="print-btn" onclick="window.print()">&#128438; Print / Save as PDF</button>
-  <h1>${area.name}</h1>
+  <h1>${escHtml(area.name)}</h1>
   <div class="meta">${mode === 'summary' ? 'Summary' : 'Detailed'} listing &nbsp;&middot;&nbsp; ${instances.length} record${instances.length !== 1 ? 's' : ''} &nbsp;&middot;&nbsp; Printed ${date}</div>
-  ${area.description ? `<div class="desc">${area.description}</div>` : ''}
+  ${area.description ? `<div class="desc">${escHtml(area.description)}</div>` : ''}
   <table>
     ${colgroup}
     <thead>${headers}</thead>

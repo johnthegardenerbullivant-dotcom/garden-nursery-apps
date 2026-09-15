@@ -27,6 +27,11 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 
 **Action required: none**
 
+- **Fixed: Area print view shows plant and area text safely.** *Print → Summary* and *Detailed* on an
+  area put names, notes, heights and the area description into the printed page as raw HTML, so a
+  `<` in a note could break the layout or add markup. Every value is now escaped, as the rest of the
+  app already does. Printouts look the same.
+
 - **Web addresses are now clickable in both apps.** A link starting `http://` or `https://` opens in
   a new tab, and long addresses wrap instead of running off the screen.
   - **Garden:** task descriptions and completion notes, a plant's notes and care reminders, the notes
