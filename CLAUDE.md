@@ -83,7 +83,7 @@ garden-apps/
 │   │   ├── icons/            ← 3 PNGs
 │   │   ├── functions/         ← 2 Netlify functions, both calling Gemini:
 │   │   │                        scan-label.js · lookup-plant.js
-│   │   └── js/               ← 16 ES modules
+│   │   └── js/               ← 17 ES modules
 │   │
 │   └── nursery/              ← Netlify site #2. Same shape, 25 JS modules.
 │
@@ -316,6 +316,11 @@ composite indexes or fight Netlify.
    app works; a preview URL keeps serving the last **successful** build, so a failed deploy still
    loads happily; and for anything visual, serve over HTTP — `file://` blocks cross-directory CSS
    and reports a false "everything is broken".
+8. **End every shipping step with one status line.** Two remotes (`origin` and `public`), two
+   sites, and previews versus production make it easy to lose track of where a change actually
+   is. After opening a PR, merging, deploying or publishing, say where things stand in one line,
+   for example: *PR #43 merged · Garden live (Published) · Nursery skipped, no change · not yet
+   pushed to `public`*. Check each part rather than assuming it.
 
 ---
 
