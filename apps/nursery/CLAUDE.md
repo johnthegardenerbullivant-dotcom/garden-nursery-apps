@@ -37,7 +37,7 @@ Environment variables on the Nursery site:
 | `FIREBASE_APP_ID` | ” |
 | `GARDEN_URL` | **Nursery only.** The companion Garden site's address, written into `app-config.js`. The two links back to Garden hide themselves when it is unset — see below. |
 | `GEMINI_API_KEY` | Google AI Studio key for the label-scan and plant-lookup functions. Set and working. |
-| `GEMINI_MODEL` | Optional; defaults to `gemini-flash-latest` |
+| `GEMINI_MODEL` | Optional. The code falls back to `gemini-3.5-flash`; set `gemini-flash-latest` to always track the newest Flash |
 | `GEMINI_MODEL_RESEARCH` | Not set — research runs on full Flash since the 30s timeout increase. Only needed if that is ever lost. |
 | `LOOKUP_BUDGET_MS` | `27000`, just inside Netlify's 30s function timeout. Code default is 8500. |
 

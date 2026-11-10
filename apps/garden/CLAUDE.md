@@ -34,7 +34,7 @@ Environment variables on the Garden site:
 | `FIREBASE_MESSAGING_SENDER_ID` | ” |
 | `FIREBASE_APP_ID` | ” |
 | `GEMINI_API_KEY` | Google AI Studio key for the label-scan and plant-lookup functions. Set and verified working. |
-| `GEMINI_MODEL` | Optional; defaults to `gemini-flash-latest` |
+| `GEMINI_MODEL` | Optional. The code falls back to `gemini-3.5-flash`; set `gemini-flash-latest` to always track the newest Flash |
 | `GEMINI_MODEL_RESEARCH` | Not set — research runs on full Flash since the 30s timeout increase. Only needed if that is ever lost. |
 | `LOOKUP_BUDGET_MS` | `27000`, just inside Netlify's 30s function timeout. Code default is 8500. |
 

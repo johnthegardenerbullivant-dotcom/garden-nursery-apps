@@ -30,21 +30,26 @@ botanical name, size, or supplier.
 
 Fill these fields:
 - commonName: the everyday name (e.g. "Dog rose", "Lavender").
-- genus: the botanical genus, capitalised (e.g. "Rosa", "Lavandula").
+- genus: the botanical genus, capitalized (e.g. "Rosa", "Lavandula").
 - species: the species epithet, lowercase (e.g. "canina", "angustifolia").
 - subspecies: subspecies epithet only, if printed (lowercase), else "".
 - variety: botanical variety (var.) epithet only, if printed, else "".
 - cultivar: the cultivar name WITHOUT quotation marks (e.g. New Dawn, Hidcote), else "".
 - authority: the naming authority if shown (e.g. "L.", "Mill."), else "".
-- hybrid: true only if the name contains a hybrid mark (×), otherwise false.
-- description: a short description of the plant as printed — flower colour, habit,
+- hybrid: true only if the name contains a hybrid mark, otherwise false. A hybrid mark
+  is the × sign, or a standalone letter x used in its place between the genus and the
+  epithet (e.g. "Abelia x grandiflora").
+- description: a short description of the plant as printed — flower color, habit,
   season of interest, etc. Keep it to what the label says.
 - careNotes: combine any care guidance printed on the label into one readable note —
   aspect / sun or shade, watering, soil type, hardiness, feeding, pruning, position.
-- ultimateHeight: mature height as printed, keeping units and ranges (e.g. "1.5m",
-  "40-60cm"), else "".
-- ultimateWidth: mature spread / width as printed (e.g. "1m", "30cm"), else "".
+- ultimateHeight: mature height as printed, keeping units and ranges (e.g. "3-4 ft",
+  "24-30 in", "1.5m"), else "". Do not convert units.
+- ultimateWidth: mature spread / width as printed (e.g. "2 ft", "1m"), else "".
 - supplier: the nursery or brand name printed on the label, else "".
+
+Write description and careNotes in American English spelling (color, gray, fertilize),
+even when the label uses British spelling. That changes spelling only, never content.
 
 Return the result as JSON matching the provided schema.`;
 
