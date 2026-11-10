@@ -8,6 +8,7 @@ import {
     persistentLocalCache, persistentMultipleTabManager,
     collection, doc,
     setDoc as fsSetDoc, updateDoc as fsUpdateDoc, deleteDoc as fsDeleteDoc,
+    writeBatch,
     getDocs, getDoc,
     query, orderBy, where, limit,
     serverTimestamp
@@ -92,6 +93,30 @@ function addDoc(collectionRef, data) {
 const setDoc    = (...args) => queued(fsSetDoc(...args));
 const updateDoc = (...args) => queued(fsUpdateDoc(...args));
 const deleteDoc = (...args) => queued(fsDeleteDoc(...args));
+
+// Writes that belong together go to the server as one step: all of them
+// happen, or none do. Without this, a connection dropped between two awaits
+// left half a change behind, such as a death recorded with the plant still
+// shown in its area. A batch queues offline exactly as a single write does,
+// and counts as one change on the sync pill.
+//
+//     await commitTogether(b => { b.set(refA, dataA); b.delete(refB); });
+function commitTogether(build) {
+    const batch = writeBatch(db);
+    build(batch);
+    return queued(batch.commit());
+}
+
+// Delete a list of documents together. Put a parent LAST: a list too long for
+// one batch goes in several, and if it stops partway the parent is still
+// there, so the delete can simply be run again.
+const BATCH_MAX = 450;
+async function deleteTogether(refs) {
+    for (let i = 0; i < refs.length; i += BATCH_MAX) {
+        const chunk = refs.slice(i, i + BATCH_MAX);
+        await commitTogether(b => chunk.forEach(r => b.delete(r)));
+    }
+}
 
 /**
  * Initialise Firebase.
@@ -239,27 +264,26 @@ export async function ensureTagCode(plant) {
 
 /** Delete a plant and all its instances and photos */
 export async function deletePlant(id) {
-    // Delete instances
+    // Find the instances and photos first
     const instancesSnap = await getDocs(
         query(collection(db, 'instances'), where('plantId', '==', id))
     );
-    for (const d of instancesSnap.docs) {
-        await deleteDoc(d.ref);
-    }
-    // Delete photos — Storage file first, then Firestore metadata document
     const photosSnap = await getDocs(
         query(collection(db, 'photos'), where('plantId', '==', id))
     );
+    // The records go together, the plant last.
+    await deleteTogether([
+        ...instancesSnap.docs.map(d => d.ref),
+        ...photosSnap.docs.map(d => d.ref),
+        doc(db, 'plants', id),
+    ]);
+    // Then the photo files. Storage has no offline queue and cannot join a
+    // batch, so these are not waited for: a file that cannot be removed now is
+    // left behind in Storage, where nothing points at it any more.
     for (const d of photosSnap.docs) {
-        // Try to delete from storage
-        try {
-            const storageRef = ref(storage, d.data().storagePath);
-            await deleteObject(storageRef);
-        } catch (_) { /* ignore if already gone */ }
-        await deleteDoc(d.ref);
+        const path = d.data().storagePath;
+        if (path) deleteObject(ref(storage, path)).catch(() => { /* already gone, or offline */ });
     }
-    // Delete the plant itself
-    await deleteDoc(doc(db, 'plants', id));
 }
 
 /** How many Nursery batches link to a plant, for the delete warning. Deleting
@@ -311,17 +335,15 @@ export async function deleteArea(id) {
     const instancesSnap = await getDocs(
         query(collection(db, 'instances'), where('areaId', '==', id))
     );
-    for (const d of instancesSnap.docs) {
-        await deleteDoc(d.ref);
-    }
     // Also remove any task assignments scoped to this area
     const assignmentsSnap = await getDocs(
         query(collection(db, 'taskAssignments'), where('areaId', '==', id))
     );
-    for (const d of assignmentsSnap.docs) {
-        await deleteDoc(d.ref);
-    }
-    await deleteDoc(doc(db, 'areas', id));
+    await deleteTogether([
+        ...instancesSnap.docs.map(d => d.ref),
+        ...assignmentsSnap.docs.map(d => d.ref),
+        doc(db, 'areas', id),
+    ]);
 }
 
 // =============================================
@@ -390,29 +412,28 @@ export async function getDeceasedForPlant(plantId) {
 }
 
 /**
- * Record a plant death. Creates a deceasedPlants document, then adjusts the
- * source instance: if the whole quantity died the instance is removed,
- * otherwise its quantity is reduced by the number that died.
+ * Record a plant death. Creates a deceasedPlants document and adjusts the
+ * source instance in one step: if the whole quantity died the instance is
+ * removed, otherwise its quantity is reduced by the number that died.
  *
  * @param {object} record   { plantId, plantName, commonName, areaId, areaName,
  *                            quantity, cause, notes, diedDate }
  * @param {object} instance { id, quantity } — the location the death came from
  */
 export async function recordPlantDeath(record, instance) {
-    await addDoc(collection(db, 'deceasedPlants'), {
-        ...record,
-        createdAt: serverTimestamp()
-    });
-
-    if (instance && instance.id) {
-        const had  = instance.quantity || 1;
-        const died = record.quantity   || 1;
-        if (died >= had) {
-            await deleteDoc(doc(db, 'instances', instance.id));
-        } else {
-            await updateDoc(doc(db, 'instances', instance.id), { quantity: had - died });
+    await commitTogether(b => {
+        b.set(doc(collection(db, 'deceasedPlants')), {
+            ...record,
+            createdAt: serverTimestamp()
+        });
+        if (instance && instance.id) {
+            const had  = instance.quantity || 1;
+            const died = record.quantity   || 1;
+            const instanceRef = doc(db, 'instances', instance.id);
+            if (died >= had) b.delete(instanceRef);
+            else             b.update(instanceRef, { quantity: had - died });
         }
-    }
+    });
 }
 
 /** Delete a deceased record (removes the Compost Bin entry — does not replant) */
@@ -439,25 +460,25 @@ export async function getNurseryLocations() {
  * Transfer plants from the garden into the Nursery Management app.
  * Writes a new nursery_batches document (shape compatible with the Nursery
  * schema) and reduces / removes the source garden instance by the quantity
- * moved (mirrors recordPlantDeath). `instance` is { id, quantity }.
+ * moved, in one step (mirrors recordPlantDeath). `instance` is { id, quantity }.
  * Returns the new batch DocumentReference.
  */
 export async function transferToNursery(batchData, instance) {
-    const batchRef = await addDoc(collection(db, 'nursery_batches'), {
-        ...batchData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-    });
-
-    if (instance && instance.id) {
-        const had   = instance.quantity || 1;
-        const moved = batchData.startQty || 1;
-        if (moved >= had) {
-            await deleteDoc(doc(db, 'instances', instance.id));
-        } else {
-            await updateDoc(doc(db, 'instances', instance.id), { quantity: had - moved });
+    const batchRef = doc(collection(db, 'nursery_batches'));
+    await commitTogether(b => {
+        b.set(batchRef, {
+            ...batchData,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+        if (instance && instance.id) {
+            const had   = instance.quantity || 1;
+            const moved = batchData.startQty || 1;
+            const instanceRef = doc(db, 'instances', instance.id);
+            if (moved >= had) b.delete(instanceRef);
+            else              b.update(instanceRef, { quantity: had - moved });
         }
-    }
+    });
     return batchRef;
 }
 
@@ -500,10 +521,7 @@ export async function deleteTask(id) {
     const assignmentsSnap = await getDocs(
         query(collection(db, 'taskAssignments'), where('taskId', '==', id))
     );
-    for (const d of assignmentsSnap.docs) {
-        await deleteDoc(d.ref);
-    }
-    await deleteDoc(doc(db, 'tasks', id));
+    await deleteTogether([...assignmentsSnap.docs.map(d => d.ref), doc(db, 'tasks', id)]);
 }
 
 // =============================================
@@ -556,9 +574,7 @@ export async function deleteTaskAssignmentsForArea(areaId) {
     const snap = await getDocs(
         query(collection(db, 'taskAssignments'), where('areaId', '==', areaId))
     );
-    for (const d of snap.docs) {
-        await deleteDoc(d.ref);
-    }
+    await deleteTogether(snap.docs.map(d => d.ref));
 }
 
 // =============================================
@@ -692,9 +708,10 @@ export async function getPhotosForArea(areaId) {
 
 /** Persist a new display order for a set of photos */
 export async function updatePhotoOrders(orderedIds) {
-    await Promise.all(
-        orderedIds.map((id, idx) => updateDoc(doc(db, 'photos', id), { order: idx }))
-    );
+    if (!orderedIds.length) return;
+    await commitTogether(b => {
+        orderedIds.forEach((id, idx) => b.update(doc(db, 'photos', id), { order: idx }));
+    });
 }
 
 /**
@@ -767,8 +784,7 @@ export async function deleteIrrigationZone(id) {
     const logsSnap = await getDocs(
         query(collection(db, 'irrigationLogs'), where('zoneId', '==', id))
     );
-    for (const d of logsSnap.docs) await deleteDoc(d.ref);
-    await deleteDoc(doc(db, 'irrigationZones', id));
+    await deleteTogether([...logsSnap.docs.map(d => d.ref), doc(db, 'irrigationZones', id)]);
 }
 
 // =============================================

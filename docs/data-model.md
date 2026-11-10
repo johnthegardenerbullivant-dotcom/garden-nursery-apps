@@ -67,8 +67,8 @@ other app's data:
 
 | Function | Location | What it does |
 |---|---|---|
-| `plantOutToGarden()` | `apps/nursery/js/db.js` | Writes a `nursery_outcomes` row, adds to the Garden plant chosen in the form, else the batch's `plantId`, creating a `plants` doc when there is none or it has been deleted; then writes an `instances` row linking plant to area. Returns the resolved `plantId`. |
-| `transferToNursery()` | `apps/garden/js/db.js` | Sends a Garden plant to Nursery as a new batch. `getNurseryLocations()` in the same file reads Nursery's locations so the form can offer a destination. |
+| `plantOutToGarden()` | `apps/nursery/js/db.js` | Writes a `nursery_outcomes` row, adds to the Garden plant chosen in the form, else the batch's `plantId`, creating a `plants` doc when there is none or it has been deleted; then writes an `instances` row linking plant to area. All of it is one batch. Returns the resolved `plantId`. |
+| `transferToNursery()` | `apps/garden/js/db.js` | Sends a Garden plant to Nursery as a new batch, reducing or removing the Garden `instances` row in the same batch. `getNurseryLocations()` in the same file reads Nursery's locations so the form can offer a destination. |
 
 ## The rule that has bitten before
 

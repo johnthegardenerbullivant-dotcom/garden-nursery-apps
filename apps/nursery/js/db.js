@@ -9,6 +9,7 @@ import {
     persistentLocalCache, persistentMultipleTabManager,
     collection, doc,
     setDoc as fsSetDoc, updateDoc as fsUpdateDoc, deleteDoc as fsDeleteDoc,
+    writeBatch,
     getDocs, getDoc,
     query, orderBy, where, limit,
     serverTimestamp
@@ -94,6 +95,30 @@ function addDoc(collectionRef, data) {
 const setDoc    = (...args) => queued(fsSetDoc(...args));
 const updateDoc = (...args) => queued(fsUpdateDoc(...args));
 const deleteDoc = (...args) => queued(fsDeleteDoc(...args));
+
+// Writes that belong together go to the server as one step: all of them
+// happen, or none do. Without this, a connection dropped between two awaits
+// left half a change behind, such as a death recorded with the plant still
+// shown in its area. A batch queues offline exactly as a single write does,
+// and counts as one change on the sync pill.
+//
+//     await commitTogether(b => { b.set(refA, dataA); b.delete(refB); });
+function commitTogether(build) {
+    const batch = writeBatch(db);
+    build(batch);
+    return queued(batch.commit());
+}
+
+// Delete a list of documents together. Put a parent LAST: a list too long for
+// one batch goes in several, and if it stops partway the parent is still
+// there, so the delete can simply be run again.
+const BATCH_MAX = 450;
+async function deleteTogether(refs) {
+    for (let i = 0; i < refs.length; i += BATCH_MAX) {
+        const chunk = refs.slice(i, i + BATCH_MAX);
+        await commitTogether(b => chunk.forEach(r => b.delete(r)));
+    }
+}
 
 export function initFirebase() {
     if (firebaseConfig.apiKey.startsWith('REPLACE_WITH')) return null;
@@ -340,14 +365,14 @@ export async function deleteNurseryBatch(id) {
     const logSnap = await getDocs(
         query(collection(db, 'nursery_logs'), where('batchId', '==', id))
     );
-    for (const d of logSnap.docs) await deleteDoc(d.ref);
-
     const outcomeSnap = await getDocs(
         query(collection(db, 'nursery_outcomes'), where('batchId', '==', id))
     );
-    for (const d of outcomeSnap.docs) await deleteDoc(d.ref);
-
-    return await deleteDoc(doc(db, 'nursery_batches', id));
+    return await deleteTogether([
+        ...logSnap.docs.map(d => d.ref),
+        ...outcomeSnap.docs.map(d => d.ref),
+        doc(db, 'nursery_batches', id),
+    ]);
 }
 
 // =============================================
@@ -533,6 +558,8 @@ export async function getChildBatches(parentBatchId) {
 }
 
 // When planting out, write a Garden Management plant record (if needed) and instance.
+// The outcome, the plant and the instance go to the server as one step, so the
+// Nursery cannot record a planting-out that Garden never received.
 // `gardenPlantId` overrides the batch's link: a plant ID adds to that plant, null
 // creates a new one. Left out, the batch's own link decides.
 export async function plantOutToGarden(batchData, areaId, areaName, quantity, date, notes, { gardenPlantId } = {}) {
@@ -542,21 +569,26 @@ export async function plantOutToGarden(batchData, areaId, areaName, quantity, da
     let plantId = gardenPlantId !== undefined ? gardenPlantId : (batchData.plantId || null);
     if (plantId && !(await gardenPlantExists(plantId))) plantId = null;
 
-    // Write nursery outcome
-    await addNurseryOutcome({
-        batchId:   batchData.id,
-        date,
-        type:      'planted-out',
-        quantity,
-        areaId,
-        areaName,
-        notes
-    });
+    // No linked Garden plant (a gift or purchase, or the link was dead) — one
+    // is created below. Its id is made here, on the device.
+    const newPlantRef = plantId ? null : doc(collection(db, 'plants'));
+    if (newPlantRef) plantId = newPlantRef.id;
 
-    // Resolve or create the Garden Management plant record
-    if (!plantId) {
-        // No linked Garden plant (a gift or purchase, or the link was dead) — create one now
-        const plantRef = await addDoc(collection(db, 'plants'), {
+    await commitTogether(b => {
+        // The nursery outcome
+        b.set(doc(collection(db, 'nursery_outcomes')), {
+            batchId:   batchData.id,
+            date,
+            type:      'planted-out',
+            quantity,
+            areaId,
+            areaName,
+            notes,
+            createdAt: serverTimestamp()
+        });
+
+        // The Garden Management plant record, if there was none
+        if (newPlantRef) b.set(newPlantRef, {
             commonName:    batchData.commonName   || batchData.plantName || '',
             genus:         batchData.genus         || '',
             species:       batchData.species        || '',
@@ -574,17 +606,16 @@ export async function plantOutToGarden(batchData, areaId, areaName, quantity, da
             photoOrder:    [],
             createdAt:     serverTimestamp(),
         });
-        plantId = plantRef.id;
-    }
 
-    // Write the instance linking the plant to the area
-    await addDoc(collection(db, 'instances'), {
-        plantId,
-        areaId,
-        quantity,
-        datePlanted: date,
-        notes:       `From nursery batch${notes ? ': ' + notes : ''}`,
-        createdAt:   serverTimestamp()
+        // The instance linking the plant to the area
+        b.set(doc(collection(db, 'instances')), {
+            plantId,
+            areaId,
+            quantity,
+            datePlanted: date,
+            notes:       `From nursery batch${notes ? ': ' + notes : ''}`,
+            createdAt:   serverTimestamp()
+        });
     });
 
     // Return the resolved plantId so the caller can store it back on the batch if it was newly created

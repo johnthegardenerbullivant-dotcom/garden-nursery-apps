@@ -23,6 +23,22 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 
 ---
 
+## 2026-11-10
+
+**Action required: none**
+
+- **Saves that change several records now happen completely or not at all.** Recording a plant
+  death, transferring a plant to the nursery and planting a batch out each used to make two or
+  three separate changes, and a connection dropped between them left half behind: a death recorded
+  with the plant still shown in its area, or a planting-out the garden never received. Each is now
+  a single step.
+- **Deleting a plant, area, task, irrigation zone or batch removes it and everything under it
+  together**, and is quicker. Before, a delete that stopped partway left the parent with some of
+  its records gone.
+- **Deleting a plant no longer waits for its photo files to be removed.** The records go first; the
+  files follow in the background. If the device is offline at that moment the files stay behind in
+  Storage, unused.
+
 ## 2026-11-09 — works offline
 
 **Action required: none.** Each device builds its offline copy the first time it opens the app
