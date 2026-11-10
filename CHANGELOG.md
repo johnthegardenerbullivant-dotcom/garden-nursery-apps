@@ -23,6 +23,26 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 
 ---
 
+## 2026-11-09
+
+**Action required: none**
+
+- **The phone's Back button now goes back one screen** in both apps, instead of leaving the app.
+  The same goes for the browser's Back and Forward buttons on a laptop. With a form open, Back
+  closes the form. On a top-level screen, Back leaves as before.
+- **A half-filled form asks before it is thrown away.** Tapping the dimmed area above a form, the ✕,
+  or Back used to discard whatever had been typed. Each now asks first if anything was entered.
+  *Cancel* and *Save* behave as before.
+- **Save and Cancel stay at the bottom of the screen** on every form, so a long form no longer has
+  to be scrolled to its end to save.
+- **A tap visibly registers.** The screen dims and a bar runs under the header while the next
+  screen loads. A screen that fails to load now says so and offers *Retry*.
+- **Garden opens on Tasks**, as intended since April; it had been opening on Overview. The count on
+  the Tasks tab is right from launch.
+- **Fixed:** two quick taps on different tabs could leave the wrong screen showing; AI lookup notes
+  written in the evening were stamped with the next day's date; and two places showed text without
+  escaping it.
+
 ## 2026-09-14
 
 **Action required: none**

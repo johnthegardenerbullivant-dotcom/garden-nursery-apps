@@ -484,6 +484,19 @@
     margin-top: 20px;
     flex-wrap: wrap;
 }
+/* Inside a modal the buttons stick to the bottom edge, so Save is in reach
+   without scrolling to the end of a form that runs to three or four phone
+   screens. The negative margins cancel .modal-body's padding so the bar spans
+   the full width and sits flush with the bottom; the padding puts it back. */
+.modal .form-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin: 20px -20px -24px;
+    padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: var(--white);
+    border-top: 1px solid var(--grey-200);
+}
 .form-section-label {
     font-size: 0.78rem;
     font-weight: 700;

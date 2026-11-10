@@ -107,7 +107,10 @@ function assembleNote(research, prose) {
 
     if (!blocks.length) return '';
 
-    const stamp = new Date().toISOString().slice(0, 10);
+    // Local date, not UTC: toISOString() reads tomorrow from late afternoon
+    // onwards in the Americas.
+    const now   = new Date();
+    const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const how = research.grounded ? 'AI lookup with web search' : 'AI lookup (NOT web-grounded)';
     blocks.push(`[${how}, ${stamp}. Unverified details were omitted. Please check before relying on it.]`);
 

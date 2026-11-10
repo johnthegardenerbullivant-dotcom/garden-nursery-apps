@@ -202,6 +202,34 @@ body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* Set on .app-main by route() in main.js while the next screen's data is on
+   its way. The outgoing screen dims and stops taking taps, and a bar runs
+   under the header. Both wait 120ms, so a screen that arrives at once does
+   not flicker. */
+.app-main.is-loading {
+    pointer-events: none;
+    animation: screenDim 0.2s ease 0.12s both;
+}
+.app-main.is-loading::before {
+    content: '';
+    position: fixed;
+    top: var(--header-h);
+    left: 0;
+    width: 40%;
+    height: 3px;
+    background: var(--green-500);
+    z-index: 90;
+    animation: loadingBar 1.1s ease-in-out 0.12s infinite both;
+}
+@keyframes screenDim  { from { opacity: 1; } to { opacity: 0.45; } }
+@keyframes loadingBar {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(250%); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .app-main.is-loading::before { animation: none; width: 100%; }
+}
+
 /* --- Bottom Navigation --- */
 .bottom-nav {
     position: fixed;

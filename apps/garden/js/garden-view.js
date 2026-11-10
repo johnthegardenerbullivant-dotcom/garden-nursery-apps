@@ -10,7 +10,7 @@ import {
     formatBotanicalName, escHtml, todayStr, isOverdue
 } from './db.js';
 import { setLoading, navigate, showToast } from './ui-utils.js';
-import { buildTaskRow, attachTaskHandlers } from './tasks-view.js';
+import { buildTaskRow, attachTaskHandlers, updateNavBadge } from './tasks-view.js';
 import { getIrrigationBannerInfo }          from './irrigation-view.js';
 import { causeMeta }                        from './compost-view.js';
 
@@ -94,6 +94,10 @@ export async function renderGardenView(container, headerActionEl, backBtn) {
         const tasks = await getTasks();
         taskMap = Object.fromEntries(tasks.map(t => [t.id, t]));
     } catch (_) {}
+
+    // Keep the count on the Tasks tab right when the app opens here rather than
+    // on Tasks. Same rule as the Tasks page: active, and its task still exists.
+    if (Object.keys(taskMap).length) updateNavBadge(activeTasks.filter(t => taskMap[t.taskId]).length);
 
     const plantMap = Object.fromEntries(plants.map(p => [p.id, p]));
     const areaNameMap = Object.fromEntries(areas.map(a => [a.id, a.name]));

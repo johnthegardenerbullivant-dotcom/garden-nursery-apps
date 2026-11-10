@@ -813,8 +813,7 @@ export function firstOccurrenceFromToday(recurrence) {
  */
 export async function createNextRecurringOccurrence(assignment, task) {
     if (!task?.recurrence || task.recurrence.type === 'none') return;
-    const fromDate = assignment.occurrenceDate || assignment.dueDate
-                     || new Date().toISOString().slice(0, 10);
+    const fromDate = assignment.occurrenceDate || assignment.dueDate || todayStr();
     const nextDate = nextOccurrenceDate(task.recurrence, fromDate);
     return addTaskAssignment({
         taskId:         assignment.taskId,
