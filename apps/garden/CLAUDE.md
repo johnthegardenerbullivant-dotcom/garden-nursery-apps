@@ -79,7 +79,7 @@ navigation. It ships with the site but nothing in `js/` depends on it.
 | `ui-utils.js` | Modal, toast, carousel, drag-sort, date picker | `navigate`, `goBack`, `showModal`, `hideModal`, `isModalOpen`, `requestCloseModal` (closes, asking first if the form was touched — for the overlay, the ✕ and Back; Cancel and Save use `hideModal`), `showToast`, `initPhotoCarousel`, `initPhotoDragSort`, `datePicker`, `initDatePickers` |
 | `auth-view.js` | Login / access-denied overlay | `showLoginOverlay`, `hideLoginOverlay`, `showAccessDenied` |
 | `garden-view.js` | Overview dashboard | `renderGardenView` |
-| `plants-view.js` | Plants list, plant detail, plant form | `renderPlantsList`, `renderPlantDetail`, `clearPlantSearch`, `showPlantForm`, `showAddPlantToAreaModal`, `showDeathModal` |
+| `plants-view.js` | Plants list (drawn 60 cards at a time by an `IntersectionObserver`, one delegated click listener, A–Z strip, filters; `listState` holds search, filters and depth so Back restores them), plant detail, plant form | `renderPlantsList`, `renderPlantDetail`, `clearPlantSearch`, `showPlantForm`, `showAddPlantToAreaModal`, `showDeathModal` |
 | `areas-view.js` | Areas list, area detail (plants / tasks / gallery tabs) | `renderAreasList`, `renderAreaDetail`, `showAreaForm` |
 | `walkround-view.js` | Walk-round: inventory one area on a phone — tick off each plant, record what happened to the missing, add the unlisted. Route `#area-walk/<areaId>`. | `renderWalkRound` |
 | `tasks-view.js` | Tasks: recurring, by-area, by-status | `renderTasksView`, `renderAreaTasksSection`, `buildTaskRow`, `attachTaskHandlers`, `showTaskForm`, `showAssignExistingTaskModal`, `updateNavBadge`, `GENERAL_AREA_ID` |
