@@ -298,8 +298,18 @@ export function initPhotoDragSort(gridEl, onOrderChange) {
 //  Renders a text input with auto-hyphen formatting + a calendar button.
 //  Call initDatePickers(container) after the HTML is in the DOM.
 // =============================================
+// On a phone or tablet the system's own date wheel is quicker than typing
+// digits and cannot produce an invalid date, so there the field is a plain
+// <input type="date">. A laptop keeps the typed field with its calendar button.
+// Both give the form the same thing: '' or a YYYY-MM-DD string under the same
+// id and name, so no caller needs to know which it got.
+const TOUCH_FIRST = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+
 export function datePicker(id, name, value = '') {
     const safe = (value || '').replace(/"/g, '&quot;');
+    if (TOUCH_FIRST) {
+        return `<input class="form-input date-native" type="date" id="${id}" name="${name}" value="${safe}">`;
+    }
     return `
         <div class="date-picker-wrap">
             <input class="form-input date-text" type="text"

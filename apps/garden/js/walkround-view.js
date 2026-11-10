@@ -27,7 +27,7 @@
 import {
     getArea, updateArea, getAreas,
     getInstancesInArea, updateInstance, deleteInstance,
-    getPlants, formatBotanicalName, escHtml
+    getPlants, formatBotanicalName, escHtml, fmtDate
 } from './db.js';
 import { showModal, hideModal, showToast, setLoading, goBack } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
@@ -305,7 +305,7 @@ export async function renderWalkRound(container, headerActionEl, backBtn, areaId
         const meta    = [
             `${qty} plant${qty !== 1 ? 's' : ''}`,
             plant?.tagCode   ? `🏷️ ${escHtml(plant.tagCode)}` : null,
-            inst.datePlanted ? `planted ${escHtml(inst.datePlanted)}` : null,
+            inst.datePlanted ? `planted ${escHtml(fmtDate(inst.datePlanted))}` : null,
         ].filter(Boolean).join(' · ');
 
         const checked = isChecked(inst);

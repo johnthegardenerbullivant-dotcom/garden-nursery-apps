@@ -292,3 +292,8 @@ body {
     transition: transform var(--transition);
 }
 .nav-btn.active .nav-icon { transform: scale(1.1); }
+
+/* --- Tap targets, 2026-11 --- */
+/* Back was 32px high, under the 44px a finger needs. The header is 60px, so
+   there is room. */
+.back-btn { min-height: 44px; }

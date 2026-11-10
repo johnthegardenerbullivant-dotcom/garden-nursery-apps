@@ -899,3 +899,24 @@ code {
 .scan-filled {
     animation: scanFilledFlash 2.2s ease;
 }
+
+/* =============================================
+   Tap targets and input text size, 2026-11
+   ============================================= */
+/* Text a person types into is 16px. Anything smaller makes iPhone Safari zoom
+   the whole page in when the field is tapped, and it is easier to read
+   outdoors on any phone. The form fields are set in each app's styles.css. */
+.search-input { font-size: 1rem; }
+
+/* Small round ✕ buttons keep their size and gain an invisible margin that
+   also takes the tap: about 44px across in each case. */
+.search-clear::after,
+.photo-delete::after {
+    content: '';
+    position: absolute;
+    inset: -13px;
+}
+.photo-delete::after { inset: -9px; }
+
+/* Admin, per user. A slip here changes someone's access. */
+.um-role-select { min-height: 44px; font-size: 1rem; }

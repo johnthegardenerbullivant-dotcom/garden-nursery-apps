@@ -1339,7 +1339,7 @@ select.plant-area-filter.active option { color: var(--grey-800); background: var
 }
 .nav-btn {
     padding: 8px 2px;
-    font-size: 0.65rem;
+    font-size: 0.72rem;   /* was 0.65rem (10.4px): small for reading outdoors */
 }
 
 /* =============================================
@@ -3010,3 +3010,37 @@ select.plant-area-filter.active option { color: var(--grey-800); background: var
 /* Three footer buttons must fit a 320px phone: trim padding, never wrap a label */
 .wr-footer-buttons      { gap: 6px; }
 .wr-footer-buttons .btn { padding-left: 6px; padding-right: 6px; white-space: nowrap; font-size: 0.88rem; }
+
+/* =============================================
+   Tap targets and input text size, 2026-11
+   ============================================= */
+/* Everything here was under the 44px a finger needs. The ones used most were
+   the smallest: the task status pills were 26px high with Delete just below.
+   Where a control sits in a tight row and growing it would break the layout,
+   it keeps its size and an invisible ::after takes the tap instead. */
+.btn-sm,
+.filter-chip,
+.view-toggle-btn,
+.task-status-btn,
+.irr-action-chip,
+.irr-tab-btn,
+.overview-area-chip,
+.blog-tag-filter-btn,
+.suggestion-label { min-height: 44px; }
+.irr-nav-arrow { width: 44px; height: 44px; }
+.irr-log-auto-btn { min-width: 44px; }
+/* A <select> counts as a text field for the iPhone zoom, chip or not. */
+.plant-filters select.plant-area-filter { font-size: 1rem; }
+
+.overview-section-link,
+.suggestion-delete { position: relative; }
+.overview-section-link::after,
+.suggestion-delete::after {
+    content: '';
+    position: absolute;
+    inset: -13px;
+}
+.overview-section-link::after { inset: -12px -4px; }
+
+/* 16px, so iPhone Safari does not zoom the page when a field is tapped. */
+.form-input, .form-textarea, .form-select, .plant-lookup-text { font-size: 1rem; }

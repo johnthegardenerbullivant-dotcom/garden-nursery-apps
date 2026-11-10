@@ -7,7 +7,7 @@ import {
     getInstancesInArea, getPlants,
     getPhotosForArea, uploadAreaPhoto, deletePhoto, updatePhotoOrders, getFirstPhotoForPlants,
     getTaskAssignments,
-    formatBotanicalName, escHtml, linkify, ensureTagCode
+    formatBotanicalName, escHtml, linkify, ensureTagCode, fmtDate
 } from './db.js';
 import { showModal, hideModal, showToast, setLoading, navigate, initPhotoCarousel, initPhotoDragSort } from './ui-utils.js';
 import { renderAreaTasksSection } from './tasks-view.js';
@@ -202,7 +202,7 @@ export async function renderAreaDetail(container, headerActionEl, backBtn, areaI
                 const commonName = plant?.commonName && formatBotanicalName(plant) ? escHtml(plant.commonName) : '';
                 const details   = [
                     inst.quantity > 1 ? `${inst.quantity} plants` : null,
-                    inst.datePlanted  ? `Planted ${inst.datePlanted}` : null,
+                    inst.datePlanted  ? `Planted ${escHtml(fmtDate(inst.datePlanted))}` : null,
                     inst.lastSeen     ? `Seen ${inst.lastSeen}` : null,
                     inst.notFoundOn   ? `⚠ Not found ${inst.notFoundOn}` : null,
                     inst.notes || null,

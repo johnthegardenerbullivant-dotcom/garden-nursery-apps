@@ -9,7 +9,7 @@ import {
     getPhotosForPlant, uploadPhoto, deletePhoto, updatePhotoOrders, getPlantIdsWithPhotos,
     getDeceasedPlants, recordPlantDeath,
     getNurseryLocations, transferToNursery, countNurseryBatchesForPlant,
-    formatBotanicalName, escHtml, linkify, ensureTagCode
+    formatBotanicalName, escHtml, linkify, ensureTagCode, fmtDate
 } from './db.js';
 import { showModal, hideModal, showToast, setLoading, navigate, goBack, initPhotoCarousel, datePicker, initDatePickers, initPhotoDragSort } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
@@ -318,7 +318,7 @@ function plantCard(plant, hasPhotos = false, areaNames = []) {
                 ${plant.commonName ? `<div class="card-subtitle">${escHtml(plant.commonName)}</div>` : ''}
                 <div class="card-meta">
                     ${plant.genus ? `<button class="card-badge genus-badge" data-genus="${escHtml(plant.genus)}" title="Show all ${escHtml(plant.genus)}">${escHtml(plant.genus)}</button>` : ''}
-                    ${plant.dateAcquired ? `<span class="card-badge" style="background:var(--grey-100);color:var(--grey-600);">📅 ${escHtml(plant.dateAcquired)}</span>` : ''}
+                    ${plant.dateAcquired ? `<span class="card-badge" style="background:var(--grey-100);color:var(--grey-600);">📅 ${escHtml(fmtDate(plant.dateAcquired))}</span>` : ''}
                     ${hasPhotos ? `<span class="card-badge" style="background:var(--grey-100);color:var(--grey-600);" title="Has photos">📷</span>` : ''}
                 </div>
                 ${locationLine}
@@ -542,7 +542,7 @@ function buildPlantDetailHTML(plant, instances, photos) {
         ['Variety',      plant.variety],
         ['Authority',    plant.authority],
         ['Common name',  plant.commonName],
-        ['Date acquired', plant.dateAcquired],
+        ['Date acquired', fmtDate(plant.dateAcquired)],
         ['Height at maturity', plant.height],
         ['Width at maturity', plant.width],
     ].filter(([, v]) => v);
@@ -670,7 +670,7 @@ function instanceRow(inst) {
     const areaName = inst.area ? escHtml(inst.area.name) : 'Unknown area';
     const details  = [
         inst.quantity > 1 ? `${inst.quantity} plants` : null,
-        inst.datePlanted ? `Planted ${inst.datePlanted}` : null,
+        inst.datePlanted ? `Planted ${escHtml(fmtDate(inst.datePlanted))}` : null,
         inst.lastSeen    ? `Seen ${escHtml(inst.lastSeen)}` : null,
         inst.notFoundOn  ? `⚠ Not found ${escHtml(inst.notFoundOn)}` : null,
         inst.notes ? linkify(inst.notes) : null,

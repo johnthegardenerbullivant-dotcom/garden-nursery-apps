@@ -1351,6 +1351,9 @@ const MONTHS_FULL  = ['January','February','March','April','May','June',
 /** Format a YYYY-MM-DD string as "14 Sep 26". The default for lists and rows. */
 export function fmtDate(dateStr) {
     if (!dateStr) return '';
+    // Anything that is not a full YYYY-MM-DD (an imported "2019", say) is
+    // shown as it was entered instead of as "undefined undefined".
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return String(dateStr);
     const [y, m, d] = dateStr.split('-').map(Number);
     return `${d} ${MONTHS_SHORT[m - 1]} ${String(y).slice(2)}`;
 }
