@@ -192,6 +192,28 @@ any single write. `deleteTogether()` is the same for a parent and its children, 
 function that makes two or more writes for one user action should use one of them rather than
 awaiting writes in sequence. A batch is refused whole if the rules refuse any one write in it.
 
+### Remembered collections
+
+Added 2026-11-10. `whole(name, fetch)` in each `db.js` keeps a whole-collection read in memory, and
+the plain getters (`getPlants()`, `getAreas()`, `getNurseryBatches()` …) go through it. A copy is
+dropped when this app writes to that collection, when the page returns to the foreground, when the
+connection returns, and after two minutes.
+
+- **Dropping on write is automatic**, because the shadowed `addDoc`/`setDoc`/`updateDoc`/`deleteDoc`
+  and `commitTogether()` do it from the reference they are handed. A new write function needs
+  nothing special.
+- **A new whole-collection getter should go through `whole()`**, keyed by the collection's real
+  name, or writes will not drop it.
+- **Only whole collections are kept.** One document, or one plant's or one batch's records, is read
+  from Firestore each time. Several of those feed a read-then-write (`recomputeBatchState()`), where
+  a stale read would be written back.
+- **Callers get shallow copies**, so a view may sort or change what it is given.
+- **A change made in the other app or on another device shows after one of the drops above**, not
+  on the next tap. That is the trade.
+
+Garden also has `countOf()`, which asks the server for a count and falls back to counting the
+device's copy when offline.
+
 Two things to keep in mind when changing a view:
 
 - **Offline, a collection this device has never fetched reads as empty, not as an error.** A screen

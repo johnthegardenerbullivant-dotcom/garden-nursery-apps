@@ -90,11 +90,15 @@ function queued(serverPromise) {
 // with setDoc.
 function addDoc(collectionRef, data) {
     const ref = doc(collectionRef);
+    forget(collectionRef.id);
     return queued(fsSetDoc(ref, data)).then(() => ref);
 }
-const setDoc    = (...args) => queued(fsSetDoc(...args));
-const updateDoc = (...args) => queued(fsUpdateDoc(...args));
-const deleteDoc = (...args) => queued(fsDeleteDoc(...args));
+// Each also drops the remembered copy of the collection it writes to (see
+// "Remembered collections" below). ref.parent.id is the collection's name.
+const touched   = ref => { forget(ref.parent.id); return ref; };
+const setDoc    = (ref, ...rest) => queued(fsSetDoc(touched(ref), ...rest));
+const updateDoc = (ref, ...rest) => queued(fsUpdateDoc(touched(ref), ...rest));
+const deleteDoc = (ref, ...rest) => queued(fsDeleteDoc(touched(ref), ...rest));
 
 // Writes that belong together go to the server as one step: all of them
 // happen, or none do. Without this, a connection dropped between two awaits
@@ -105,7 +109,11 @@ const deleteDoc = (...args) => queued(fsDeleteDoc(...args));
 //     await commitTogether(b => { b.set(refA, dataA); b.delete(refB); });
 function commitTogether(build) {
     const batch = writeBatch(db);
-    build(batch);
+    build({
+        set:    (ref, ...rest) => batch.set(touched(ref), ...rest),
+        update: (ref, ...rest) => batch.update(touched(ref), ...rest),
+        delete: ref            => batch.delete(touched(ref)),
+    });
     return queued(batch.commit());
 }
 
@@ -119,6 +127,61 @@ async function deleteTogether(refs) {
         await commitTogether(b => chunk.forEach(r => b.delete(r)));
     }
 }
+
+// =============================================
+//  Remembered collections
+// =============================================
+// Added 2026-11. Every screen used to download whole collections again each
+// time it drew, so tapping a filter chip on Tasks fetched five collections to
+// re-filter what was already on the phone. A whole-collection read is now
+// kept in memory and handed back until one of these happens:
+//
+//   - this app writes to that collection (the write functions above do it,
+//     so a new write function needs nothing special);
+//   - the app comes back to the foreground, or the connection returns;
+//   - two minutes pass.
+//
+// The last two are for changes made somewhere else: the other app, or another
+// person's phone. Until one of them happens such a change is not seen, which
+// is the price of not asking the server on every tap.
+//
+// Only whole-collection reads are kept. A read of one document, or of one
+// plant's or one batch's records, still asks Firestore each time: those are
+// small, and several of them feed a calculation that is then written back.
+//
+// Callers get copies, so a view can sort or change what it is given.
+const REMEMBER_MS = 2 * 60 * 1000;
+const remembered  = new Map();     // collection name -> { at, list, promise }
+
+function forget(...names) {
+    if (names.length) names.forEach(n => remembered.delete(n));
+    else remembered.clear();
+}
+const copies = list => list.map(item => ({ ...item }));
+function current(name) {
+    const entry = remembered.get(name);
+    return entry && Date.now() - entry.at < REMEMBER_MS ? entry : null;
+}
+/** The whole collection, from memory if it is there, else from fetch(). */
+async function whole(name, fetch) {
+    let entry = current(name);
+    if (!entry) {
+        entry = { at: Date.now(), list: null };
+        // A write that lands while this is in flight removes the entry, so the
+        // answer goes to whoever is already waiting and is not kept.
+        entry.promise = fetch().then(
+            list => { entry.list = list; return list; },
+            err  => { if (remembered.get(name) === entry) remembered.delete(name); throw err; }
+        );
+        remembered.set(name, entry);
+    }
+    return copies(await entry.promise);
+}
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') forget();
+});
+window.addEventListener('online', () => forget());
+
 
 export function initFirebase() {
     if (firebaseConfig.apiKey.startsWith('REPLACE_WITH')) return null;
@@ -195,7 +258,8 @@ export function linkify(str) {
  *                    role, status, blocked, lastLoginAt, createdAt }
  * Requires admin read access on the users collection (see firestore.rules).
  */
-export async function getUsers() {
+export function getUsers() { return whole('users', fetchUsers); }
+async function fetchUsers() {
     const snap = await getDocs(collection(db, 'users'));
     return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
 }
@@ -232,11 +296,9 @@ export async function setUserBlocked(uid, blocked) {
  * Used to drive the pending-users badge on the Admin nav tab.
  */
 export async function getPendingUserCount() {
-    const snap = await getDocs(collection(db, 'users'));
-    return snap.docs.filter(d => {
-        const data = d.data();
-        return !data.role && !data.blocked;
-    }).length;
+    // The users list is a handful of documents and the Admin panel wants it
+    // anyway, so this shares the one remembered read with getUsers().
+    return (await getUsers()).filter(u => !u.role && !u.blocked).length;
 }
 
 /** Format a YYYY-MM-DD string as "14 May 26" */
@@ -288,7 +350,8 @@ export function formatBotanicalName(o) {
 //  PROPAGATION LOCATIONS  (nursery_locations)
 // =============================================
 
-export async function getNurseryLocations() {
+export function getNurseryLocations() { return whole('nursery_locations', fetchNurseryLocations); }
+async function fetchNurseryLocations() {
     const q = query(collection(db, 'nursery_locations'), orderBy('name'));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -322,7 +385,8 @@ export async function deleteNurseryLocation(id) {
 //  PROPAGATION BATCHES  (nursery_batches)
 // =============================================
 
-export async function getNurseryBatches() {
+export function getNurseryBatches() { return whole('nursery_batches', fetchNurseryBatches); }
+async function fetchNurseryBatches() {
     const q = query(collection(db, 'nursery_batches'), orderBy('startDate', 'desc'));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -379,7 +443,8 @@ export async function deleteNurseryBatch(id) {
 //  PROPAGATION LOGS  (nursery_logs)
 // =============================================
 
-export async function getAllNurseryLogs() {
+export function getAllNurseryLogs() { return whole('nursery_logs', fetchAllNurseryLogs); }
+async function fetchAllNurseryLogs() {
     const snap = await getDocs(collection(db, 'nursery_logs'));
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
@@ -636,14 +701,16 @@ export async function gardenPlantExists(plantId) {
 }
 
 /** Read the Garden Management plants list for the plant picker */
-export async function getGardenPlants() {
+export function getGardenPlants() { return whole('plants', fetchGardenPlants); }
+async function fetchGardenPlants() {
     const q = query(collection(db, 'plants'), orderBy('genus'));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
 /** Read the Garden Management areas list for the "planted out" picker */
-export async function getGardenAreas() {
+export function getGardenAreas() { return whole('areas', fetchGardenAreas); }
+async function fetchGardenAreas() {
     const q = query(collection(db, 'areas'), orderBy('name'));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -771,7 +838,8 @@ export const LOSS_REASON_LABELS = {
 //  WISHLIST / IDEAS  (nursery_wishlist)
 // =============================================
 
-export async function getNurseryWishlist() {
+export function getNurseryWishlist() { return whole('nursery_wishlist', fetchNurseryWishlist); }
+async function fetchNurseryWishlist() {
     const snap = await getDocs(collection(db, 'nursery_wishlist'));
     const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     // Sort: by priority (high first), then createdAt desc
@@ -809,7 +877,8 @@ export async function deleteNurseryWishlistItem(id) {
 //  PROPAGATION PLANS  (nursery_plans)
 // =============================================
 
-export async function getNurseryPlans() {
+export function getNurseryPlans() { return whole('nursery_plans', fetchNurseryPlans); }
+async function fetchNurseryPlans() {
     const snap = await getDocs(collection(db, 'nursery_plans'));
     const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     // Sort: active ideas first (not done), then by createdAt desc
