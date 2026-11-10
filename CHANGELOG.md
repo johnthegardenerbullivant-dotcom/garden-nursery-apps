@@ -35,6 +35,15 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 - **Deleting a plant, area, task, irrigation zone or batch removes it and everything under it
   together**, and is quicker. Before, a delete that stopped partway left the parent with some of
   its records gone.
+- **Screens stop downloading the same lists over and over.** Each list (plants, areas, tasks,
+  batches and so on) is kept in memory after its first download, so tapping a filter or the
+  By Area / By Status switch on Tasks redraws at once instead of fetching five lists again.
+- **A change made somewhere else can take up to two minutes to appear**, where before it appeared on
+  the next tap. "Somewhere else" means the other app or another person's device. Changes made in
+  the app you are using still show at once, and returning to the app from another tab or app
+  fetches fresh data.
+- **The Admin panel's record counts and the "has nursery batches" check** ask the server for the
+  number alone instead of downloading every record.
 - **Deleting a plant no longer waits for its photo files to be removed.** The records go first; the
   files follow in the background. If the device is offline at that moment the files stay behind in
   Storage, unused.

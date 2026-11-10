@@ -9,7 +9,7 @@ import {
     collection, doc,
     setDoc as fsSetDoc, updateDoc as fsUpdateDoc, deleteDoc as fsDeleteDoc,
     writeBatch,
-    getDocs, getDoc,
+    getDocs, getDoc, getCountFromServer,
     query, orderBy, where, limit,
     serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
@@ -88,11 +88,15 @@ function queued(serverPromise) {
 // with setDoc.
 function addDoc(collectionRef, data) {
     const ref = doc(collectionRef);
+    forget(collectionRef.id);
     return queued(fsSetDoc(ref, data)).then(() => ref);
 }
-const setDoc    = (...args) => queued(fsSetDoc(...args));
-const updateDoc = (...args) => queued(fsUpdateDoc(...args));
-const deleteDoc = (...args) => queued(fsDeleteDoc(...args));
+// Each also drops the remembered copy of the collection it writes to (see
+// "Remembered collections" below). ref.parent.id is the collection's name.
+const touched   = ref => { forget(ref.parent.id); return ref; };
+const setDoc    = (ref, ...rest) => queued(fsSetDoc(touched(ref), ...rest));
+const updateDoc = (ref, ...rest) => queued(fsUpdateDoc(touched(ref), ...rest));
+const deleteDoc = (ref, ...rest) => queued(fsDeleteDoc(touched(ref), ...rest));
 
 // Writes that belong together go to the server as one step: all of them
 // happen, or none do. Without this, a connection dropped between two awaits
@@ -103,7 +107,11 @@ const deleteDoc = (...args) => queued(fsDeleteDoc(...args));
 //     await commitTogether(b => { b.set(refA, dataA); b.delete(refB); });
 function commitTogether(build) {
     const batch = writeBatch(db);
-    build(batch);
+    build({
+        set:    (ref, ...rest) => batch.set(touched(ref), ...rest),
+        update: (ref, ...rest) => batch.update(touched(ref), ...rest),
+        delete: ref            => batch.delete(touched(ref)),
+    });
     return queued(batch.commit());
 }
 
@@ -115,6 +123,75 @@ async function deleteTogether(refs) {
     for (let i = 0; i < refs.length; i += BATCH_MAX) {
         const chunk = refs.slice(i, i + BATCH_MAX);
         await commitTogether(b => chunk.forEach(r => b.delete(r)));
+    }
+}
+
+// =============================================
+//  Remembered collections
+// =============================================
+// Added 2026-11. Every screen used to download whole collections again each
+// time it drew, so tapping a filter chip on Tasks fetched five collections to
+// re-filter what was already on the phone. A whole-collection read is now
+// kept in memory and handed back until one of these happens:
+//
+//   - this app writes to that collection (the write functions above do it,
+//     so a new write function needs nothing special);
+//   - the app comes back to the foreground, or the connection returns;
+//   - two minutes pass.
+//
+// The last two are for changes made somewhere else: the other app, or another
+// person's phone. Until one of them happens such a change is not seen, which
+// is the price of not asking the server on every tap.
+//
+// Only whole-collection reads are kept. A read of one document, or of one
+// plant's or one batch's records, still asks Firestore each time: those are
+// small, and several of them feed a calculation that is then written back.
+//
+// Callers get copies, so a view can sort or change what it is given.
+const REMEMBER_MS = 2 * 60 * 1000;
+const remembered  = new Map();     // collection name -> { at, list, promise }
+
+function forget(...names) {
+    if (names.length) names.forEach(n => remembered.delete(n));
+    else remembered.clear();
+}
+const copies = list => list.map(item => ({ ...item }));
+function current(name) {
+    const entry = remembered.get(name);
+    return entry && Date.now() - entry.at < REMEMBER_MS ? entry : null;
+}
+/** The whole collection, from memory if it is there, else from fetch(). */
+async function whole(name, fetch) {
+    let entry = current(name);
+    if (!entry) {
+        entry = { at: Date.now(), list: null };
+        // A write that lands while this is in flight removes the entry, so the
+        // answer goes to whoever is already waiting and is not kept.
+        entry.promise = fetch().then(
+            list => { entry.list = list; return list; },
+            err  => { if (remembered.get(name) === entry) remembered.delete(name); throw err; }
+        );
+        remembered.set(name, entry);
+    }
+    return copies(await entry.promise);
+}
+/** The collection if it is already in memory, else null. Never fetches. */
+function held(name) {
+    const entry = current(name);
+    return entry && entry.list ? copies(entry.list) : null;
+}
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') forget();
+});
+window.addEventListener('online', () => forget());
+
+/** How many documents a query matches, without downloading them. The server
+ *  has to answer this, so offline it falls back to counting the device's copy. */
+async function countOf(q) {
+    try {
+        return (await getCountFromServer(q)).data().count;
+    } catch (_) {
+        return (await getDocs(q)).size;
     }
 }
 
@@ -155,7 +232,8 @@ export function initFirebase() {
 // =============================================
 
 /** Fetch all plants, ordered by genus (secondary sort done in JS to avoid index requirements) */
-export async function getPlants() {
+export function getPlants() { return whole('plants', fetchPlants); }
+async function fetchPlants() {
     const q = query(collection(db, 'plants'), orderBy('genus'));
     const snap = await getDocs(q);
     const plants = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -290,10 +368,7 @@ export async function deletePlant(id) {
  *  the plant leaves them alone: each keeps the name and details stored on it,
  *  and Nursery treats the dead link as no link. */
 export async function countNurseryBatchesForPlant(plantId) {
-    const snap = await getDocs(
-        query(collection(db, 'nursery_batches'), where('plantId', '==', plantId))
-    );
-    return snap.size;
+    return countOf(query(collection(db, 'nursery_batches'), where('plantId', '==', plantId)));
 }
 
 // =============================================
@@ -301,7 +376,8 @@ export async function countNurseryBatchesForPlant(plantId) {
 // =============================================
 
 /** Fetch all areas */
-export async function getAreas() {
+export function getAreas() { return whole('areas', fetchAreas); }
+async function fetchAreas() {
     const q = query(collection(db, 'areas'), orderBy('name'));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -351,7 +427,8 @@ export async function deleteArea(id) {
 // =============================================
 
 /** Get all instances */
-export async function getInstances() {
+export function getInstances() { return whole('instances', fetchInstances); }
+async function fetchInstances() {
     const snap = await getDocs(collection(db, 'instances'));
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
@@ -398,7 +475,8 @@ export async function deleteInstance(id) {
 //  area while still alive in another.
 
 /** Get all deceased records, newest death first (sorted in JS — no index needed) */
-export async function getDeceasedPlants() {
+export function getDeceasedPlants() { return whole('deceasedPlants', fetchDeceasedPlants); }
+async function fetchDeceasedPlants() {
     const snap = await getDocs(collection(db, 'deceasedPlants'));
     const recs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     return recs.sort((a, b) => (b.diedDate || '').localeCompare(a.diedDate || ''));
@@ -449,7 +527,8 @@ export async function deleteDeceasedRecord(id) {
 
 /** Read the Nursery Management locations list (for the transfer location picker).
  *  No orderBy — sort client-side to avoid a composite index requirement. */
-export async function getNurseryLocations() {
+export function getNurseryLocations() { return whole('nursery_locations', fetchNurseryLocations); }
+async function fetchNurseryLocations() {
     const snap = await getDocs(collection(db, 'nursery_locations'));
     return snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
@@ -487,7 +566,8 @@ export async function transferToNursery(batchData, instance) {
 // =============================================
 
 /** Fetch all tasks, ordered by title */
-export async function getTasks() {
+export function getTasks() { return whole('tasks', fetchTasks); }
+async function fetchTasks() {
     const q = query(collection(db, 'tasks'), orderBy('title'));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -529,7 +609,8 @@ export async function deleteTask(id) {
 // =============================================
 
 /** Get all task assignments */
-export async function getTaskAssignments() {
+export function getTaskAssignments() { return whole('taskAssignments', fetchTaskAssignments); }
+async function fetchTaskAssignments() {
     const snap = await getDocs(collection(db, 'taskAssignments'));
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
@@ -654,31 +735,42 @@ export async function getFirstPhotoForPlants(plantIds) {
     if (!plantIds.length) return {};
     const CHUNK = 30;
     const map   = {};
+    const consider = data => {
+        const pid    = data.plantId;
+        const curr   = map[pid];
+        const dOrder = data.order ?? Infinity;
+        const cOrder = curr?.order ?? Infinity;
+        if (!curr || dOrder < cOrder ||
+            (dOrder === cOrder &&
+             (data.createdAt?.toMillis?.() ?? 0) < (curr.createdAt?.toMillis?.() ?? 0))) {
+            map[pid] = data;
+        }
+    };
+    // If the Plants list has already brought every photo record down, pick
+    // from those rather than asking again in chunks of 30.
+    const all = held('photos');
+    if (all) {
+        const wanted = new Set(plantIds);
+        all.forEach(p => { if (wanted.has(p.plantId)) consider(p); });
+        return map;
+    }
     for (let i = 0; i < plantIds.length; i += CHUNK) {
         const chunk = plantIds.slice(i, i + CHUNK);
         const q     = query(collection(db, 'photos'), where('plantId', 'in', chunk));
         const snap  = await getDocs(q);
-        snap.docs.forEach(d => {
-            const data   = { id: d.id, ...d.data() };
-            const pid    = data.plantId;
-            const curr   = map[pid];
-            const dOrder = data.order ?? Infinity;
-            const cOrder = curr?.order ?? Infinity;
-            if (!curr || dOrder < cOrder ||
-                (dOrder === cOrder &&
-                 (data.createdAt?.toMillis?.() ?? 0) < (curr.createdAt?.toMillis?.() ?? 0))) {
-                map[pid] = data;
-            }
-        });
+        snap.docs.forEach(d => consider({ id: d.id, ...d.data() }));
     }
     return map;
 }
 
 /** Return a Set of plantIds that have at least one photo */
 export async function getPlantIdsWithPhotos() {
-    const snap = await getDocs(collection(db, 'photos'));
-    const ids  = new Set();
-    snap.docs.forEach(d => { const pid = d.data().plantId; if (pid) ids.add(pid); });
+    const photos = await whole('photos', async () => {
+        const snap = await getDocs(collection(db, 'photos'));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    });
+    const ids = new Set();
+    photos.forEach(p => { if (p.plantId) ids.add(p.plantId); });
     return ids;
 }
 
@@ -753,7 +845,8 @@ export async function uploadAreaPhoto(areaId, file, onProgress) {
 // =============================================
 
 /** Fetch all irrigation zones (sorted in JS to avoid index requirements) */
-export async function getIrrigationZones() {
+export function getIrrigationZones() { return whole('irrigationZones', fetchIrrigationZones); }
+async function fetchIrrigationZones() {
     const snap = await getDocs(collection(db, 'irrigationZones'));
     const zones = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     return zones.sort((a, b) => {
@@ -792,7 +885,8 @@ export async function deleteIrrigationZone(id) {
 // =============================================
 
 /** Fetch all irrigation logs */
-export async function getIrrigationLogs() {
+export function getIrrigationLogs() { return whole('irrigationLogs', fetchIrrigationLogs); }
+async function fetchIrrigationLogs() {
     const snap = await getDocs(collection(db, 'irrigationLogs'));
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
@@ -841,7 +935,8 @@ export async function deleteIrrigationLog(id) {
 //  SUGGESTIONS  (improvement / wishlist list)
 // =============================================
 
-export async function getSuggestions() {
+export function getSuggestions() { return whole('suggestions', fetchSuggestions); }
+async function fetchSuggestions() {
     const q    = query(collection(db, 'suggestions'), orderBy('createdAt', 'asc'));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -1096,26 +1191,23 @@ export async function clearAllData() {
 
 /** Return record counts for all collections */
 export async function getDataCounts() {
+    // Eight of these are plain counts, which the server can give without
+    // sending the documents. Instances and deceased plants are read in full
+    // because their quantities are added up.
+    const n = name => countOf(collection(db, name));
     const [p, a, i, ph, t, ta, iz, il, bp, dp] = await Promise.all([
-        getDocs(collection(db, 'plants')),
-        getDocs(collection(db, 'areas')),
-        getDocs(collection(db, 'instances')),
-        getDocs(collection(db, 'photos')),
-        getDocs(collection(db, 'tasks')),
-        getDocs(collection(db, 'taskAssignments')),
-        getDocs(collection(db, 'irrigationZones')),
-        getDocs(collection(db, 'irrigationLogs')),
-        getDocs(collection(db, 'blogPosts')),
-        getDocs(collection(db, 'deceasedPlants')),
+        n('plants'), n('areas'), getInstances(), n('photos'), n('tasks'),
+        n('taskAssignments'), n('irrigationZones'), n('irrigationLogs'),
+        n('blogPosts'), getDeceasedPlants(),
     ]);
-    const specimens = i.docs.reduce((sum, d) => sum + (d.data().quantity || 1), 0);
-    const composted = dp.docs.reduce((sum, d) => sum + (d.data().quantity || 1), 0);
+    const specimens = i.reduce((sum, d)  => sum + (d.quantity || 1), 0);
+    const composted = dp.reduce((sum, d) => sum + (d.quantity || 1), 0);
     return {
-        plants: p.size, areas: a.size, instances: i.size, specimens,
-        photos: ph.size, tasks: t.size, taskAssignments: ta.size,
-        irrigationZones: iz.size, irrigationLogs: il.size,
-        blogPosts: bp.size,
-        deceasedPlants: dp.size, composted,
+        plants: p, areas: a, instances: i.length, specimens,
+        photos: ph, tasks: t, taskAssignments: ta,
+        irrigationZones: iz, irrigationLogs: il,
+        blogPosts: bp,
+        deceasedPlants: dp.length, composted,
     };
 }
 
@@ -1161,7 +1253,8 @@ export function hybridTypeOf(plant) {
  *                    role, status, blocked, lastLoginAt, createdAt }
  * Requires admin read access on the users collection (see firestore.rules).
  */
-export async function getUsers() {
+export function getUsers() { return whole('users', fetchUsers); }
+async function fetchUsers() {
     const snap = await getDocs(collection(db, 'users'));
     return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
 }
@@ -1198,11 +1291,9 @@ export async function setUserBlocked(uid, blocked) {
  * Used to drive the pending-users badge on the Admin nav tab.
  */
 export async function getPendingUserCount() {
-    const snap = await getDocs(collection(db, 'users'));
-    return snap.docs.filter(d => {
-        const data = d.data();
-        return !data.role && !data.blocked;
-    }).length;
+    // The users list is a handful of documents and the Admin panel wants it
+    // anyway, so this shares the one remembered read with getUsers().
+    return (await getUsers()).filter(u => !u.role && !u.blocked).length;
 }
 
 /** Simple HTML escape */
