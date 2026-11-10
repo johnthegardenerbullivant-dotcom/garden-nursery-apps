@@ -186,6 +186,12 @@ Added 2026-11. Three pieces, and they only work together:
 - **The service worker** caches the Firebase SDK and the other CDN libraries, without which the
   app cannot start offline at all.
 
+**Writes that belong together use `commitTogether()`** (added 2026-11-10, same block of each
+`db.js`): a Firestore batch, so all of them happen or none do, and it goes through `queued()` like
+any single write. `deleteTogether()` is the same for a parent and its children, parent last. A new
+function that makes two or more writes for one user action should use one of them rather than
+awaiting writes in sequence. A batch is refused whole if the rules refuse any one write in it.
+
 Two things to keep in mind when changing a view:
 
 - **Offline, a collection this device has never fetched reads as empty, not as an error.** A screen

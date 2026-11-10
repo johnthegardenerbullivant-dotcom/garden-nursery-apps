@@ -224,7 +224,7 @@ it out otherwise, so every other batch keeps five steps.
 
 ### Plant out → Garden
 
-`plantOutToGarden()` writes a `nursery_outcomes` row, then reaches into **Garden's** collections: it
+`plantOutToGarden()` writes a `nursery_outcomes` row and, in the same batch, reaches into **Garden's** collections: it
 creates a `plants` document if the batch has no `plantId` yet (e.g. the batch came from a gift or
 purchase) **or its `plantId` points at a plant Garden has since deleted**, and always writes an
 `instances` row linking plant to area. It returns the resolved `plantId`, and the caller stores it
