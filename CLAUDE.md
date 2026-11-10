@@ -171,6 +171,34 @@ done. `js/auth.js` and `functions/scan-label.js` are still byte-identical copies
 `cp` build command now exists, so hoisting those into `/shared` too is a small follow-on whenever
 it is worth doing.
 
+### Offline
+
+Added 2026-11. Three pieces, and they only work together:
+
+- **Firestore's persistent cache** (`initFirebase()` in each `db.js`). Reads fall back to the
+  copy in IndexedDB; writes made offline are stored there and sent later, across restarts.
+- **`queued()` in each `db.js`**, which every write goes through. Firestore's write promise settles
+  only when the *server* has the write, so an awaited save would hang offline. `queued()` waits five
+  seconds (0.3 if the browser already knows it is offline) and then lets the caller continue. The
+  file's own `addDoc`/`setDoc`/`updateDoc`/`deleteDoc` shadow Firestore's, so **a new write function
+  needs nothing special — but never import Firestore's write functions anywhere else**, or that
+  write will hang offline. `auth.js` is the one exception and deliberately does not await.
+- **The service worker** caches the Firebase SDK and the other CDN libraries, without which the
+  app cannot start offline at all.
+
+Two things to keep in mind when changing a view:
+
+- **Offline, a collection this device has never fetched reads as empty, not as an error.** A screen
+  that totals several collections can therefore show a partial figure. That is inherent to the
+  cache; do not "fix" it by treating empty as failure.
+- **A write the rules refuse can no longer fail its form once `queued()` has let go.** It raises a
+  `write-failed` event, which `initSyncIndicator()` in `ui-utils.js` turns into a toast. Online,
+  refusals arrive inside the wait and fail the form as before.
+
+The app's own files are still network-first. Serving them cache-first would make slow-signal
+launches faster, but a page that loads a mix of modules from two different deploys is a blank screen, so it
+needs versioned precaching first. Not done.
+
 ### Role system
 
 Three roles, enforced by `isAtLeast()` in each app's `js/auth.js`:

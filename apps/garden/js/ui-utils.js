@@ -131,6 +131,67 @@ export function showToast(message, type = 'info') {
 }
 
 // =============================================
+//  Offline and sync indicator
+//  Call once at startup. Shows a small pill under the header while the device
+//  is offline or while writes are waiting to reach the server, and turns the
+//  two failures nothing else reports into toasts: a queued write the server
+//  later refused (db.js, 'write-failed'), and any error no code caught.
+// =============================================
+export function initSyncIndicator() {
+    if (document.getElementById('sync-pill')) return;
+    const pill = document.createElement('div');
+    pill.id = 'sync-pill';
+    pill.className = 'sync-pill';
+    pill.setAttribute('role', 'status');
+    document.body.appendChild(pill);
+
+    let unsynced = 0;
+    let timer    = null;
+
+    const draw = () => {
+        let text = '';
+        if (!navigator.onLine) {
+            text = unsynced > 0
+                ? `Offline · ${unsynced} change${unsynced !== 1 ? 's' : ''} will send when you're back in range`
+                : 'Offline · showing what this device has saved';
+        } else if (unsynced > 0) {
+            text = `Sending ${unsynced} change${unsynced !== 1 ? 's' : ''}…`;
+        }
+        pill.textContent = text;
+        pill.classList.toggle('visible', !!text);
+        pill.classList.toggle('offline', !navigator.onLine);
+    };
+
+    window.addEventListener('online',  draw);
+    window.addEventListener('offline', draw);
+    window.addEventListener('sync-state', e => {
+        unsynced = e.detail.unsynced;
+        clearTimeout(timer);
+        // An ordinary save is confirmed in well under a second; only say
+        // "Sending…" for one that is taking long enough to wonder about.
+        if (unsynced > 0 && navigator.onLine) timer = setTimeout(draw, 1500);
+        else draw();
+    });
+    window.addEventListener('write-failed', () => {
+        showToast('A change made earlier could not be saved. Please check it and try again.', 'error');
+    });
+
+    let lastErrorToast = 0;
+    window.addEventListener('unhandledrejection', e => {
+        const code = e.reason && e.reason.code ? String(e.reason.code) : '';
+        if (code.startsWith('auth/')) return;          // sign-in popups report their own
+        console.error('Unhandled error:', e.reason);
+        if (Date.now() - lastErrorToast < 5000) return; // one toast, not a stack of them
+        lastErrorToast = Date.now();
+        showToast(navigator.onLine
+            ? 'Something went wrong. Please try that again.'
+            : 'That needs a connection. Try again when you have signal.', 'error');
+    });
+
+    draw();
+}
+
+// =============================================
 //  Photo drag-to-reorder
 //  Call initPhotoDragSort(gridEl, onOrderChange) after the grid is in the DOM.
 //  Works with pointer events (mouse + touch). Each .photo-thumb must have

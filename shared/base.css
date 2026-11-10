@@ -230,6 +230,29 @@ body {
     .app-main.is-loading::before { animation: none; width: 100%; }
 }
 
+/* Offline / sending pill, drawn by initSyncIndicator() in ui-utils.js. Sits
+   just under the header, out of the way of the + button and the toasts. */
+.sync-pill {
+    position: fixed;
+    top: calc(var(--header-h) + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: calc(100vw - 24px);
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: var(--grey-800);
+    color: var(--white);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+    box-shadow: var(--shadow-md);
+    z-index: 95;
+    pointer-events: none;
+    display: none;
+}
+.sync-pill.visible { display: block; }
+.sync-pill.offline { background: #8a5a00; }
+
 /* --- Bottom Navigation --- */
 .bottom-nav {
     position: fixed;

@@ -844,7 +844,10 @@ export function attachTaskHandlers(root, onRefresh) {
             try {
                 await updateTaskAssignment(input.dataset.assignmentId,
                     { completionNote: input.value.trim() || null });
-            } catch (_) {}
+            } catch (err) {
+                console.error(err);
+                showToast('Could not save that note', 'error');
+            }
         });
         // Prevent row toggle from firing on input click
         input.addEventListener('click', e => e.stopPropagation());

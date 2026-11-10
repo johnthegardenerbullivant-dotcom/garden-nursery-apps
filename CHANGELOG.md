@@ -23,6 +23,23 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 
 ---
 
+## 2026-11-09 — works offline
+
+**Action required: none.** Each device builds its offline copy the first time it opens the app
+with a connection after this update.
+
+- **Both apps now work with poor or no signal.** What a device has already loaded is kept on it, so
+  lists and records open without a connection. Changes made without signal are saved on the device
+  and sent when it is back in range, even if the app was closed in between. A pill under the
+  header says when you are offline and how many changes are waiting.
+- **What offline does not cover:** anything that device has never loaded shows as empty rather than
+  as an error; photos cannot be uploaded; label scanning and plant lookup need a connection; and a
+  device that has never opened the app online cannot open it offline.
+- **Fixed: "Access Pending" shown when there was simply no signal.** The app now says it can't
+  connect and offers *Try again*.
+- **Fixed: a task note that failed to save said nothing.** It now reports the failure, as does any
+  other error that nothing else caught.
+
 ## 2026-11-09
 
 **Action required: none**

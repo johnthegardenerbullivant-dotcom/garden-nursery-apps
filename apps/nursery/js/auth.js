@@ -78,6 +78,9 @@ export function isAtLeast(role) {
  *
  * Returns 'blocked' if the user has been blocked by an admin — the caller
  * should treat this the same as no role (show access-denied screen).
+ *
+ * Returns 'unavailable' if the role could not be read at all (offline, with
+ * nothing cached). The caller should say so and offer a retry.
  */
 export async function loadRole(uid, userRecord = null) {
     try {
@@ -99,8 +102,12 @@ export async function loadRole(uid, userRecord = null) {
                 profileUpdate.createdAt = serverTimestamp();
                 profileUpdate.status    = 'pending';
             }
-            // merge: true keeps any existing role / blocked fields untouched
-            await setDoc(userRef, profileUpdate, { merge: true });
+            // merge: true keeps any existing role / blocked fields untouched.
+            // Not awaited: with the offline cache this promise only settles
+            // once the server has the write, so awaiting it would hold the app
+            // on its loading screen for as long as there is no signal.
+            setDoc(userRef, profileUpdate, { merge: true })
+                .catch(e => console.warn('Could not refresh user profile:', e));
         }
 
         if (!existed) {
@@ -118,8 +125,13 @@ export async function loadRole(uid, userRecord = null) {
 
         _role = data.role || null;
     } catch (e) {
+        // The lookup itself failed: no connection and nothing cached on this
+        // device yet. That is "couldn't check", not "no access", and the caller
+        // must be able to tell them apart or an offline user is told they have
+        // been refused.
         console.error('Could not fetch user role:', e);
         _role = null;
+        return 'unavailable';
     }
     return _role;
 }
