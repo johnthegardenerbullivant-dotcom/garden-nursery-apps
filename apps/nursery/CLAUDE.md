@@ -79,7 +79,7 @@ apps/nursery/
 | `main.js` | Entry point: router, auth state listener, nav. Owns navigation and injects it into `ui-utils`. | `navigate`, `navigateReplace`, `goBack` |
 | `db.js` | Every Firestore + Storage read/write, plus the batch-quantity maths and label constants. ~700 lines. | see [below](#dbjs-exports) |
 | `auth.js` | Auth state, role cache, sign-in helpers. **Byte-identical to Garden's.** | `initAuth`, `getAuthInstance`, `getCurrentUser`, `getCurrentRole`, `isAtLeast`, `loadRole`, `setCurrentUser`, `setRole`, `signInWithGoogle`, `signInWithEmail`, `signInAsGuest`, `signOutUser` |
-| `ui-utils.js` | Modal, toast, carousel, drag-sort, date picker. Navigation is injected via `setNavigateFn` etc. rather than imported. | `setNavigateFn`, `setGoBackFn`, `setNavigateReplaceFn`, `navigate`, `goBack`, `navigateReplace`, `setLoading`, `showModal`, `hideModal`, `initPhotoCarousel`, `showToast`, `initPhotoDragSort`, `datePicker`, **`isValidDateStr`**, `initDatePickers` |
+| `ui-utils.js` | Modal, toast, carousel, drag-sort, date picker. Navigation is injected via `setNavigateFn` etc. rather than imported. | `setNavigateFn`, `setGoBackFn`, `setNavigateReplaceFn`, `navigate`, `goBack`, `navigateReplace`, `setLoading`, `showModal`, `hideModal`, `isModalOpen`, `requestCloseModal` (closes, asking first if the form was touched — for the overlay, the ✕ and Back; Cancel and Save use `hideModal`), `initPhotoCarousel`, `showToast`, `initPhotoDragSort`, `datePicker`, **`isValidDateStr`**, `initDatePickers` |
 | `auth-view.js` | Login / access-denied overlay | `showLoginOverlay`, `hideLoginOverlay`, `showAccessDenied` |
 
 > `isValidDateStr()` exists here but **not** in Garden's `ui-utils.js` — the one known drift between

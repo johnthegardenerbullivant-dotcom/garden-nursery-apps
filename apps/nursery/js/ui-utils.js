@@ -24,10 +24,29 @@ export function setLoading(container, on) {
 // =============================================
 //  Modal
 // =============================================
+// Has anything in the open form been typed, picked or attached? Set by the
+// listeners below, cleared whenever a modal opens or closes. It is what lets a
+// stray tap on the dimmed area, the ✕ or the phone's Back button ask before
+// throwing a half-filled form away, while Cancel and Save still close at once.
+let _modalDirty = false;
+let _dirtyWired = false;
+
+function wireDirtyTracking() {
+    if (_dirtyWired) return;
+    const body = document.getElementById('modal-body');
+    if (!body) return;
+    const mark = () => { _modalDirty = true; };
+    body.addEventListener('input',  mark);
+    body.addEventListener('change', mark);   // selects, checkboxes, photo pickers
+    _dirtyWired = true;
+}
+
 export function showModal(title, bodyHTML) {
+    wireDirtyTracking();
     document.getElementById('modal-title').textContent = title;
     document.getElementById('modal-body').innerHTML    = bodyHTML;
     document.getElementById('modal-overlay').classList.add('open');
+    _modalDirty = false;
     // Always start at the top of the form so the first field is visible
     const modal = document.getElementById('modal');
     if (modal) modal.scrollTop = 0;
@@ -36,6 +55,24 @@ export function showModal(title, bodyHTML) {
 export function hideModal() {
     document.getElementById('modal-overlay').classList.remove('open');
     document.getElementById('modal-body').innerHTML = '';
+    _modalDirty = false;
+}
+
+export function isModalOpen() {
+    return document.getElementById('modal-overlay').classList.contains('open');
+}
+
+/**
+ * Close the modal the way an accidental gesture would: ask first if the form
+ * has been touched. Returns true if it closed. Use this for the dimmed
+ * overlay, the ✕ and the Back button; a form's own Cancel and Save buttons
+ * are deliberate and keep calling hideModal().
+ */
+export function requestCloseModal() {
+    if (!isModalOpen()) return true;
+    if (_modalDirty && !confirm('Discard what you have entered?')) return false;
+    hideModal();
+    return true;
 }
 
 // =============================================

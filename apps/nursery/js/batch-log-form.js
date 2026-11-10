@@ -5,7 +5,7 @@
 import {
     addNurseryLog, updateNurseryBatch, uploadNurseryPhoto,
     getNurseryLocations, recomputeBatchState,
-    STAGE_LABELS, STAGE_ORDER, LOSS_REASON_LABELS, todayStr, stageLabel
+    STAGE_LABELS, STAGE_ORDER, LOSS_REASON_LABELS, todayStr, stageLabel, escHtml
 } from './db.js';
 import { showModal, hideModal, showToast, initDatePickers, datePicker, isValidDateStr } from './ui-utils.js';
 import { hasPretreatment, checkUpdates, sowUpdates } from './pretreatment.js';
@@ -26,7 +26,7 @@ async function showLogForm(batch, onSaved) {
     try { locations = await getNurseryLocations(); } catch (e) {}
 
     const locOptions = locations.map(l =>
-        `<option value="${l.id}" data-name="${l.name.replace(/"/g, '&quot;')}">${l.name}</option>`
+        `<option value="${l.id}" data-name="${escHtml(l.name)}">${escHtml(l.name)}</option>`
     ).join('');
 
     showModal('Add Log Entry', `

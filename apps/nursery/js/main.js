@@ -8,7 +8,8 @@ import { initAuth, getAuthInstance, loadRole, setCurrentUser, setRole,
 import { showLoginOverlay, hideLoginOverlay, showAccessDenied } from './auth-view.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
-import { setNavigateFn, setGoBackFn, setNavigateReplaceFn, hideModal } from './ui-utils.js';
+import { setNavigateFn, setGoBackFn, setNavigateReplaceFn,
+         isModalOpen, requestCloseModal, showToast } from './ui-utils.js';
 import { renderDashboard }                                   from './dashboard-view.js';
 import { renderBatchesList, renderBatchDetail }              from './batches-view.js';
 import { renderPropagatedPlants, renderPlantPropHistory }    from './plants-view.js';
@@ -52,44 +53,137 @@ function captureCurrentState() {
     return { scrollTop: window.scrollY };
 }
 
+// ---------------------------------------------
+//  Browser history
+// ---------------------------------------------
+// Every screen change is mirrored into the browser's own history, so the
+// phone's Back button or gesture (and the laptop's Back button) steps back one
+// screen instead of leaving the app. Until 2026-11 every change used
+// replaceState, which left the browser with a single entry however far in you
+// had gone.
+//
+// navHistory stays the source of saved screen state (scroll position, open
+// sections). Each browser entry carries { idx }, its depth in that stack, which
+// is how a popstate tells Back (idx below the stack) from Forward or a
+// hand-edited address (anything else).
+//
+// One extra entry, { guard: true }, sits underneath the first screen. Without
+// it, Back on a top-level screen leaves the page with no event at all, so an
+// open form could not be closed by Back there. Landing on the guard means "the
+// user backed out of the app": the handler closes a form if one is open, and
+// otherwise lets them leave.
+
+function hashFor(view, id) { return id ? `#${view}/${id}` : `#${view}`; }
+
+function parseHash() {
+    const hash  = window.location.hash.replace('#', '') || 'dashboard';
+    const parts = hash.split('/');
+    return { view: parts[0] || 'dashboard', id: parts[1] || null };
+}
+
+let historyReady   = false;  // guard entry laid down?
+let skipPops       = 0;      // popstate events caused by our own history calls
+let skipTimer      = null;
+let pendingTabHash = null;   // hash to stamp on the entry a tab tap rewinds to
+
+function expectOwnPop() {
+    skipPops++;
+    clearTimeout(skipTimer);
+    // If the browser never delivers it (nothing to move to), stop expecting it
+    // rather than swallowing the user's next real Back.
+    skipTimer = setTimeout(() => { skipPops = 0; pendingTabHash = null; }, 1000);
+}
+
 export async function navigate(view, id) {
     navHistory.push({ view: currentView, id: currentId, state: captureCurrentState() });
     currentView = view;
     currentId   = id || null;
-    const hash  = id ? `#${view}/${id}` : `#${view}`;
-    history.replaceState(null, '', hash);
+    history.pushState({ idx: navHistory.length }, '', hashFor(view, id));
     await route(view, id);
     window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
+// Like navigate() but does NOT add a history entry. Use when a view should
+// replace its predecessor (e.g. editor → post after save), so Back skips the
+// replaced view entirely.
 export async function navigateReplace(view, id) {
     currentView = view;
     currentId   = id || null;
-    const hash  = id ? `#${view}/${id}` : `#${view}`;
-    history.replaceState(null, '', hash);
+    history.replaceState({ idx: navHistory.length }, '', hashFor(view, id));
     await route(view, id);
     window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
 export async function goBack() {
+    // Somewhere to go back to: let the browser do it, and the popstate handler
+    // below draws the screen. One code path for the on-screen Back button and
+    // the phone's.
     if (navHistory.length > 0) {
-        const prev  = navHistory.pop();
-        currentView = prev.view;
-        currentId   = prev.id;
-        const hash  = prev.id ? `#${prev.view}/${prev.id}` : `#${prev.view}`;
-        history.replaceState(null, '', hash);
-        await route(prev.view, prev.id, prev.state || {});
-        if (prev.state && prev.state.scrollTop > 0) {
-            window.scrollTo({ top: prev.state.scrollTop, behavior: 'instant' });
-        }
-    } else {
-        navHistory  = [];
-        currentView = 'dashboard';
-        currentId   = null;
-        history.replaceState(null, '', '#dashboard');
-        await route('dashboard', null, {});
+        history.back();
+        return;
     }
+    // Arrived straight on a detail screen (a link, a reload): no history, so
+    // fall back to the list it belongs to.
+    const base  = currentView.startsWith('batch')      ? 'batches'
+                : currentView.startsWith('plant-prop') ? 'plants'
+                : 'dashboard';
+    navHistory  = [];
+    currentView = base;
+    currentId   = null;
+    history.replaceState(history.state && history.state.guard ? { guard: true } : { idx: 0 }, '', `#${base}`);
+    await route(base, null, {});
 }
+
+window.addEventListener('popstate', async (e) => {
+    if (skipPops > 0) {
+        skipPops--;
+        if (pendingTabHash) {
+            history.replaceState({ idx: 0 }, '', pendingTabHash);
+            pendingTabHash = null;
+        }
+        return;
+    }
+
+    // Back with a form open closes the form (asking first if it has been
+    // filled in) and stays on the screen underneath.
+    if (isModalOpen()) {
+        requestCloseModal();
+        expectOwnPop();
+        history.forward();
+        return;
+    }
+
+    // Backed out past the first screen. In a browser tab this goes on to the
+    // page before the app; installed as an app there is nothing before it, so
+    // the next Back closes it.
+    if (e.state && e.state.guard) {
+        history.back();
+        setTimeout(() => {
+            if (history.state && history.state.guard && document.visibilityState === 'visible') {
+                showToast('Press Back again to leave');
+            }
+        }, 350);
+        return;
+    }
+
+    const { view, id } = parseHash();
+    const idx = (e.state && Number.isInteger(e.state.idx)) ? e.state.idx : null;
+    let saved = {};
+    if (idx !== null && idx < navHistory.length) {
+        // Back: unwind to that depth and reuse the state saved when we left it.
+        let prev = null;
+        while (navHistory.length > idx) prev = navHistory.pop();
+        if (prev && prev.view === view && (prev.id || null) === id) saved = prev.state || {};
+    } else {
+        // Forward, or an address typed or followed by hand.
+        navHistory.push({ view: currentView, id: currentId, state: captureCurrentState() });
+        if (idx === null) history.replaceState({ idx: navHistory.length }, '', hashFor(view, id));
+    }
+    currentView = view;
+    currentId   = id;
+    await route(view, id, saved);
+    window.scrollTo({ top: saved.scrollTop || 0, behavior: 'instant' });
+});
 
 setNavigateFn(navigate);
 setGoBackFn(goBack);
@@ -99,7 +193,50 @@ setNavigateReplaceFn(navigateReplace);
 //  Router
 // =============================================
 
+// route() is the only way a screen gets drawn. It wraps drawRoute() with three
+// things the views cannot do for themselves:
+//   • a loading state at once, so a tap visibly registers before the data
+//     arrives (the previous screen used to sit unchanged under a new title);
+//   • a sequence number, because two taps in quick succession start two
+//     renders and the slower one would otherwise finish last and win;
+//   • a Retry screen if a view throws, instead of silently leaving the old one.
+let routeSeq  = 0;   // most recent route() call
+let routeDone = 0;   // most recent route() call that has finished drawing
+let lastRoute = null;
+
 async function route(view, id, state = {}) {
+    const seq = ++routeSeq;
+    lastRoute = { view, id, state };
+    mainEl.classList.add('is-loading');
+    let handedOn = false;
+    try {
+        handedOn = (await drawRoute(view, id, state)) === 'handed-on';
+    } catch (err) {
+        console.error('Could not draw', view, err);
+        if (seq === routeSeq) {
+            mainEl.innerHTML = `<div class="empty-state">
+                <div class="empty-state-icon">⚠️</div>
+                <h3>Couldn't load this screen</h3>
+                <p>Check your connection and try again.</p>
+                <button class="btn btn-primary" id="route-retry-btn">Retry</button>
+            </div>`;
+            mainEl.querySelector('#route-retry-btn')
+                ?.addEventListener('click', () => route(view, id, state));
+        }
+    }
+    if (handedOn) return;                    // a nested route() call owns the screen
+    if (seq === routeSeq) {
+        routeDone = seq;
+        mainEl.classList.remove('is-loading');
+    } else if (routeDone > seq && lastRoute) {
+        // A newer screen had already finished and this older one has just drawn
+        // over it. Draw the newer one again.
+        const l = lastRoute;
+        await route(l.view, l.id, l.state);
+    }
+}
+
+async function drawRoute(view, id, state = {}) {
     document.querySelectorAll('.fab').forEach(el => el.remove());
     backBtn.classList.remove('visible');
 
@@ -155,7 +292,9 @@ async function route(view, id, state = {}) {
             break;
 
         default:
-            navigate('dashboard');
+            // An address that names no screen: go home without adding history.
+            navigateReplace('dashboard');
+            return 'handed-on';
     }
 }
 
@@ -163,13 +302,18 @@ async function route(view, id, state = {}) {
 //  Initial load from URL hash
 // =============================================
 function routeFromHash() {
-    const hash  = window.location.hash.replace('#', '') || 'dashboard';
-    const parts = hash.split('/');
-    const view  = parts[0] || 'dashboard';
-    const id    = parts[1] || null;
+    const { view, id } = parseHash();
     navHistory  = [];
     currentView = view;
     currentId   = id;
+    if (!historyReady) {
+        // First screen of this page load: lay the guard entry underneath it.
+        history.replaceState({ guard: true }, '', hashFor(view, id));
+        history.pushState({ idx: 0 }, '', hashFor(view, id));
+        historyReady = true;
+    } else {
+        history.replaceState({ idx: 0 }, '', hashFor(view, id));
+    }
     route(view, id);
 }
 
@@ -179,10 +323,21 @@ function routeFromHash() {
 
 navBtns.forEach(btn => {
     btn.addEventListener('click', async () => {
+        // A tab is a top-level screen, so it sits at depth 0: Back from it
+        // leaves the app rather than replaying every tab visited. If we are
+        // deeper than that, rewind the browser's history to match first.
+        const depth = navHistory.length;
+        const hash  = `#${btn.dataset.view}`;
         navHistory  = [];
         currentView = btn.dataset.view;
         currentId   = null;
-        history.replaceState(null, '', `#${btn.dataset.view}`);
+        if (depth > 0) {
+            pendingTabHash = hash;
+            expectOwnPop();
+            history.go(-depth);
+        } else {
+            history.replaceState(history.state && history.state.guard ? { guard: true } : { idx: 0 }, '', hash);
+        }
         await route(btn.dataset.view, null);
         window.scrollTo({ top: 0, behavior: 'instant' });
     });
@@ -191,10 +346,10 @@ navBtns.forEach(btn => {
 backBtn.addEventListener('click', goBack);
 
 let overlayMousedownTarget = null;
-modalCloseBtn.addEventListener('click', hideModal);
+modalCloseBtn.addEventListener('click', requestCloseModal);
 modalOverlay.addEventListener('mousedown', e => { overlayMousedownTarget = e.target; });
 modalOverlay.addEventListener('click', e => {
-    if (e.target === modalOverlay && overlayMousedownTarget === modalOverlay) hideModal();
+    if (e.target === modalOverlay && overlayMousedownTarget === modalOverlay) requestCloseModal();
     overlayMousedownTarget = null;
 });
 
