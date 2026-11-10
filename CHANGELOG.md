@@ -23,6 +23,26 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 
 ---
 
+## 2026-11-10 — easier to tap
+
+**Action required: none**
+
+- **The controls used most are now big enough for a finger.** In Garden: the To-Do / In Progress /
+  Completed pills on a task (they were 26 px high, with Delete just beneath), Edit and Delete on a
+  task, the irrigation Log, Done and Skip buttons, the filter chips, By Area / By Status, and the
+  area chips on Overview. In Nursery: the stage pills, the All / Active / Completed tabs, the sort
+  button and the Planted out / Given away / Lost choice. In both: Back, the role picker in Admin,
+  and every small button. Each is at least 44 px high.
+- **Small ✕ buttons and status pills look the same but respond over a wider area**: the search
+  clear, photo delete, wishlist delete, and the Idea / Planned / Done pill on a plan.
+- **Text you type into is 16 px everywhere.** It is easier to read, and on an iPhone it stops the
+  page zooming in each time a field is tapped.
+- **On a phone or tablet, date fields open the system's own date picker.** A laptop keeps the typed
+  field with its calendar button.
+- **Garden shows dates one way.** Plant cards, plant details and the plant rows in an area now read
+  *4 May 22*, as task rows already did, instead of *2022-05-04*.
+- **The labels under the bottom tabs are slightly larger.**
+
 ## 2026-11-10 — Plants list
 
 **Action required: none**
