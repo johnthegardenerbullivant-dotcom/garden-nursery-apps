@@ -35,15 +35,22 @@ function todayISO() {
 //  PLANTS LIST
 // =============================================
 
-// Persists the last search query so Back navigation restores the filtered view.
-let savedPlantQuery = '';
+// What the list is showing. Kept here, outside the render, so that coming Back
+// from a plant restores the same search, filters and depth. main.js puts the
+// scroll position back after the render, which only works if at least as many
+// cards are drawn as were there before: that is what `shown` is for.
+const PLANT_PAGE = 60;
+const freshListState = () => ({ query: '', unplaced: false, noPhoto: false, areaId: '', shown: PLANT_PAGE });
+let listState = freshListState();
+let listObserver = null;
 
 /** Call this when navigating to Plants fresh (e.g. tapping the nav tab). */
-export function clearPlantSearch() { savedPlantQuery = ''; }
+export function clearPlantSearch() { listState = freshListState(); }
 
 export async function renderPlantsList(container, headerActionEl, backBtn) {
     setLoading(container, true);
     backBtn.classList.remove('visible');
+    listObserver?.disconnect();
 
     let plants = [], photoPlantIds = new Set(), instances = [], areas = [], deceased = [];
     try {
@@ -61,15 +68,19 @@ export async function renderPlantsList(container, headerActionEl, backBtn) {
     const deceasedPlantIds = new Set(deceased.map(d => d.plantId));
     plants = plants.filter(p => !(deceasedPlantIds.has(p.id) && !livingPlantIds.has(p.id)));
 
-    // Build plantId → area names map for location display
+    // Build plantId → area names (for the card) and area ids (for the filter)
     const areaNameMap = Object.fromEntries(areas.map(a => [a.id, a.name]));
     const plantAreaNames = {};
+    const plantAreaIds   = {};
     for (const inst of instances) {
         const name = areaNameMap[inst.areaId];
         if (!name) continue;
-        if (!plantAreaNames[inst.plantId]) plantAreaNames[inst.plantId] = [];
+        if (!plantAreaNames[inst.plantId]) { plantAreaNames[inst.plantId] = []; plantAreaIds[inst.plantId] = new Set(); }
         if (!plantAreaNames[inst.plantId].includes(name)) plantAreaNames[inst.plantId].push(name);
+        plantAreaIds[inst.plantId].add(inst.areaId);
     }
+    // An area filter left over from an area that has since been deleted
+    if (listState.areaId && !areaNameMap[listState.areaId]) listState.areaId = '';
 
     // Build FAB — editors and admins only
     headerActionEl.innerHTML = '';
@@ -84,22 +95,40 @@ export async function renderPlantsList(container, headerActionEl, backBtn) {
         document.body.appendChild(fab);
     }
 
-    // Restore the previous search query (empty when arriving via nav tab)
-    let query = savedPlantQuery;
     let debounceTimer = null;
 
     container.innerHTML = `
         <div class="search-bar">
             <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input class="search-input" id="plant-search" placeholder="Search by name, genus, species…"
-                   autocomplete="off" value="${query.replace(/"/g, '&quot;')}">
+                   autocomplete="off" value="${escHtml(listState.query)}">
             <button class="search-clear" id="search-clear-btn" title="Clear search" aria-label="Clear search">✕</button>
         </div>
+        <div class="filter-chips plant-filters">
+            <button class="filter-chip" data-filter="unplaced" aria-pressed="false">Not placed</button>
+            <button class="filter-chip" data-filter="noPhoto" aria-pressed="false">No photo</button>
+            <select class="filter-chip plant-area-filter" id="plant-area-filter" aria-label="Show one area">
+                <option value="">All areas</option>
+                ${areas.map(a => `<option value="${escHtml(a.id)}">${escHtml(a.name)}</option>`).join('')}
+            </select>
+        </div>
         <div id="plant-results"></div>
+        <nav class="az-strip" id="az-strip" aria-label="Jump to a letter" hidden></nav>
     `;
 
+    const resultsEl   = container.querySelector('#plant-results');
+    const azStrip     = container.querySelector('#az-strip');
+    const searchInput = container.querySelector('#plant-search');
+    const clearBtn    = container.querySelector('#search-clear-btn');
+    const areaSelect  = container.querySelector('#plant-area-filter');
+    const chips       = [...container.querySelectorAll('.filter-chip[data-filter]')];
+
     const filtered = () => plants.filter(p => {
-        const q = query.toLowerCase().trim();
+        if (listState.unplaced && (plantAreaNames[p.id] || []).length) return false;
+        if (listState.noPhoto  && photoPlantIds.has(p.id))             return false;
+        if (listState.areaId   && !plantAreaIds[p.id]?.has(listState.areaId)) return false;
+
+        const q = listState.query.toLowerCase().trim();
         if (!q) return true;
 
         // Split into individual words so multi-word queries like "Acer palmatum"
@@ -117,80 +146,157 @@ export async function renderPlantsList(container, headerActionEl, backBtn) {
         return words.every(word => fields.some(field => field.includes(word)));
     });
 
-    const renderResults = () => {
-        const list = filtered();
-        const resultsEl = container.querySelector('#plant-results');
-        if (!resultsEl) return;
+    // The list as currently filtered, and how many of its cards are drawn.
+    let list = [], drawn = 0;
+    const cardFor = p => plantCard(p, photoPlantIds.has(p.id), plantAreaNames[p.id] || []);
+
+    /** Draw cards up to (not including) index `upTo`. */
+    const drawTo = upTo => {
+        const grid = resultsEl.querySelector('#plant-grid');
+        upTo = Math.min(upTo, list.length);
+        if (!grid || upTo <= drawn) return;
+        grid.insertAdjacentHTML('beforeend', list.slice(drawn, upTo).map(cardFor).join(''));
+        drawn = upTo;
+        listState.shown = drawn;
+        if (drawn >= list.length) { listObserver?.disconnect(); resultsEl.querySelector('#plant-more')?.remove(); }
+    };
+
+    // The list is sorted by genus, so the first card of each initial letter is
+    // where that letter starts. Plants with no genus sort first, under "#".
+    const letterOf = p => { const c = (p.genus || '').trim().charAt(0).toUpperCase(); return c >= 'A' && c <= 'Z' ? c : '#'; };
+    const drawStrip = () => {
+        const starts = new Map();
+        list.forEach((p, i) => { const l = letterOf(p); if (!starts.has(l)) starts.set(l, i); });
+        // Worth having only when the list runs past the first page and spans letters
+        const show = list.length > PLANT_PAGE && starts.size > 1;
+        azStrip.hidden = !show;
+        [resultsEl, searchInput.parentElement, areaSelect.parentElement].forEach(el => el.classList.toggle('has-az', show));
+        azStrip.innerHTML = show
+            ? [...starts].map(([l, i]) => `<button type="button" data-index="${i}" aria-label="Jump to ${l === '#' ? 'plants with no genus' : l}">${l}</button>`).join('')
+            : '';
+    };
+    const jumpTo = index => {
+        drawTo(index + PLANT_PAGE);
+        const card = resultsEl.querySelector('#plant-grid')?.children[index];
+        if (!card) return;
+        const headerH = document.querySelector('.app-header')?.offsetHeight || 60;
+        window.scrollTo({ top: card.getBoundingClientRect().top + window.scrollY - headerH - 8, behavior: 'instant' });
+    };
+
+    /** Rebuild the results. `keepDepth` is true only for the first draw, when
+     *  coming Back wants as many cards as were showing before. */
+    const renderResults = (keepDepth = false) => {
+        list  = filtered();
+        drawn = 0;
+        listObserver?.disconnect();
+        const first = keepDepth ? Math.max(listState.shown, PLANT_PAGE) : PLANT_PAGE;
+        const narrowed = list.length !== plants.length;
+        const noun = n => `plant${n !== 1 ? 's' : ''}`;
 
         resultsEl.innerHTML = `
             <div class="list-header">
                 <span class="list-title">Plants</span>
-                <span class="list-count">${list.length} plant${list.length !== 1 ? 's' : ''}</span>
+                <span class="list-count">${narrowed ? `${list.length} of ${plants.length} ${noun(plants.length)}` : `${list.length} ${noun(list.length)}`}</span>
             </div>
             ${list.length === 0 ? `
                 <div class="empty-state">
                     <div class="empty-state-icon">🌱</div>
-                    <h3>${query ? 'No plants found' : 'No plants yet'}</h3>
-                    <p>${query ? 'Try a different search term.' : 'Tap the + button to add your first plant.'}</p>
+                    <h3>${narrowed ? 'No plants found' : 'No plants yet'}</h3>
+                    <p>${narrowed ? 'Try a different search, or clear a filter.' : 'Tap the + button to add your first plant.'}</p>
                 </div>
             ` : `
-                <div class="card-grid">
-                    ${list.map(p => plantCard(p, photoPlantIds.has(p.id), plantAreaNames[p.id] || [])).join('')}
-                </div>
+                <div class="card-grid" id="plant-grid"></div>
+                <div id="plant-more" class="plant-more" aria-hidden="true"></div>
             `}
         `;
+        drawTo(first);
+        drawStrip();
 
-        // Bind card clicks
-        resultsEl.querySelectorAll('.plant-card').forEach(card => {
-            card.addEventListener('click', () => navigate('plant-detail', card.dataset.id));
-        });
-
-        // Genus badge — filter to that genus without navigating into the card
-        resultsEl.querySelectorAll('.genus-badge').forEach(badge => {
-            badge.addEventListener('click', e => {
-                e.stopPropagation();
-                const genus = badge.dataset.genus;
-                query = genus;
-                savedPlantQuery = genus;
-                searchInput.value = genus;
-                syncClearBtn();
-                clearTimeout(debounceTimer);
-                renderResults();
-            });
-        });
+        // More cards arrive as the end of the list comes within a few screens.
+        const more = resultsEl.querySelector('#plant-more');
+        if (more && 'IntersectionObserver' in window) {
+            listObserver = new IntersectionObserver(entries => {
+                if (!entries.some(e => e.isIntersecting)) return;
+                drawTo(drawn + PLANT_PAGE);
+                // Still in view after that batch (a tall screen): ask again.
+                const again = resultsEl.querySelector('#plant-more');
+                if (again) { listObserver.unobserve(again); listObserver.observe(again); }
+            }, { rootMargin: '1200px 0px' });
+            listObserver.observe(more);
+        } else if (more) {
+            drawTo(list.length);        // no observer: draw everything, as before
+        }
     };
 
-    const searchInput = container.querySelector('#plant-search');
-    const clearBtn    = container.querySelector('#search-clear-btn');
-
-    function syncClearBtn() {
+    const syncControls = () => {
         clearBtn.style.display = searchInput.value ? 'flex' : 'none';
-    }
+        chips.forEach(c => {
+            const on = !!listState[c.dataset.filter];
+            c.classList.toggle('active', on);
+            c.setAttribute('aria-pressed', String(on));
+        });
+        areaSelect.value = listState.areaId;
+        areaSelect.classList.toggle('active', !!listState.areaId);
+    };
+    const refilter = () => {
+        syncControls();
+        clearTimeout(debounceTimer);
+        renderResults();
+        window.scrollTo({ top: 0, behavior: 'instant' });
+    };
 
-    // Show the clear button immediately if the search was restored from saved state
-    syncClearBtn();
+    // One listener for every card, however many are drawn.
+    resultsEl.addEventListener('click', e => {
+        // Genus badge — filter to that genus without navigating into the card
+        const badge = e.target.closest('.genus-badge');
+        if (badge) {
+            listState.query = badge.dataset.genus;
+            searchInput.value = listState.query;
+            refilter();
+            return;
+        }
+        const card = e.target.closest('.plant-card');
+        if (card) navigate('plant-detail', card.dataset.id);
+    });
+
+    // A–Z strip: tap a letter, or slide a finger down it.
+    const letterAt = (x, y) => document.elementFromPoint(x, y)?.closest?.('#az-strip button');
+    let lastLetter = null;
+    const strike = btn => {
+        if (!btn || btn === lastLetter) return;
+        lastLetter = btn;
+        jumpTo(Number(btn.dataset.index));
+    };
+    azStrip.addEventListener('pointerdown', e => { lastLetter = null; strike(e.target.closest('button')); });
+    azStrip.addEventListener('pointermove', e => { if (e.buttons || e.pointerType === 'touch') strike(letterAt(e.clientX, e.clientY)); });
+    azStrip.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); lastLetter = null; strike(e.target.closest('button')); }
+    });
+
+    chips.forEach(c => c.addEventListener('click', () => {
+        listState[c.dataset.filter] = !listState[c.dataset.filter];
+        refilter();
+    }));
+    areaSelect.addEventListener('change', () => { listState.areaId = areaSelect.value; refilter(); });
 
     // Debounced search — waits 300ms after last keystroke before filtering
     searchInput.addEventListener('input', e => {
-        query = e.target.value;
-        savedPlantQuery = query;   // persist so Back restores it
-        syncClearBtn();
+        listState.query = e.target.value;   // kept so Back restores it
+        clearBtn.style.display = searchInput.value ? 'flex' : 'none';
         clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(renderResults, 300);
+        debounceTimer = setTimeout(() => renderResults(), 300);
     });
 
     // Clear button — wipe the input, reset query, re-render immediately
     clearBtn.addEventListener('click', () => {
         searchInput.value = '';
-        query = '';
-        savedPlantQuery = '';
-        syncClearBtn();
-        clearTimeout(debounceTimer);
-        renderResults();
+        listState.query = '';
+        refilter();
         searchInput.focus();
     });
 
-    renderResults();
+    syncControls();
+    renderResults(true);
     setLoading(container, false);
 }
 

@@ -1090,6 +1090,71 @@ textarea::placeholder {
     font-style: italic;
 }
 
+/* --- Plants list: filters, A–Z strip, incremental drawing (2026-11) --- */
+/* The genus badge is a button inside a card that is itself tappable, and it is
+   only about 20px high. The ::after widens what a finger can hit to roughly
+   44px without changing how the badge looks or how the card lays out. */
+.genus-badge { position: relative; }
+.genus-badge::after {
+    content: '';
+    position: absolute;
+    inset: -12px -8px;
+}
+/* The area picker is a native <select> dressed as a chip, so on a phone it
+   opens the system's own list. */
+/* One row: the picker gives up width before anything wraps. */
+.plant-filters { flex-wrap: nowrap; }
+.plant-filters .filter-chip { flex-shrink: 0; white-space: nowrap; }
+.plant-filters select.plant-area-filter {
+    flex: 0 1 150px;
+    min-width: 0;
+    max-width: 150px;
+    padding-right: 8px;
+    text-overflow: ellipsis;
+}
+select.plant-area-filter.active option { color: var(--grey-800); background: var(--white); }
+/* Watched by the list: when it nears the screen, the next cards are drawn. */
+.plant-more { height: 1px; }
+/* Keep the search box, the filters and the cards clear of the strip. */
+.has-az { margin-right: 14px; }
+.az-strip {
+    position: fixed;
+    top: calc(var(--header-h) + 8px);
+    /* stops above the + button: nav, 16px gap, 56px button, 8px to spare */
+    bottom: calc(var(--nav-h) + 80px);
+    right: 0;
+    width: 26px;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    touch-action: none;          /* a finger sliding down it picks letters, not scrolls */
+    user-select: none;
+    -webkit-user-select: none;
+}
+.az-strip[hidden] { display: none; }
+.az-strip button {
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: 28px;
+    padding: 0;
+    border: none;
+    background: none;
+    font-family: var(--font);
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--green-700);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.az-strip button:hover,
+.az-strip button:focus-visible { color: var(--green-900); background: var(--green-100); outline: none; }
+/* On a wide screen the page sits in a centered frame; keep the strip at the
+   frame's edge, not the window's. */
+@media (min-width: 900px) {
+    .az-strip { right: max(0px, calc((100vw - 1100px) / 2)); }
+}
+
 /* =============================================
    OVERVIEW DASHBOARD
    ============================================= */

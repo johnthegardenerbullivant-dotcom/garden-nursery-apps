@@ -23,6 +23,22 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 
 ---
 
+## 2026-11-10 — Plants list
+
+**Action required: none**
+
+- **The Plants list in Garden opens with the first 60 plants and adds more as you scroll**, instead
+  of drawing every plant at once. Searching is quicker for the same reason.
+- **An A–Z strip down the right-hand edge jumps to a letter.** Tap a letter, or slide a finger down
+  the strip. It appears when the list is long enough to need it.
+- **Three filters under the search box:** *Not placed*, *No photo*, and a picker that shows one
+  area. They combine with each other and with the search, and the count reads *25 of 1068 plants*
+  while any of them is narrowing the list.
+- **Coming back from a plant returns to the same place**, with the same search and filters. Tapping
+  the Plants tab starts afresh.
+- **The genus badge on a plant card is easier to hit.** It looks the same; the area that responds to
+  a finger is larger.
+
 ## 2026-11-10
 
 **Action required: none**
