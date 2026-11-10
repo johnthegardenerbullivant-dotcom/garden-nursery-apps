@@ -5,11 +5,11 @@
 import { initFirebase, getPendingUserCount } from './db.js';
 import { initAuth, getAuthInstance, loadRole, setCurrentUser, setRole,
          getCurrentUser, getCurrentRole, signOutUser } from './auth.js';
-import { showLoginOverlay, hideLoginOverlay, showAccessDenied } from './auth-view.js';
+import { showLoginOverlay, hideLoginOverlay, showAccessDenied, showCantConnect } from './auth-view.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 import { setNavigateFn, setGoBackFn, setNavigateReplaceFn,
-         isModalOpen, requestCloseModal, showToast } from './ui-utils.js';
+         isModalOpen, requestCloseModal, showToast, initSyncIndicator } from './ui-utils.js';
 import { renderDashboard }                                   from './dashboard-view.js';
 import { renderBatchesList, renderBatchDetail }              from './batches-view.js';
 import { renderPropagatedPlants, renderPlantPropHistory }    from './plants-view.js';
@@ -422,6 +422,7 @@ function boot() {
     }
 
     configOverlay.style.display = 'none';
+    initSyncIndicator();
     initAuth(firebase.app, firebase.db);
 
     onAuthStateChanged(getAuthInstance(), async (user) => {
@@ -446,6 +447,11 @@ function boot() {
         // User Management panel in Admin can display them immediately.
         setCurrentUser(user);
         const role = await loadRole(user.uid, user);
+
+        if (role === 'unavailable') {
+            showCantConnect();
+            return;
+        }
 
         if (!role || role === 'blocked') {
             showAccessDenied(user.email || user.displayName || 'you');

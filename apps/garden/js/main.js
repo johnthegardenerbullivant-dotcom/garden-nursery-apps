@@ -5,11 +5,11 @@
 import { initFirebase, getPendingUserCount, getPlantByTagCode, isTagCode, escHtml } from './db.js';
 import { initAuth, getAuthInstance, loadRole, setCurrentUser, setRole,
          getCurrentUser, getCurrentRole, signInAsGuest, signOutUser } from './auth.js';
-import { showLoginOverlay, hideLoginOverlay, showAccessDenied } from './auth-view.js';
+import { showLoginOverlay, hideLoginOverlay, showAccessDenied, showCantConnect } from './auth-view.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 import { setNavigateFn, setGoBackFn, setNavigateReplaceFn,
-         isModalOpen, requestCloseModal, showToast } from './ui-utils.js';
+         isModalOpen, requestCloseModal, showToast, initSyncIndicator } from './ui-utils.js';
 import { renderPlantsList, renderPlantDetail, clearPlantSearch } from './plants-view.js';
 import { renderAreasList, renderAreaDetail }   from './areas-view.js';
 import { renderWalkRound }                     from './walkround-view.js';
@@ -546,6 +546,7 @@ function boot() {
     }
 
     configOverlay.style.display = 'none';
+    initSyncIndicator();
 
     // Initialise Auth with the Firebase app + Firestore instances
     initAuth(firebase.app, firebase.db);
@@ -587,6 +588,11 @@ function boot() {
         // User Management panel in Admin can display them immediately.
         setCurrentUser(user);
         const role = await loadRole(user.uid, user);
+
+        if (role === 'unavailable') {
+            showCantConnect();
+            return;
+        }
 
         if (!role || role === 'blocked') {
             // Authenticated but no role assigned yet, or explicitly blocked

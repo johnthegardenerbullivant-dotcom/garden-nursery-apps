@@ -18,6 +18,27 @@ export function hideLoginOverlay() {
     if (overlay) overlay.style.display = 'none';
 }
 
+/**
+ * Replace the login card with a "can't reach the server" message. Shown when
+ * the role lookup failed outright, which without this looked like a refusal.
+ */
+export function showCantConnect() {
+    const overlay = document.getElementById('login-overlay');
+    if (!overlay) return;
+    overlay.style.display = 'flex';
+    overlay.querySelector('.login-card').innerHTML = `
+        <div class="login-logo">🌱</div>
+        <h1 class="login-title">Can't connect</h1>
+        <p class="login-subtitle" style="text-align:center;margin-bottom:24px;line-height:1.6;">
+            You're signed in, but the app couldn't reach its data to check your access.
+            This usually means no signal.<br><br>
+            Once this device has opened the app with a connection, it will open without one.
+        </p>
+        <button class="btn btn-primary" id="login-retry-btn" style="width:100%;">Try again</button>
+    `;
+    overlay.querySelector('#login-retry-btn')?.addEventListener('click', () => location.reload());
+}
+
 export function showAccessDenied(email) {
     const overlay = document.getElementById('login-overlay');
     if (!overlay) return;

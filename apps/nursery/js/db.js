@@ -5,9 +5,10 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import {
-    getFirestore,
+    getFirestore, initializeFirestore,
+    persistentLocalCache, persistentMultipleTabManager,
     collection, doc,
-    addDoc, setDoc, updateDoc, deleteDoc,
+    setDoc as fsSetDoc, updateDoc as fsUpdateDoc, deleteDoc as fsDeleteDoc,
     getDocs, getDoc,
     query, orderBy, where, limit,
     serverTimestamp
@@ -24,11 +25,92 @@ import { isUncounted, uncountedQtyText } from './germination.js';
 // ---------- Initialise Firebase ----------
 let app, db, storage;
 
+// =============================================
+//  Offline: a cache on the device, and writes that queue
+// =============================================
+// Added 2026-11. Two things make the app usable with poor or no signal.
+//
+// 1. Firestore keeps its data in IndexedDB on the device (see initFirebase).
+//    A read with no connection is answered from that copy, and a write made
+//    with no connection is stored there and sent when the connection returns,
+//    even if the app has been closed in between.
+//
+// 2. Every write in this file goes through queued(). Firestore's own write
+//    promise does not settle until the SERVER has the write, so out of signal
+//    an awaited save would leave its form on "Saving…" for as long as you stay
+//    out of range. queued() waits a few seconds for the server and then lets
+//    the caller carry on: the write is already safe in the local cache and is
+//    in every read from that moment.
+//
+// The cost of (2): a write the server later REFUSES (the security rules) can no
+// longer fail the form that made it once queued() has let go. That is announced
+// with a 'write-failed' event instead, which ui-utils turns into a toast. When
+// the server is reachable a refusal arrives well inside the wait, so the form
+// still sees it as before.
+//
+// addDoc, setDoc, updateDoc and deleteDoc below shadow Firestore's own, which
+// are imported under fs* names, so the rest of this file reads as it always
+// did and cannot bypass the queue by accident.
+
+const ACK_WAIT_MS         = 5000;  // online: how long to wait for the server
+const ACK_WAIT_OFFLINE_MS = 300;   // browser already says we are offline
+
+let unsynced = 0;                  // writes the server has not confirmed yet
+
+function announceSync() {
+    window.dispatchEvent(new CustomEvent('sync-state', { detail: { unsynced } }));
+}
+
+function queued(serverPromise) {
+    unsynced++;
+    announceSync();
+    let acked = false, released = false;
+    const settled = serverPromise.then(
+        value => { acked = true; unsynced--; announceSync(); return value; },
+        err   => {
+            acked = true; unsynced--; announceSync();
+            if (released) {
+                console.error('A queued write was refused:', err);
+                window.dispatchEvent(new CustomEvent('write-failed', { detail: err }));
+            }
+            throw err;
+        }
+    );
+    return new Promise((resolve, reject) => {
+        settled.then(resolve, err => { if (!released) reject(err); });
+        setTimeout(() => {
+            if (!acked) { released = true; resolve(undefined); }
+        }, navigator.onLine ? ACK_WAIT_MS : ACK_WAIT_OFFLINE_MS);
+    });
+}
+
+// addDoc must hand back the new document's reference straight away, so the id
+// is made on the device (which is all Firestore's addDoc does) and written
+// with setDoc.
+function addDoc(collectionRef, data) {
+    const ref = doc(collectionRef);
+    return queued(fsSetDoc(ref, data)).then(() => ref);
+}
+const setDoc    = (...args) => queued(fsSetDoc(...args));
+const updateDoc = (...args) => queued(fsUpdateDoc(...args));
+const deleteDoc = (...args) => queued(fsDeleteDoc(...args));
+
 export function initFirebase() {
     if (firebaseConfig.apiKey.startsWith('REPLACE_WITH')) return null;
     try {
         app     = initializeApp(firebaseConfig);
-        db      = getFirestore(app);
+        // Keep the data on the device so the app works without signal. The
+        // tab manager lets two tabs of the app share that one copy. A browser
+        // that refuses IndexedDB (some private windows) falls back to the
+        // in-memory cache the app used before: it works, online only.
+        try {
+            db = initializeFirestore(app, {
+                localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+            });
+        } catch (e) {
+            console.warn('Offline cache unavailable, continuing online-only:', e);
+            db = getFirestore(app);
+        }
         storage = getStorage(app);
         return { app, db, storage };
     } catch (e) {

@@ -144,10 +144,11 @@ through `showAddPlantToAreaModal`, label scan included. It stores **only fields 
 documents**, so no rules change: `instances.lastSeen` and `instances.notFoundOn` (YYYY-MM-DD),
 `areas.walkRoundStarted` (set while in progress, `null` otherwise) and `areas.lastWalkRound`. A
 plant is checked on the current walk-round when `lastSeen >= walkRoundStarted`, which is why progress
-resumes on any device. **Writes are tracked, not awaited:** out of signal Firestore's promise does not
-settle until the server has the write, and the memory cache means closing the page loses anything
-unsent — so ticks update the screen at once, a refused write is rolled back with a toast, and a
-`beforeunload` guard warns while writes are waiting. Death, add-plant and new-plant still await, as
+resumes on any device. **Writes are tracked, not awaited:** ticks update the screen at once and a refused
+write is rolled back with a toast. This predates the app-wide offline cache (root `CLAUDE.md`,
+*Offline*). Since 2026-11 unsent writes survive closing the page, and `queued()` settles each
+write after a few seconds, so the `beforeunload` guard and the "keep this page open" wording are
+now more cautious than they need to be. Harmless; simplify when next in that file. Death, add-plant and new-plant still await, as
 they do everywhere else.
 
 **UX notes and improvement ideas:** [`docs/ux-review.md`](../../docs/ux-review.md).
