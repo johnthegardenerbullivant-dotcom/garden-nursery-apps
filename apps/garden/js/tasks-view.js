@@ -43,6 +43,13 @@ let allExpanded = false;
 // This survives re-renders (filter changes, Back navigation) so sections stay open.
 let expandedSectionIds = new Set();
 
+// Until someone opens or closes a section by hand, the page decides: Overdue
+// is open, and when there are only a few tasks everything is. It used to open
+// with every section shut, so a screen of ten tasks showed two headers.
+// Kept per view: the two views have different sections.
+const sectionChoiceMade = { 'by-area': false, 'by-status': false };
+const FEW_TASKS = 15;
+
 // Date helpers now come from db.js — see the import above.
 
 // =============================================
@@ -54,6 +61,7 @@ export async function renderTasksView(container, headerActionEl, backBtn, restor
     // An empty array is valid — it means "collapse everything" (user had nothing open).
     if (Array.isArray(restoredExpanded)) {
         expandedSectionIds = new Set(restoredExpanded);
+        sectionChoiceMade[activeView] = true;
     }
     setLoading(container, true);
     backBtn.classList.remove('visible');
@@ -92,6 +100,7 @@ export async function renderTasksView(container, headerActionEl, backBtn, restor
         assignmentsByArea[a.areaId].push(a);
     }
 
+    // For the count on the Tasks tab.
     const activeCount = enriched.filter(a =>
         a.status === 'todo' || a.status === 'in-progress').length;
 
@@ -145,14 +154,7 @@ export async function renderTasksView(container, headerActionEl, backBtn, restor
             <button class="btn btn-sm btn-secondary" id="expand-all-btn">Expand all</button>
         </div>
 
-        ${activeCount > 0 ? `
-        <div style="margin-bottom:12px;font-size:0.85rem;color:var(--green-700);font-weight:600;
-             padding:8px 12px;background:var(--green-50);border-radius:var(--radius-sm);
-             border-left:3px solid var(--green-500);">
-            ${activeCount} active task${activeCount !== 1 ? 's' : ''} across all areas
-        </div>` : ''}
-
-        <div class="filter-chips">
+        <div class="filter-chips tasks-filter-chips">
             <button class="filter-chip filter-chip--overdue${overdueOnly ? ' active' : ''}" data-overdue="1">
                 ⚠️ Overdue
             </button>
@@ -194,6 +196,12 @@ export async function renderTasksView(container, headerActionEl, backBtn, restor
         header.addEventListener('click', e => {
             if (e.target.closest('.area-open-btn')) return;
             const section = header.closest('.area-section');
+            if (!sectionChoiceMade[activeView]) {
+                container.querySelectorAll('.area-section.expanded').forEach(open => {
+                    if (open.dataset.areaId) expandedSectionIds.add(open.dataset.areaId);
+                });
+                sectionChoiceMade[activeView] = true;
+            }
             section.classList.toggle('expanded');
             const areaId = section.dataset.areaId;
             if (areaId) {
@@ -229,8 +237,10 @@ export async function renderTasksView(container, headerActionEl, backBtn, restor
     });
 
     // Apply initial expanded state — honour both allExpanded and individual section tracking
+    const fewTasks = container.querySelectorAll('.task-row').length <= FEW_TASKS;
     container.querySelectorAll('.area-section').forEach(s => {
-        const shouldExpand = allExpanded || expandedSectionIds.has(s.dataset.areaId);
+        const shouldExpand = allExpanded || expandedSectionIds.has(s.dataset.areaId) ||
+            (!sectionChoiceMade[activeView] && (fewTasks || s.classList.contains('overdue-section')));
         s.classList.toggle('expanded', shouldExpand);
     });
     const expandBtn = container.querySelector('#expand-all-btn');
@@ -238,6 +248,7 @@ export async function renderTasksView(container, headerActionEl, backBtn, restor
 
     expandBtn?.addEventListener('click', () => {
         allExpanded = !allExpanded;
+        sectionChoiceMade['by-area'] = sectionChoiceMade['by-status'] = true;
         container.querySelectorAll('.area-section').forEach(s => {
             s.classList.toggle('expanded', allExpanded);
             const areaId = s.dataset.areaId;
@@ -498,7 +509,7 @@ function buildStatusView(enriched, areas, areaPlantMapFn, filterSet) {
         const uniqueCount = Object.keys(byTask).length;
         return `
             <div class="area-section status-section${isOverdueSection ? ' overdue-section' : ''}"
-                 data-status="${status}">
+                 data-status="${status}" data-area-id="status-${status}">
                 <div class="area-section-header">
                     <div class="area-header-left">
                         <span class="area-chevron">&#9654;</span>
@@ -604,6 +615,10 @@ export function buildTaskRow(assignment, plantMap, areaLabel = null, showStatusB
              ${multiAreaData ? `data-multi-areas="${escHtml(JSON.stringify(multiAreaData))}"` : ''}>
             <div class="task-row-header">
                 <div class="task-row-left">
+                    ${isAtLeast('editor') && !isSkipped ? `
+                    <button type="button" class="task-check${assignment.status === 'completed' ? ' done' : ''}"
+                            aria-label="${assignment.status === 'completed' ? 'Completed. Tap to put back to To-Do' : 'Mark as completed'}"
+                            title="${assignment.status === 'completed' ? 'Put back to To-Do' : 'Mark as completed'}"></button>` : ''}
                     <span class="priority-dot priority-${priority}"
                           title="${PRIORITY_LABEL[priority]} priority"></span>
                     ${isRecurring ? `<span class="recurring-badge" title="Recurring task">🔁</span>` : ''}
@@ -762,6 +777,22 @@ export function attachTaskHandlers(root, onRefresh) {
     root.querySelectorAll('.task-row-header').forEach(header => {
         header.addEventListener('click', () =>
             header.closest('.task-row').classList.toggle('expanded'));
+    });
+
+    // ---- One-tap tick: the same as pressing Completed (or To-Do to undo it)
+    // in the expanded row, so multi-area tasks and recurring tasks behave
+    // exactly as they do from the buttons.
+    root.querySelectorAll('.task-check').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const row = btn.closest('.task-row');
+            if (!row) return;
+            const target = row.dataset.status === 'completed' ? 'todo' : 'completed';
+            const statusBtn = row.querySelector(`.task-status-btn[data-status="${target}"]`);
+            if (!statusBtn) return;
+            btn.classList.toggle('done', target === 'completed');   // show it at once
+            statusBtn.click();
+        });
     });
 
     // ---- Quick status change ----
@@ -1018,6 +1049,35 @@ export async function showAssignExistingTaskModal(areaId, areaName, onSave) {
 // =============================================
 //  NAV BADGE  (active task count)
 // =============================================
+
+/**
+ * Put a find box above a long list of checkboxes. Typing hides the rows that
+ * do not match; a ticked row always stays in view, so nothing chosen can be
+ * hidden by the filter. Lists of eight or fewer are left alone.
+ */
+function addListFilter(list, placeholder) {
+    const items = [...list.querySelectorAll('.area-checkbox-item')];
+    if (items.length <= 8) return;
+    const box = document.createElement('input');
+    box.type = 'search';
+    box.className = 'form-input list-filter';
+    box.placeholder = placeholder;
+    box.autocomplete = 'off';
+    box.setAttribute('aria-label', placeholder.replace('…', ''));
+    list.before(box);
+    const apply = () => {
+        const q = box.value.trim().toLowerCase();
+        items.forEach(it => {
+            const ticked = it.querySelector('input[type=checkbox]')?.checked;
+            it.hidden = !!q && !ticked && !it.textContent.toLowerCase().includes(q);
+        });
+    };
+    // Typing a search is not a change to the form, so it must not make Cancel
+    // or Back ask "Discard what you have entered?". Enter must not submit.
+    box.addEventListener('input',  e => { e.stopPropagation(); apply(); });
+    box.addEventListener('change', e => e.stopPropagation());
+    box.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+}
 
 export function updateNavBadge(count) {
     const btn = document.querySelector('[data-view="tasks"]');
@@ -1341,7 +1401,7 @@ export async function showTaskForm(task, existingAssignments, areas, instances,
             </div>
 
             <div class="form-section-label">Assign to</div>
-            <div class="area-checkbox-list" style="margin-bottom:12px;">
+            <div class="area-checkbox-list assign-to-list" style="margin-bottom:12px;">
                 ${allTargets.map(t => `
                     <div class="area-checkbox-item">
                         <input type="checkbox" id="area-check-${t.id}"
@@ -1368,6 +1428,8 @@ export async function showTaskForm(task, existingAssignments, areas, instances,
     `;
 
     showModal(isEdit ? 'Edit Task' : 'Add Task', html);
+    document.querySelectorAll('#modal-body .area-checkbox-list').forEach(list =>
+        addListFilter(list, list.classList.contains('assign-to-list') ? 'Find an area…' : 'Find a plant…'));
 
     // Recurrence type — show/hide sub-options and auto-fill due dates
     const recurTypeSel    = document.getElementById('recur-type');

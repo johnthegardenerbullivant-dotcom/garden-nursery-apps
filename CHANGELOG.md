@@ -23,6 +23,26 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 
 ---
 
+## 2026-11-10 — Tasks screen
+
+**Action required: none**
+
+- **Tasks opens with the tasks showing.** The Overdue section is open, and when there are 15 tasks or
+  fewer every section is. It used to open with every section shut. Once you open or close a section
+  yourself, the screen remembers that for the rest of the visit, separately for By Area and By
+  Status.
+- **A section you leave open stays open** after you change a task's status in By Status. Before, the
+  whole list closed up again.
+- **A round tick at the start of each task marks it done in one tap**, without opening the row, on
+  Tasks, on Overview and on each area's task list. Tap
+  it again to put the task back to To-Do. It does exactly what the Completed and To-Do buttons do,
+  so a task in several areas still asks which areas, and a recurring task still schedules its next
+  date.
+- **The "10 active tasks across all areas" banner is gone**; the same number is on the Tasks tab.
+  The four filter chips now sit on one row.
+- **Add Task: a find box over the area list**, which is also taller. Type part of a name to narrow
+  the 35 areas; areas already ticked stay in view. Long plant lists in the same form get one too.
+
 ## 2026-11-10 — easier to tap
 
 **Action required: none**

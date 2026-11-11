@@ -3044,3 +3044,66 @@ select.plant-area-filter.active option { color: var(--grey-800); background: var
 
 /* 16px, so iPhone Safari does not zoom the page when a field is tapped. */
 .form-input, .form-textarea, .form-select, .plant-lookup-text { font-size: 1rem; }
+
+/* =============================================
+   Tasks screen, 2026-11
+   ============================================= */
+/* The four status chips stay on one row; on a narrow phone the row slides
+   sideways rather than wrapping onto a second line. */
+.tasks-filter-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-left: -16px;
+    margin-right: -16px;
+    padding: 0 16px 2px;
+}
+.tasks-filter-chips::-webkit-scrollbar { display: none; }
+.tasks-filter-chips { gap: 6px; }
+.tasks-filter-chips .filter-chip { flex-shrink: 0; white-space: nowrap; padding-left: 10px; padding-right: 10px; }
+
+/* One tap marks a task done, without opening the row. 26px to look at, 44px
+   to hit. */
+.task-check {
+    position: relative;
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    margin: -4px 2px -4px -2px;
+    padding: 0;
+    border: 2px solid var(--grey-300);
+    border-radius: 50%;
+    background: var(--white);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background var(--transition), border-color var(--transition);
+}
+.task-check::after {
+    content: '';
+    position: absolute;
+    inset: -11px;
+}
+.task-check:hover { border-color: var(--green-500); }
+.task-check.done {
+    background: var(--green-700);
+    border-color: var(--green-700);
+}
+.task-check.done::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 3px;
+    width: 6px;
+    height: 11px;
+    border: solid var(--white);
+    border-width: 0 2.5px 2.5px 0;
+    transform: rotate(45deg);
+}
+
+/* Add Task: the area list was a box four rows high holding 35 areas. */
+.assign-to-list { max-height: min(45vh, 360px); }
+.list-filter { margin-bottom: 8px; }
+.area-checkbox-item { min-height: 44px; }
+.area-checkbox-item[hidden] { display: none; }
+.area-checkbox-item input { width: 20px; height: 20px; flex-shrink: 0; }
+.area-checkbox-item label { flex: 1; cursor: pointer; }
