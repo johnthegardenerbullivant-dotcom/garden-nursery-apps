@@ -23,6 +23,22 @@ Every entry below therefore carries an **Action required** line. `none` means sy
 
 ---
 
+## 2026-11-10 — quicker to start
+
+**Action required: none**
+
+- **Both apps start with less to download.** Screens opened less often are fetched the first time
+  they are needed. Garden's launch went from 19 of its own files (568 KB) to 15 (375 KB), and no
+  longer loads the blog editor; Nursery's from 27 files (410 KB) to 24 (338 KB). A few seconds after
+  launch the rest are fetched in the background, so every screen still opens with no signal later.
+- **Fixed: a task repeating monthly on the 31st skipped February** (31 January was followed by
+  31 March). Months shorter than the chosen day now use their last day.
+- **Fixed: repeat dates could land on the wrong day east of UTC+12**, such as New Zealand in summer.
+- **`CLAUDE.md` is no longer served by either site.** It is a note for whoever works on the code.
+- **For maintainers:** a `tests/` folder, run with `node --test "tests/*.test.mjs"`, and no npm.
+  Garden's pure helpers moved from `db.js` to a new `garden-logic.js` so Node can load them;
+  `db.js` re-exports them, so nothing that imports them changed.
+
 ## 2026-11-10 — Tasks screen
 
 **Action required: none**

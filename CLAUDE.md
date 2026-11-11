@@ -14,7 +14,7 @@ Two Progressive Web Apps, one Firebase project, one repo, two Netlify sites.
 |---|---|---|
 | What it does | Plant collection, areas, tasks, irrigation, blog/journal, compost bin | Propagation batches from sowing to planted-out, given-away or lost |
 | Folder | `apps/garden/` | `apps/nursery/` |
-| JS modules | 17 | 25 |
+| JS modules | 18 | 25 |
 | Netlify site | #1 | #2 |
 
 - **Firebase project:** one project — Firestore + Storage + Auth — **shared by both apps**. Which
@@ -83,7 +83,7 @@ garden-apps/
 │   │   ├── icons/            ← 3 PNGs
 │   │   ├── functions/         ← 2 Netlify functions, both calling Gemini:
 │   │   │                        scan-label.js · lookup-plant.js
-│   │   └── js/               ← 17 ES modules
+│   │   └── js/               ← 18 ES modules
 │   │
 │   └── nursery/              ← Netlify site #2. Same shape, 25 JS modules.
 │
@@ -95,6 +95,9 @@ garden-apps/
 │   └── cors.json
 │
 ├── docs/                     ← design notes, specs, the restructure plan
+├── tests/                    ← node --test, no npm. Covers the pure modules only:
+│                                garden-logic.js, and Nursery's pretreatment.js,
+│                                germination.js and plant-match.js. See rule 9.
 └── tools/
     ├── build.mjs             ← THE build: copies /shared, generates the two config files
     ├── check-public.mjs      ← "have I released what I merged?" Merging publishes
@@ -335,7 +338,7 @@ composite indexes or fight Netlify.
 
 ## Standing rules
 
-1. **`node --check` every JS file after generating or moving any of them.** All 50: 17 Garden
+1. **`node --check` every JS file after generating or moving any of them.** All 51: 18 Garden
    modules, 25 Nursery modules, 2 `functions/scan-label.js`, 2 `functions/lookup-plant.js`, and the
    4 scripts in `tools/`. If it reports an error, treat it as real — never dismiss it as a false
    alarm. One command covers the lot:
@@ -377,6 +380,19 @@ composite indexes or fight Netlify.
    is. After opening a PR, merging, deploying or publishing, say where things stand in one line,
    for example: *PR #43 merged · Garden live (Published) · Nursery skipped, no change · not yet
    pushed to `public`*. Check each part rather than assuming it.
+9. **Run the tests before pushing a change to dates, names, escaping, tag codes, pre-sowing
+   treatment, germination or plant matching.** Node's own test runner; nothing to install:
+
+   ```
+   node --test "tests/*.test.mjs"
+   ```
+
+   Keep the quotes: Node expands the pattern itself, which works the same in PowerShell and Git
+   Bash. The tests only reach modules with no imports — `garden-logic.js` in Garden, and
+   `pretreatment.js`, `germination.js` and `plant-match.js` in Nursery — so logic worth
+   testing belongs in one of those, not in a `db.js` or a view. To check another time zone, set
+   `TZ` in PowerShell (`$env:TZ = 'Pacific/Auckland'`); Git Bash does not pass `TZ` on to
+   Windows programs, so setting it there silently tests your own zone.
 
 ---
 

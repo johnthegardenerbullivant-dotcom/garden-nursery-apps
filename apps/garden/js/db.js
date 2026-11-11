@@ -20,6 +20,18 @@ import {
 import imageCompression from 'https://cdn.jsdelivr.net/npm/browser-image-compression@2/dist/browser-image-compression.mjs';
 
 import { firebaseConfig } from '../firebase-config.js';
+import {
+    TAG_CODE_ALPHABET, TAG_CODE_LENGTH, isTagCode, nextOccurrenceDate, firstOccurrenceFromToday,
+    formatBotanicalName, hybridTypeOf, plainPlantName, escHtml, linkify,
+    fmtDate, fmtDateLong, todayStr, isOverdue
+} from './garden-logic.js';
+// The pure helpers live in garden-logic.js so Node can test them; they are
+// re-exported here so every view still imports from './db.js'.
+export {
+    isTagCode, nextOccurrenceDate, firstOccurrenceFromToday,
+    formatBotanicalName, hybridTypeOf, plainPlantName, escHtml, linkify,
+    fmtDate, fmtDateLong, todayStr, isOverdue
+};
 
 // ---------- Initialise Firebase ----------
 let app, db, storage;
@@ -286,13 +298,7 @@ export async function updatePlant(id, data) {
 // Crockford's Base32 alphabet: no I, L, O or U, so nothing on a printed tag
 // can be misread as something else, and every character is legal in QR
 // alphanumeric mode. See docs/plant-tags.md.
-const TAG_CODE_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
-const TAG_CODE_LENGTH   = 6;
 
-/** Is this path segment shaped like a tag code rather than a Firestore ID? */
-export function isTagCode(value) {
-    return new RegExp(`^[${TAG_CODE_ALPHABET}]{${TAG_CODE_LENGTH}}$`).test(String(value || '').toUpperCase());
-}
 
 function randomTagCode() {
     const bytes = new Uint8Array(TAG_CODE_LENGTH);
@@ -697,34 +703,36 @@ export async function getPhotosForPlant(plantId) {
  * Returns a promise that resolves with the photo document ID.
  * Calls onProgress(pct) with upload % (0–100).
  */
-export async function uploadPhoto(plantId, file, onProgress) {
+/**
+ * Compress a picture and put it in Storage under <folder>/<ownerId>/.
+ * Resolves with { url, path }. The three upload functions below differ only
+ * in the folder and in what record, if any, they write afterwards.
+ */
+async function uploadToStorage(folder, ownerId, file, onProgress) {
     const fileToUpload = await compressImage(file);
-    return new Promise((resolve, reject) => {
-        const ext        = file.name.split('.').pop();
-        const filename   = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-        const path       = `plant-photos/${plantId}/${filename}`;
-        const storageRef = ref(storage, path);
-        const task       = uploadBytesResumable(storageRef, fileToUpload);
+    const ext      = file.name.split('.').pop();
+    const filename = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const path     = `${folder}/${ownerId}/${filename}`;
+    const task     = uploadBytesResumable(ref(storage, path), fileToUpload);
+    await new Promise((resolve, reject) => task.on('state_changed',
+        snap => { if (onProgress) onProgress((snap.bytesTransferred / snap.totalBytes) * 100); },
+        reject,
+        resolve
+    ));
+    return { url: await getDownloadURL(task.snapshot.ref), path };
+}
 
-        task.on('state_changed',
-            snap => {
-                const pct = (snap.bytesTransferred / snap.totalBytes) * 100;
-                if (onProgress) onProgress(pct);
-            },
-            err => reject(err),
-            async () => {
-                const url = await getDownloadURL(task.snapshot.ref);
-                const docRef = await addDoc(collection(db, 'photos'), {
-                    plantId,
-                    url,
-                    storagePath: path,
-                    filename: file.name,
-                    createdAt: serverTimestamp()
-                });
-                resolve(docRef.id);
-            }
-        );
+/** Upload a plant photo and record it. Resolves with the photo record's id. */
+export async function uploadPhoto(plantId, file, onProgress) {
+    const { url, path } = await uploadToStorage('plant-photos', plantId, file, onProgress);
+    const docRef = await addDoc(collection(db, 'photos'), {
+        plantId,
+        url,
+        storagePath: path,
+        filename: file.name,
+        createdAt: serverTimestamp()
     });
+    return docRef.id;
 }
 
 /**
@@ -811,32 +819,15 @@ export async function updatePhotoOrders(orderedIds) {
  * Compresses the image to ≤500 KB / 1920 px before uploading if needed.
  */
 export async function uploadAreaPhoto(areaId, file, onProgress) {
-    const fileToUpload = await compressImage(file);
-    return new Promise((resolve, reject) => {
-        const ext        = file.name.split('.').pop();
-        const filename   = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-        const path       = `area-photos/${areaId}/${filename}`;
-        const storageRef = ref(storage, path);
-        const task       = uploadBytesResumable(storageRef, fileToUpload);
-        task.on('state_changed',
-            snap => {
-                const pct = (snap.bytesTransferred / snap.totalBytes) * 100;
-                if (onProgress) onProgress(pct);
-            },
-            err => reject(err),
-            async () => {
-                const url = await getDownloadURL(task.snapshot.ref);
-                const docRef = await addDoc(collection(db, 'photos'), {
-                    areaId,
-                    url,
-                    storagePath: path,
-                    filename: file.name,
-                    createdAt: serverTimestamp()
-                });
-                resolve(docRef.id);
-            }
-        );
+    const { url, path } = await uploadToStorage('area-photos', areaId, file, onProgress);
+    const docRef = await addDoc(collection(db, 'photos'), {
+        areaId,
+        url,
+        storagePath: path,
+        filename: file.name,
+        createdAt: serverTimestamp()
     });
+    return docRef.id;
 }
 
 // =============================================
@@ -956,52 +947,6 @@ export async function deleteSuggestion(id) {
 // =============================================
 
 /**
- * Given a recurrence pattern and a YYYY-MM-DD start date, return the next
- * occurrence date as a YYYY-MM-DD string (always at least one unit ahead).
- */
-export function nextOccurrenceDate(recurrence, fromDateStr) {
-    const d = new Date(fromDateStr + 'T12:00:00');
-    if (recurrence.type === 'daily') {
-        d.setDate(d.getDate() + 1);
-    } else if (recurrence.type === 'weekly') {
-        const target = recurrence.dayOfWeek;
-        let ahead = target - d.getDay();
-        if (ahead <= 0) ahead += 7;
-        d.setDate(d.getDate() + ahead);
-    } else if (recurrence.type === 'monthly') {
-        const dom = recurrence.dayOfMonth || 1;
-        d.setMonth(d.getMonth() + 1);
-        d.setDate(Math.min(dom, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
-    }
-    return d.toISOString().slice(0, 10);
-}
-
-/**
- * Return the first (upcoming) occurrence date from today for a new recurring task.
- * For weekly tasks, returns today if today matches the target day.
- */
-export function firstOccurrenceFromToday(recurrence) {
-    const today = new Date();
-    today.setHours(12, 0, 0, 0);
-    if (recurrence.type === 'daily') {
-        return today.toISOString().slice(0, 10);
-    } else if (recurrence.type === 'weekly') {
-        const target = recurrence.dayOfWeek;
-        let ahead = target - today.getDay();
-        if (ahead < 0) ahead += 7;
-        today.setDate(today.getDate() + ahead);
-        return today.toISOString().slice(0, 10);
-    } else if (recurrence.type === 'monthly') {
-        const dom = recurrence.dayOfMonth || 1;
-        const thisMonth = new Date(today.getFullYear(), today.getMonth(), dom, 12);
-        if (thisMonth >= today) return thisMonth.toISOString().slice(0, 10);
-        const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, dom, 12);
-        return nextMonth.toISOString().slice(0, 10);
-    }
-    return today.toISOString().slice(0, 10);
-}
-
-/**
  * After a recurring assignment is completed or skipped, create the next occurrence.
  */
 export async function createNextRecurringOccurrence(assignment, task) {
@@ -1087,25 +1032,8 @@ export async function deleteBlogPost(id) {
  * Returns { url, storagePath }.
  */
 export async function uploadBlogPhoto(postId, file, onProgress) {
-    const fileToUpload = await compressImage(file);
-    return new Promise((resolve, reject) => {
-        const ext        = file.name.split('.').pop();
-        const filename   = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-        const path       = `blog-photos/${postId}/${filename}`;
-        const storageRef = ref(storage, path);
-        const task       = uploadBytesResumable(storageRef, fileToUpload);
-        task.on('state_changed',
-            snap => {
-                const pct = (snap.bytesTransferred / snap.totalBytes) * 100;
-                if (onProgress) onProgress(pct);
-            },
-            err => reject(err),
-            async () => {
-                const url = await getDownloadURL(task.snapshot.ref);
-                resolve({ url, storagePath: path });
-            }
-        );
-    });
+    const { url, path } = await uploadToStorage('blog-photos', postId, file, onProgress);
+    return { url, storagePath: path };
 }
 
 // =============================================
@@ -1212,38 +1140,6 @@ export async function getDataCounts() {
 }
 
 // =============================================
-//  HELPERS
-// =============================================
-
-/** Build a display-ready botanical name string (HTML) */
-export function formatBotanicalName(plant) {
-    const ht = hybridTypeOf(plant);
-    let parts = [];
-    // Intergeneric hybrids place the × immediately before the genus (×Genus);
-    // interspecific hybrids place it before the species epithet (Genus × species).
-    if (plant.genus)      parts.push(ht === 'intergeneric' ? `×<em>${escHtml(plant.genus)}</em>` : `<em>${escHtml(plant.genus)}</em>`);
-    if (ht === 'interspecific' && plant.species) parts.push('×');
-    if (plant.species)    parts.push(`<em>${escHtml(plant.species)}</em>`);
-    if (plant.subspecies) parts.push(`subsp. <em>${escHtml(plant.subspecies)}</em>`);
-    if (plant.variety)    parts.push(`var. <em>${escHtml(plant.variety)}</em>`);
-    if (plant.cultivar)   parts.push(`'${escHtml(plant.cultivar)}'`);
-    if (plant.authority)  parts.push(escHtml(plant.authority));
-    return parts.join(' ');
-}
-
-/**
- * Effective hybrid type for a plant.
- * Returns 'interspecific' | 'intergeneric' | null.
- * Legacy records stored only a boolean `hybrid` — treat those as interspecific
- * (the common case; × before the species), which matches how the app rendered
- * them historically in the garden view.
- */
-export function hybridTypeOf(plant) {
-    if (plant && plant.hybridType) return plant.hybridType;
-    return (plant && plant.hybrid) ? 'interspecific' : null;
-}
-
-// =============================================
 //  USER MANAGEMENT  (admin panel)
 // =============================================
 
@@ -1296,89 +1192,6 @@ export async function getPendingUserCount() {
     return (await getUsers()).filter(u => !u.role && !u.blocked).length;
 }
 
-/** Simple HTML escape */
-export function escHtml(str) {
-    if (!str) return '';
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
 
-/**
- * escHtml, plus http(s) URLs turned into links that open in a new tab.
- * Added 2026-09-14 for task descriptions, notes and area descriptions.
- * The text between URLs and each URL are escaped separately, so the <a>
- * is the only markup that can reach the page, and the pattern only
- * matches http and https — never javascript: or data:.
- */
-export function linkify(str) {
-    if (!str) return '';
-    const re = /\bhttps?:\/\/[^\s<>"']+/gi;
-    let out = '', last = 0, m;
-    while ((m = re.exec(str))) {
-        let url = m[0];
-        // Trailing punctuation belongs to the sentence, not the URL — except
-        // a ')' that closes a '(' inside it, as Wikipedia URLs have.
-        while (/[.,;:!?)\]]$/.test(url)) {
-            const opens  = (url.match(/\(/g) || []).length;
-            const closes = (url.match(/\)/g) || []).length;
-            if (url.endsWith(')') && opens >= closes) break;
-            url = url.slice(0, -1);
-        }
-        out += escHtml(str.slice(last, m.index))
-             + `<a class="text-link" href="${escHtml(url)}" target="_blank" rel="noopener noreferrer">${escHtml(url)}</a>`;
-        last = m.index + url.length;
-        re.lastIndex = last;
-    }
-    return out + escHtml(str.slice(last));
-}
 
-// =============================================
-//  DATE HELPERS
-//  Added 2026-08-10. These lived as six separate local copies across
-//  tasks-view, garden-view, compost-view, irrigation-view and blog-view, and
-//  they disagreed: Tasks and Overview rendered "14 May 26" while the Compost
-//  Bin, Irrigation and the Blog rendered "14 May 2026". fmtDate is byte-identical
-//  to Nursery's in apps/nursery/js/db.js, so both apps now read the same.
-// =============================================
 
-const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const MONTHS_FULL  = ['January','February','March','April','May','June',
-                      'July','August','September','October','November','December'];
-
-/** Format a YYYY-MM-DD string as "14 Sep 26". The default for lists and rows. */
-export function fmtDate(dateStr) {
-    if (!dateStr) return '';
-    // Anything that is not a full YYYY-MM-DD (an imported "2019", say) is
-    // shown as it was entered instead of as "undefined undefined".
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return String(dateStr);
-    const [y, m, d] = dateStr.split('-').map(Number);
-    return `${d} ${MONTHS_SHORT[m - 1]} ${String(y).slice(2)}`;
-}
-
-/**
- * Format a YYYY-MM-DD string as "14 September 2026".
- * Only for prominent standalone dates — a blog post header — where the full
- * month and year read better and there is no density pressure. This is what
- * blog-view's formatDisplayDate produced via toLocaleDateString('en-GB'), kept
- * so journal entries look unchanged. Prefer fmtDate everywhere else.
- */
-export function fmtDateLong(dateStr) {
-    if (!dateStr) return '';
-    const [y, m, d] = dateStr.split('-').map(Number);
-    return `${d} ${MONTHS_FULL[m - 1]} ${y}`;
-}
-
-/** Today as YYYY-MM-DD */
-export function todayStr() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-
-/** True if a due date has passed and the task is not already completed. */
-export function isOverdue(dateStr, status) {
-    if (!dateStr || status === 'completed') return false;
-    return dateStr < todayStr();
-}

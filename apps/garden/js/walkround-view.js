@@ -27,24 +27,12 @@
 import {
     getArea, updateArea, getAreas,
     getInstancesInArea, updateInstance, deleteInstance,
-    getPlants, formatBotanicalName, escHtml, fmtDate
+    getPlants, formatBotanicalName, escHtml, fmtDate, plainPlantName, todayStr
 } from './db.js';
 import { showModal, hideModal, showToast, setLoading, goBack } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
 import { showDeathModal, showAddPlantToAreaModal } from './plants-view.js';
 
-function todayISO() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-
-// Plain-text name. formatBotanicalName() returns escaped HTML, so decode it.
-function plainName(plant) {
-    if (!plant) return 'Unknown plant';
-    const el = document.createElement('textarea');
-    el.innerHTML = formatBotanicalName(plant).replace(/<[^>]+>/g, '');
-    return el.value || plant.commonName || 'Unnamed plant';
-}
 
 // ---- Writes in flight ------------------------------------------------------
 
@@ -122,12 +110,12 @@ export async function renderWalkRound(container, headerActionEl, backBtn, areaId
         return;
     }
 
-    const today    = todayISO();
+    const today    = todayStr();
     const plantMap = Object.fromEntries(plants.map(p => [p.id, p]));
     const allIds   = new Set(instances.map(i => i.id));
     const rows     = instances.map(inst => {
         const plant = plantMap[inst.plantId] || null;
-        return { inst, plant, name: plainName(plant) };
+        return { inst, plant, name: plainPlantName(plant) };
     }).sort((a, b) => a.name.localeCompare(b.name));
 
     const started   = () => area.walkRoundStarted || null;

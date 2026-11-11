@@ -13,9 +13,23 @@ import { setNavigateFn, setGoBackFn, setNavigateReplaceFn,
 import { renderDashboard }                                   from './dashboard-view.js';
 import { renderBatchesList, renderBatchDetail }              from './batches-view.js';
 import { renderPropagatedPlants, renderPlantPropHistory }    from './plants-view.js';
-import { renderStats }                                       from './stats-view.js';
-import { renderAdminView }                                   from './admin-view.js';
-import { renderPlansView }                                   from './plans-view.js';
+
+// Screens opened less often are fetched the first time they are needed, not
+// at launch: Stats, Plans and Admin. That is plain import(), a browser feature; there is no
+// build step. A few seconds after the first screen has drawn, they are fetched
+// in the background anyway, so the service worker has a copy and they still
+// open with no signal later.
+const lazy = {
+    stats: () => import('./stats-view.js'),
+    plans: () => import('./plans-view.js'),
+    admin: () => import('./admin-view.js'),
+};
+let lazyWarmed = false;
+function warmLazyViews() {
+    if (lazyWarmed || !navigator.onLine) return;
+    lazyWarmed = true;
+    setTimeout(() => Object.values(lazy).forEach(load => load().catch(() => {})), 4000);
+}
 
 // =============================================
 //  DOM references
@@ -227,6 +241,7 @@ async function route(view, id, state = {}) {
     if (handedOn) return;                    // a nested route() call owns the screen
     if (seq === routeSeq) {
         routeDone = seq;
+        warmLazyViews();
         mainEl.classList.remove('is-loading');
     } else if (routeDone > seq && lastRoute) {
         // A newer screen had already finished and this older one has just drawn
@@ -278,17 +293,17 @@ async function drawRoute(view, id, state = {}) {
 
         case 'stats':
             pageTitleEl.textContent = '📊 Stats';
-            await renderStats(mainEl, headerAction, backBtn);
+            await (await lazy.stats()).renderStats(mainEl, headerAction, backBtn);
             break;
 
         case 'plans':
             pageTitleEl.textContent = '🌿 Propagation Plans';
-            await renderPlansView(mainEl, headerAction, backBtn);
+            await (await lazy.plans()).renderPlansView(mainEl, headerAction, backBtn);
             break;
 
         case 'admin':
             pageTitleEl.textContent = '⚙️ Admin';
-            await renderAdminView(mainEl, headerAction, backBtn);
+            await (await lazy.admin()).renderAdminView(mainEl, headerAction, backBtn);
             break;
 
         default:
