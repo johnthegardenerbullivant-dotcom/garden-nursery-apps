@@ -9,7 +9,8 @@ import {
     getPhotosForPlant, uploadPhoto, deletePhoto, updatePhotoOrders, getPlantIdsWithPhotos,
     getDeceasedPlants, recordPlantDeath,
     getNurseryLocations, transferToNursery, countNurseryBatchesForPlant,
-    formatBotanicalName, escHtml, linkify, ensureTagCode, fmtDate
+    formatBotanicalName, escHtml, linkify, ensureTagCode, fmtDate,
+    plainPlantName, todayStr
 } from './db.js';
 import { showModal, hideModal, showToast, setLoading, navigate, goBack, initPhotoCarousel, datePicker, initDatePickers, initPhotoDragSort } from './ui-utils.js';
 import { isAtLeast } from './auth.js';
@@ -20,16 +21,6 @@ import { plantQrSvg, plantTagUrl, openTagSheet, openTapeLabels,
          tapeQrPlan, qrModulesAcross, TAPE_MARGIN_PINS,
          TAG_STOCK, DEFAULT_TAG_STOCK, tapeLabelPlan } from './qr.js';
 
-// Plain-text botanical name (strips the HTML that formatBotanicalName returns)
-function plainName(plant) {
-    return (formatBotanicalName(plant) || plant.commonName || 'Unnamed plant')
-        .replace(/<[^>]+>/g, '');
-}
-
-function todayISO() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
 
 // =============================================
 //  PLANTS LIST
@@ -568,7 +559,6 @@ function buildPlantDetailHTML(plant, instances, photos) {
         </div>
 
 
-
         <!-- Nomenclature -->
         <div class="detail-section">
             <div class="detail-section-title">Nomenclature</div>
@@ -702,7 +692,7 @@ function instanceRow(inst) {
 export function showDeathModal(plant, instance, onSave) {
     const had      = instance.quantity || 1;
     const areaName = instance.area ? instance.area.name : 'Unknown area';
-    const pName    = plainName(plant);
+    const pName    = plainPlantName(plant);
 
     const causeOpts = DEATH_CAUSES.map(c =>
         `<option value="${c.key}">${c.icon}  ${escHtml(c.label)}</option>`
@@ -729,7 +719,7 @@ export function showDeathModal(plant, instance, onSave) {
             </div>
             <div class="form-group">
                 <label class="form-label" for="death-date">Date of death</label>
-                <input class="form-input" type="date" id="death-date" name="diedDate" value="${todayISO()}">
+                <input class="form-input" type="date" id="death-date" name="diedDate" value="${todayStr()}">
             </div>
             <div class="form-group">
                 <label class="form-label" for="death-notes">Notes <span class="optional">optional</span></label>
@@ -762,7 +752,7 @@ export function showDeathModal(plant, instance, onSave) {
             quantity:   qty,
             cause,
             notes:      (fd.get('notes') || '').trim(),
-            diedDate:   fd.get('diedDate') || todayISO(),
+            diedDate:   fd.get('diedDate') || todayStr(),
         };
 
         const saveBtn = document.getElementById('death-save-btn');
@@ -811,7 +801,7 @@ const NURSERY_STAGES = {
 async function showTransferModal(plant, instance, onSave) {
     const had      = instance.quantity || 1;
     const areaName = instance.area ? instance.area.name : 'Unknown area';
-    const pName    = plainName(plant);
+    const pName    = plainPlantName(plant);
 
     // Nursery locations for the picker (may be empty if none set up yet).
     let locations = [];
@@ -857,7 +847,7 @@ async function showTransferModal(plant, instance, onSave) {
             </div>
             <div class="form-group">
                 <label class="form-label" for="transfer-date">Date moved</label>
-                <input class="form-input" type="date" id="transfer-date" name="startDate" value="${todayISO()}">
+                <input class="form-input" type="date" id="transfer-date" name="startDate" value="${todayStr()}">
             </div>
             <div class="form-group">
                 <label class="form-label" for="transfer-notes">Notes <span class="optional">optional</span></label>
@@ -882,7 +872,7 @@ async function showTransferModal(plant, instance, onSave) {
         const method = fd.get('method') || 'division';
         const stage  = fd.get('stage')  || 'propagating';
         const notes  = (fd.get('notes') || '').trim();
-        const startDate  = fd.get('startDate') || todayISO();
+        const startDate  = fd.get('startDate') || todayStr();
         const locationId = fd.get('locationId') || null;
 
         // Build a nursery_batches document compatible with the Nursery app schema.
@@ -1724,7 +1714,7 @@ async function showPlantTagModal(plant) {
 
     document.getElementById('qr-print-btn')?.addEventListener('click', () => {
         hideModal();
-        openTagSheet([{ plant, note: '' }], plainName(plant));
+        openTagSheet([{ plant, note: '' }], plainPlantName(plant));
     });
 
     // Live read-out of how the code lands on the chosen tape. The number that

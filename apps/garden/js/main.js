@@ -12,13 +12,27 @@ import { setNavigateFn, setGoBackFn, setNavigateReplaceFn,
          isModalOpen, requestCloseModal, showToast, initSyncIndicator } from './ui-utils.js';
 import { renderPlantsList, renderPlantDetail, clearPlantSearch } from './plants-view.js';
 import { renderAreasList, renderAreaDetail }   from './areas-view.js';
-import { renderWalkRound }                     from './walkround-view.js';
-import { renderGardenView }                    from './garden-view.js';
-import { renderAdminView }                     from './admin-view.js';
 import { renderTasksView }                     from './tasks-view.js';
-import { renderIrrigationView }                from './irrigation-view.js';
 import { renderCompostView }                    from './compost-view.js';
-import { renderBlogList, renderBlogPost, renderBlogEditor } from './blog-view.js';
+
+// Screens opened less often are fetched the first time they are needed, not
+// at launch: Overview, Irrigation, the blog, Admin and the walk-round. That is plain import(), a browser feature; there is no
+// build step. A few seconds after the first screen has drawn, they are fetched
+// in the background anyway, so the service worker has a copy and they still
+// open with no signal later.
+const lazy = {
+    garden:     () => import('./garden-view.js'),
+    walkround:  () => import('./walkround-view.js'),
+    irrigation: () => import('./irrigation-view.js'),
+    blog:       () => import('./blog-view.js'),
+    admin:      () => import('./admin-view.js'),
+};
+let lazyWarmed = false;
+function warmLazyViews() {
+    if (lazyWarmed || !navigator.onLine) return;
+    lazyWarmed = true;
+    setTimeout(() => Object.values(lazy).forEach(load => load().catch(() => {})), 4000);
+}
 
 // =============================================
 //  DOM references
@@ -272,6 +286,7 @@ async function route(view, id, state = {}) {
     if (handedOn) return;                    // a nested route() call owns the screen
     if (seq === routeSeq) {
         routeDone = seq;
+        warmLazyViews();
         mainEl.classList.remove('is-loading');
     } else if (routeDone > seq && lastRoute) {
         // A newer screen had already finished and this older one has just drawn
@@ -343,12 +358,12 @@ async function drawRoute(view, id, state = {}) {
         // Named area-… so the Areas tab stays highlighted and Back falls back to Areas.
         case 'area-walk':
             pageTitleEl.textContent = '\u{1F6B6} Walk-round';
-            await renderWalkRound(mainEl, headerAction, backBtn, id);
+            await (await lazy.walkround()).renderWalkRound(mainEl, headerAction, backBtn, id);
             break;
 
         case 'garden':
             pageTitleEl.textContent = '\u{1F3E1} Garden Overview';
-            await renderGardenView(mainEl, headerAction, backBtn);
+            await (await lazy.garden()).renderGardenView(mainEl, headerAction, backBtn);
             break;
 
         case 'tasks':
@@ -359,7 +374,7 @@ async function drawRoute(view, id, state = {}) {
 
         case 'irrigation':
             pageTitleEl.textContent = '\uD83D\uDCA7 Irrigation';
-            await renderIrrigationView(mainEl, headerAction, backBtn);
+            await (await lazy.irrigation()).renderIrrigationView(mainEl, headerAction, backBtn);
             break;
 
         case 'compost':
@@ -369,27 +384,27 @@ async function drawRoute(view, id, state = {}) {
 
         case 'blog':
             pageTitleEl.textContent = '\uD83D\uDCDD Garden Journal';
-            await renderBlogList(mainEl, headerAction, backBtn);
+            await (await lazy.blog()).renderBlogList(mainEl, headerAction, backBtn);
             break;
 
         case 'blog-post':
             pageTitleEl.textContent = 'Journal Entry';
-            await renderBlogPost(mainEl, headerAction, backBtn, id);
+            await (await lazy.blog()).renderBlogPost(mainEl, headerAction, backBtn, id);
             break;
 
         case 'blog-compose':
             pageTitleEl.textContent = '\u270F\uFE0F New Entry';
-            await renderBlogEditor(mainEl, headerAction, backBtn, null);
+            await (await lazy.blog()).renderBlogEditor(mainEl, headerAction, backBtn, null);
             break;
 
         case 'blog-edit':
             pageTitleEl.textContent = '\u270F\uFE0F Edit Entry';
-            await renderBlogEditor(mainEl, headerAction, backBtn, id);
+            await (await lazy.blog()).renderBlogEditor(mainEl, headerAction, backBtn, id);
             break;
 
         case 'admin':
             pageTitleEl.textContent = '\u2699\uFE0F Admin';
-            await renderAdminView(mainEl, headerAction, backBtn);
+            await (await lazy.admin()).renderAdminView(mainEl, headerAction, backBtn);
             break;
 
         default:

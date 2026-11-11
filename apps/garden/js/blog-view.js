@@ -59,6 +59,39 @@ function extractAreaRefs(delta) {
     return refs;
 }
 
+// Quill is loaded by the blog, not by index.html, so nobody pays for it until
+// the blog is opened. A post needs only its stylesheet (posts are stored as
+// Quill HTML and keep its .ql-* classes); the editor needs the script too.
+const QUILL_CSS = 'https://cdn.quilljs.com/1.3.7/quill.snow.css';
+const QUILL_JS  = 'https://cdn.quilljs.com/1.3.7/quill.min.js';
+let quillCss = null, quillJs = null;
+
+function loadQuillStyles() {
+    if (!quillCss) {
+        quillCss = new Promise(resolve => {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = QUILL_CSS;
+            link.onload = link.onerror = resolve;   // a post still reads without it
+            document.head.appendChild(link);
+        });
+    }
+    return quillCss;
+}
+function loadQuill() {
+    if (window.Quill) return Promise.resolve();
+    if (!quillJs) {
+        quillJs = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = QUILL_JS;
+            script.onload = resolve;
+            script.onerror = () => { quillJs = null; reject(new Error('Could not load the editor')); };
+            document.head.appendChild(script);
+        });
+    }
+    return Promise.all([loadQuillStyles(), quillJs]);
+}
+
 /** Register the Quill blots for plant and area chips (idempotent) */
 function ensureQuillBlots() {
     if (!window.Quill || window._blogBlotsRegistered) return;
@@ -278,6 +311,7 @@ export async function renderBlogPost(container, headerActionEl, backBtn, postId)
     backBtn.classList.add('visible');
     document.querySelector('.fab')?.remove();
 
+    const styles = loadQuillStyles();
     let post;
     try {
         post = await getBlogPost(postId);
@@ -290,6 +324,8 @@ export async function renderBlogPost(container, headerActionEl, backBtn, postId)
         container.innerHTML = `<div class="empty-state"><h3>Entry not found</h3></div>`;
         return;
     }
+
+    await styles;   // so the post does not draw first unstyled
 
     const isAdmin = isAtLeast('admin');
 
@@ -393,6 +429,13 @@ export async function renderBlogEditor(container, headerActionEl, backBtn, postI
     backBtn.classList.add('visible');
     document.querySelector('.fab')?.remove();
     headerActionEl.innerHTML = '';
+
+    try {
+        await loadQuill();
+    } catch (e) {
+        container.innerHTML = `<div class="empty-state"><p>Could not load the editor. Check your connection and try again.</p></div>`;
+        return;
+    }
 
     // Load existing post (if editing), plant list and area list (for pickers)
     let post    = null;

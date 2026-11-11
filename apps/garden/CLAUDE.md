@@ -60,7 +60,7 @@ apps/garden/
 ├── functions/               ← 2 Netlify serverless functions, both calling Gemini
 │   ├── scan-label.js        ← reads a printed plant label from photos
 │   └── lookup-plant.js      ← researches a plant from its name, with web search
-└── js/                      ← 17 ES modules
+└── js/                      ← 18 ES modules
 ```
 
 `compress-photos.html` is a self-contained one-off page that re-compresses existing photos in
@@ -69,11 +69,12 @@ navigation. It ships with the site but nothing in `js/` depends on it.
 
 ---
 
-## JS module map (17 modules)
+## JS module map (18 modules)
 
 | File | Responsibility | Key exports |
 |---|---|---|
-| `main.js` | Entry point: router, auth state listener, nav wiring | *(no exports — entry point)* |
+| `main.js` | Entry point: router, auth state listener, nav wiring. Overview, the walk-round, Irrigation, the blog and Admin are `import()`ed when first opened (`lazy` at the top), then fetched in the background a few seconds after launch so they still open offline | *(no exports — entry point)* |
+| `garden-logic.js` | Pure helpers with **no imports**, so `tests/` can load them in Node: names, escaping, `linkify`, dates, repeat dates, tag codes. `db.js` re-exports all of it, so views import from `db.js` as before | `formatBotanicalName`, `plainPlantName`, `hybridTypeOf`, `escHtml`, `linkify`, `fmtDate`, `fmtDateLong`, `todayStr`, `isOverdue`, `nextOccurrenceDate`, `firstOccurrenceFromToday`, `isTagCode` |
 | `db.js` | Every Firestore + Storage read/write. ~1030 lines, the biggest module. | `initFirebase`, `getPlants`/`addPlant`/`updatePlant`/`deletePlant`, `getAreas`/`addArea`/…, `getInstances*`/`addInstance`/…, `getDeceasedPlants`, `recordPlantDeath`, `transferToNursery`, `getNurseryLocations`, `countNurseryBatchesForPlant`, `getTasks`/`addTask`/…, `getTaskAssignments*`/…, photo helpers (`uploadPhoto`, `getPhotosForPlant`, `updatePhotoOrders`, `uploadAreaPhoto`, …), `getIrrigationZones`/`addIrrigationZone`/…, `getIrrigationLogs*`/…, `getSuggestions`/…, `nextOccurrenceDate`, `firstOccurrenceFromToday`, `createNextRecurringOccurrence`, `getBlogPosts`/`saveBlogPost`/`uploadBlogPhoto`/…, `exportAllData`, `importAllData`, `clearAllData`, `getDataCounts`, `formatBotanicalName`, `hybridTypeOf`, `getUsers`, `updateUserRole`, `setUserBlocked`, `getPendingUserCount`, `escHtml`, `linkify` (escHtml plus clickable http/https URLs, for free-text fields), `isTagCode`, `getPlantByTagCode`, `ensureTagCode` |
 | `auth.js` | Auth state, role cache, sign-in helpers. **Byte-identical to Nursery's — see `tools/check-drift.mjs`.** | `initAuth`, `getAuthInstance`, `getCurrentUser`, `getCurrentRole`, `isAtLeast`, `loadRole`, `setCurrentUser`, `setRole`, `signInWithGoogle`, `signInWithEmail`, `signInAsGuest`, `signOutUser` |
 | `ui-utils.js` | Modal, toast, carousel, drag-sort, date picker | `navigate`, `goBack`, `showModal`, `hideModal`, `isModalOpen`, `requestCloseModal` (closes, asking first if the form was touched — for the overlay, the ✕ and Back; Cancel and Save use `hideModal`), `showToast`, `initPhotoCarousel`, `initPhotoDragSort`, `datePicker`, `initDatePickers` |
@@ -84,7 +85,7 @@ navigation. It ships with the site but nothing in `js/` depends on it.
 | `walkround-view.js` | Walk-round: inventory one area on a phone — tick off each plant, record what happened to the missing, add the unlisted. Route `#area-walk/<areaId>`. | `renderWalkRound` |
 | `tasks-view.js` | Tasks: recurring, by-area, by-status | `renderTasksView`, `renderAreaTasksSection`, `buildTaskRow`, `attachTaskHandlers`, `showTaskForm`, `showAssignExistingTaskModal`, `updateNavBadge`, `GENERAL_AREA_ID` |
 | `irrigation-view.js` | Irrigation zones and watering logs (~74 KB, the largest view) | `renderIrrigationView`, `getIrrigationBannerInfo` |
-| `blog-view.js` | Blog/Journal list, post reader, admin editor (Quill) | `renderBlogList`, `renderBlogPost`, `renderBlogEditor` |
+| `blog-view.js` | Blog/Journal list, post reader, admin editor (Quill). Loads Quill itself: the stylesheet for a post, the script too for the editor. It is not in `index.html` | `renderBlogList`, `renderBlogPost`, `renderBlogEditor` |
 | `compost-view.js` | Compost Bin: deceased-plant log, grouped by month | `renderCompostView`, `DEATH_CAUSES`, `causeMeta` |
 | `label-scan.js` | Client half of the Gemini label scan; compresses images and POSTs to the function. **Near-identical to Nursery's.** | `scanPanelHTML`, `focusScanCard`, `initLabelScan` |
 | `plant-lookup.js` | Client half of the AI plant lookup. Offers the two tracks, previews the result, appends to Notes on request. **Byte-identical to Nursery's** — field IDs are passed in. | `lookupPanelHTML`, `initPlantLookup` |

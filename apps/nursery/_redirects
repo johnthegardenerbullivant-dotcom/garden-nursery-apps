@@ -1,0 +1,8 @@
+# Netlify redirect rules — Nursery Management
+# Served from the publish directory root (this folder).
+
+# ---------- Notes for developers are not part of the site ----------
+# This folder is the publish directory, so CLAUDE.md in it would otherwise be
+# served to anyone who asks for it. The ! makes the rule apply even though the
+# file exists. Netlify answers with its own "Page not found".
+/CLAUDE.md   /not-found   404!
